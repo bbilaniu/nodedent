@@ -1,0 +1,130 @@
+import React from "react";
+import type { EndoCase } from "../types";
+import { caseStatusOptions } from "../state/persistence";
+import { getCaseStatus } from "../engine/deriveCaseStatus";
+import { isBlank } from "../engine/measurements";
+import { SelectInput, TextInput } from "./FormControls";
+
+type SavedCaseSummary = {
+  id: string;
+  patientNumber: string;
+  tooth: string;
+  procedureType: string;
+  canalCount?: number;
+  eventCount?: number;
+  autosavedAt: string;
+};
+
+export function CaseManagementModal({
+  caseData,
+  savedCases,
+  importText,
+  showImportBox,
+  onClose,
+  onUpdateCase,
+  onUpdateDiagnosis,
+  onApplySuggestedCaseStatus,
+  onStartNewCase,
+  onDownloadCaseJson,
+  onToggleImportBox,
+  onImportTextChange,
+  onImportCaseJson,
+  onClearSavedCurrentCase,
+  onResetAllSavedCases,
+  onLoadSavedCase,
+  onDeleteSavedCase,
+}: {
+  caseData: EndoCase;
+  savedCases: SavedCaseSummary[];
+  importText: string;
+  showImportBox: boolean;
+  onClose: () => void;
+  onUpdateCase: (updates: Partial<EndoCase>) => void;
+  onUpdateDiagnosis: (field: string, value: string) => void;
+  onApplySuggestedCaseStatus: () => void;
+  onStartNewCase: () => void;
+  onDownloadCaseJson: () => void;
+  onToggleImportBox: () => void;
+  onImportTextChange: (value: string) => void;
+  onImportCaseJson: () => void;
+  onClearSavedCurrentCase: () => void;
+  onResetAllSavedCases: () => void;
+  onLoadSavedCase: (caseId: string) => void;
+  onDeleteSavedCase: (caseId: string) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
+      <section className="mt-6 w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Case management</p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950">Patient / visit / saved cases</h2>
+            <p className="mt-1 text-sm text-slate-600">Edit case identity, diagnosis, visit status, next-visit plan, and saved-case JSON actions.</p>
+          </div>
+          <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+            Close
+          </button>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">Patient / visit</h3>
+            <div className="grid gap-3">
+              <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
+              <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
+              <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
+              <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
+              <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Use suggested status</button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-slate-900">Diagnosis / plan</h3>
+            <div className="grid gap-3">
+              <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
+              <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-slate-600">Next visit / plan</span>
+                <textarea value={caseData.nextVisitPlan || ""} onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })} placeholder="e.g., continue obturation, crown recommended, refer" className="h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-900">Saved cases / JSON</h3>
+          <div className="grid gap-3 md:grid-cols-2">
+            <button onClick={onStartNewCase} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">New case</button>
+            <button onClick={onDownloadCaseJson} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100">Download case JSON</button>
+            <button onClick={onToggleImportBox} className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50">Import case JSON</button>
+            <div className="flex gap-2">
+              <button onClick={onClearSavedCurrentCase} className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100">Clear current</button>
+              <button onClick={onResetAllSavedCases} className="flex-1 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">Reset all</button>
+            </div>
+          </div>
+          {showImportBox ? (
+            <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50 p-2">
+              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste exported case JSON here" className="h-28 w-full rounded-lg border border-blue-100 bg-white p-2 font-mono text-xs outline-none focus:border-blue-300" />
+              <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-blue-900 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800">Load pasted JSON</button>
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recent autosaves</p>
+            <div className="grid gap-2 md:grid-cols-2">
+              {savedCases.length ? savedCases.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-2">
+                  <button onClick={() => onLoadSavedCase(item.id)} className="w-full rounded-lg p-1 text-left text-xs text-slate-700 hover:bg-slate-100">
+                    <strong>{item.patientNumber}</strong> · tooth {item.tooth} · {item.procedureType}
+                    <span className="mt-1 block text-slate-500">{new Date(item.autosavedAt).toLocaleString()} · {item.canalCount || 0} canal(s) · {item.eventCount || 0} event(s)</span>
+                  </button>
+                  <button onClick={() => onDeleteSavedCase(item.id)} className="mt-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">Delete saved case</button>
+                </div>
+              )) : <p className="text-sm text-slate-500">No autosaves yet.</p>}
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
