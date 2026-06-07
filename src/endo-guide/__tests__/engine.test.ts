@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import type { EndoCase } from "../types";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus } from "../engine/deriveCanalStatus";
@@ -7,10 +9,13 @@ import { getMissingRequirements } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
 import { buildJsonExport } from "../notes/buildJsonExport";
+import { buildPatientSummary } from "../notes/buildPatientSummary";
 import { eventFragment } from "../notes/fragments";
 import { getNextRecommendedNodeForCanal } from "../protocol/continuation";
 import { protocolNodes } from "../protocol/nodes";
-import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase } from "../state/persistence";
+import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
+import { EndoCaseSchema } from "../schemas/EndoCase.schema";
+import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -30,6 +35,31 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
     ...overrides,
   };
 }
+
+function listFiles(directory: string): string[] {
+  return readdirSync(directory).flatMap((entry) => {
+    const path = join(directory, entry);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+}
+
+test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
+  const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
+  const forbiddenPatterns = [
+    /from ["']react["']/,
+    /\bwindow\b/,
+    /\bdocument\b/,
+    /\blocalStorage\b/,
+    /\bnavigator\b/,
+  ];
+
+  moduleRoots.flatMap(listFiles).forEach((file) => {
+    const source = readFileSync(file, "utf8");
+    forbiddenPatterns.forEach((pattern) => {
+      assert.equal(pattern.test(source), false, `${file} should not match ${pattern}`);
+    });
+  });
+});
 
 test("valid transition produces next node and event", () => {
   const input = baseCase();
@@ -117,11 +147,13 @@ test("ATS 15 blocks >16", () => {
 
 test("ATS 17 blocks less-or-equal-16 and ATS 16 allows it", () => {
   const option = protocolNodes["measure-available-space"].options[1];
+  const greaterThanOption = protocolNodes["measure-available-space"].options[0];
   const ats17 = baseCase({ canals: [{ ...blankCanal("MB"), availableTreatmentSpace: "17", referencePoint: "MB cusp" }] });
   const ats16 = baseCase({ canals: [{ ...blankCanal("MB"), availableTreatmentSpace: "16", referencePoint: "MB cusp" }] });
 
   assert.ok(getMissingRequirements("measure-available-space", option, ats17, ats17.canals[0]).includes("Available treatment space must be ≤16 mm for this option"));
   assert.deepEqual(getMissingRequirements("measure-available-space", option, ats16, ats16.canals[0]), []);
+  assert.ok(getMissingRequirements("measure-available-space", greaterThanOption, ats16, ats16.canals[0]).includes("Available treatment space must be >16 mm for this option"));
 });
 
 test("10C branch consistency validation", () => {
@@ -149,10 +181,19 @@ test("final shape validation accepts 30/.04", () => {
   assert.deepEqual(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]), []);
 });
 
+test("final shape validation rejects clearly invalid values", () => {
+  const option = protocolNodes["create-final-shape"].options[0];
+  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), finalShape: "large file" }] });
+  assert.ok(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]).includes("Final shape/size, e.g. 30/.04"));
+});
+
 test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal(blankCanal("MB")).nextNodeId, "estimate-wl");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), estimatedWorkingLength: "20" }).nextNodeId, "open-orifice");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), eal0: "20" }).nextNodeId, "patency-10c");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "glidePath.created", canal: "MB" }] }).nextNodeId, "gauge-final-shape");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "ready-for-obturation");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "endodontic-pathway-complete");
   const referred = { ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.referred", canal: "MB" }] };
   assert.equal(getNextRecommendedNodeForCanal(referred).disabled, true);
 });
@@ -174,6 +215,7 @@ test("switching canal event fragment records canal change and measurements remai
   };
 
   assert.match(eventFragment(event), /Workflow switched from ML to MB/);
+  assert.equal(event.type, "workflow.switchedCanal");
   assert.equal(caseData.canals.find((canal) => canal.name === "ML")?.estimatedWorkingLength, "21");
 });
 
@@ -190,18 +232,44 @@ test("compact and full notes include measurements and event fragments", () => {
     globalEvents: [event],
   });
 
-  assert.match(buildCompactNote(caseData), /MB: est WL 20 mm/);
-  assert.match(buildFullNote(caseData), /WL PA not taken/);
+  const compactNote = buildCompactNote(caseData);
+  const fullNote = buildFullNote(caseData);
+
+  assert.match(compactNote, /30 RCT/);
+  assert.match(compactNote, /Canals: MB/);
+  assert.match(compactNote, /MB: est WL 20 mm/);
+  assert.match(fullNote, /WL PA not taken/);
+  assert.match(fullNote, /MB: WL established/);
+});
+
+test("full note includes canal switch narrative and patient summary remains concise", () => {
+  const switchEvent = {
+    id: "evt_switch",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "workflow.switchedCanal",
+    canal: "DB",
+    details: { previousActiveCanal: "MB", newActiveCanal: "DB", reason: "continued DB at initial scouting" },
+  };
+  const caseData = baseCase({ globalEvents: [switchEvent] });
+
+  assert.match(buildFullNote(caseData), /Workflow switched from MB to DB/);
+  const summary = buildPatientSummary(caseData);
+  assert.match(summary, /^Endodontic treatment workflow was started/);
+  assert.ok(summary.length < 220);
 });
 
 test("JSON export preserves canal status and radiograph statuses", () => {
   const caseData = baseCase({
-    canals: [{ ...blankCanal("MB"), eal0: "20", wlRadiographStatus: "not taken", coneFitRadiograph: "acceptable" }],
+    canals: [{ ...blankCanal("MB"), eal0: "20", estimatedWorkingLength: "20", shapingLength: "19", wlRadiographStatus: "not taken", coneFitRadiograph: "acceptable" }],
+    globalEvents: [{ id: "evt", timestamp: "2026-01-01T00:00:00.000Z", type: "workingLength.established", canal: "MB" }],
   });
   const exported = buildJsonExport(caseData, "patency-10c");
   assert.equal(exported.canals[0].status, "WL established");
   assert.equal(exported.canals[0].wlRadiographStatus, "not taken");
   assert.equal(exported.canals[0].coneFitRadiograph, "acceptable");
+  assert.equal(exported.canals[0].estimatedWorkingLength, "20");
+  assert.equal(exported.canals[0].shapingLength, "19");
+  assert.equal(exported.events.length, 1);
 });
 
 test("exported JSON can be imported without losing canals, events, or measurements", () => {
@@ -219,4 +287,60 @@ test("exported JSON can be imported without losing canals, events, or measuremen
   assert.equal(restoredCanal.estimatedWorkingLength, "20");
   assert.equal(restoredCanal.events.length, 1);
   assert.equal(getCanalStatus(restoredCanal), "scouted");
+});
+
+test("valid case data passes Zod validation", () => {
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "20", wlRadiographStatus: "acceptable", coneFitRadiograph: "not taken" }],
+  });
+
+  assert.equal(EndoCaseSchema.safeParse(caseData).success, true);
+});
+
+test("schema rejects missing tooth, invalid procedure type, and invalid measurements", () => {
+  const missingTooth = { ...baseCase(), tooth: "" };
+  const invalidProcedure = { ...baseCase(), procedureType: "Implant" };
+  const invalidMeasurement = { ...blankCanal("MB"), estimatedWorkingLength: "abc" };
+
+  assert.equal(EndoCaseSchema.safeParse(missingTooth).success, false);
+  assert.equal(EndoCaseSchema.safeParse(invalidProcedure).success, false);
+  assert.equal(CanalRecordSchema.safeParse(invalidMeasurement).success, false);
+});
+
+test("schema allows valid radiograph statuses plus blank and undefined before entry", () => {
+  ["acceptable", "short", "long", "not taken", "", undefined].forEach((status) => {
+    assert.equal(RadiographStatusSchema.safeParse(status).success, true);
+  });
+  assert.equal(RadiographStatusSchema.safeParse("missing").success, false);
+});
+
+test("normalized JSON import preserves exported case data", () => {
+  const caseData = baseCase({
+    caseStatus: "Resume next visit",
+    difficulty: "high",
+    nextVisitPlan: "Continue obturation",
+    currentCanal: "DB",
+    canals: [
+      { ...blankCanal("MB"), estimatedWorkingLength: "20", wlRadiographStatus: "not taken", coneFitRadiograph: "acceptable" },
+      { ...blankCanal("DB"), estimatedWorkingLength: "21", shapingLength: "20", wlRadiographStatus: "short", coneFitRadiograph: "not taken" },
+    ],
+    globalEvents: [
+      { id: "evt_mb", timestamp: "2026-01-01T00:00:00.000Z", type: "scouting.estimatedWLSet", canal: "MB" },
+      { id: "evt_db", timestamp: "2026-01-01T00:01:00.000Z", type: "workingLength.established", canal: "DB" },
+    ],
+  });
+  const exported = buildJsonExport(caseData, "patency-10c");
+  const imported = normalizeImportedEndoCase(exported, "2026-01-01T00:02:00.000Z");
+
+  assert.equal(imported.canals.length, 2);
+  assert.equal(imported.currentCanal, "DB");
+  assert.equal(imported.canals[0].estimatedWorkingLength, "20");
+  assert.equal(imported.canals[0].wlRadiographStatus, "not taken");
+  assert.equal(imported.canals[0].coneFitRadiograph, "acceptable");
+  assert.equal(imported.canals[1].shapingLength, "20");
+  assert.equal(imported.canals[1].events?.length, 1);
+  assert.equal(imported.globalEvents.length, 2);
+  assert.equal(imported.caseStatus, "Resume next visit");
+  assert.equal(imported.difficulty, "high");
+  assert.equal(imported.nextVisitPlan, "Continue obturation");
 });

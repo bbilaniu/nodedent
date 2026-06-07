@@ -10,15 +10,24 @@ export const RadiographStatusSchema = z.union([
   z.undefined(),
 ]);
 
+export const OptionalMeasurementStringSchema = z.union([
+  z.literal(""),
+  z.string().refine((value) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric > 0;
+  }, "Measurement must be a positive number"),
+  z.undefined(),
+]);
+
 export const CanalRecordSchema = z.object({
-  name: z.string(),
-  estimatedWorkingLength: z.string().optional(),
-  fileTerminalLength: z.string().optional(),
-  availableTreatmentSpace: z.string().optional(),
+  name: z.string().trim().min(1),
+  estimatedWorkingLength: OptionalMeasurementStringSchema.optional(),
+  fileTerminalLength: OptionalMeasurementStringSchema.optional(),
+  availableTreatmentSpace: OptionalMeasurementStringSchema.optional(),
   referencePoint: z.string().optional(),
-  eal0: z.string().optional(),
-  patencyLength: z.string().optional(),
-  shapingLength: z.string().optional(),
+  eal0: OptionalMeasurementStringSchema.optional(),
+  patencyLength: OptionalMeasurementStringSchema.optional(),
+  shapingLength: OptionalMeasurementStringSchema.optional(),
   wlRadiographStatus: RadiographStatusSchema.optional(),
   finalShape: z.string().optional(),
   obturationGauge: z.string().optional(),

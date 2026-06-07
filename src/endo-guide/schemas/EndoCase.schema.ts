@@ -2,6 +2,12 @@ import { z } from "zod";
 import { CanalRecordSchema } from "./CanalRecord.schema";
 import { ClinicalEventSchema, ClosureRecordSchema } from "./ClinicalEvent.schema";
 
+export const ProcedureTypeSchema = z.union([
+  z.literal("RCT"),
+  z.literal("Retreatment"),
+  z.literal("Emergency pulpectomy"),
+]);
+
 export const DecisionGuardSchema = z.union([
   z.object({
     type: z.literal("numericComparison"),
@@ -26,18 +32,18 @@ export const DecisionGuardSchema = z.union([
 
 export const DecisionOptionSchema = z.object({
   id: z.string().optional(),
-  label: z.string(),
-  nextNodeId: z.string(),
+  label: z.string().trim().min(1),
+  nextNodeId: z.string().trim().min(1),
   difficultyFlag: z.union([z.literal("none"), z.literal("caution"), z.literal("high"), z.literal("refer")]).optional(),
   noteEvent: z.object({ type: z.string() }).optional(),
   guards: z.array(DecisionGuardSchema).optional(),
 });
 
 export const ProtocolNodeSchema = z.object({
-  id: z.string(),
-  phase: z.string(),
-  title: z.string(),
-  chairsideInstruction: z.string(),
+  id: z.string().trim().min(1),
+  phase: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  chairsideInstruction: z.string().trim().min(1),
   instruments: z.array(z.string()).optional(),
   materials: z.array(z.string()).optional(),
   requiredInputs: z.array(z.string()).optional(),
@@ -48,8 +54,8 @@ export const ProtocolNodeSchema = z.object({
 export const EndoCaseSchema = z.object({
   patientNumber: z.string(),
   autosavedAt: z.string().optional(),
-  tooth: z.string(),
-  procedureType: z.string(),
+  tooth: z.string().trim().min(1),
+  procedureType: ProcedureTypeSchema,
   caseStatus: z.string().optional(),
   nextVisitPlan: z.string().optional(),
   diagnosis: z.object({ pulpal: z.string().optional(), apical: z.string().optional() }).optional(),
@@ -59,8 +65,8 @@ export const EndoCaseSchema = z.object({
     cbctReviewed: z.boolean().optional(),
     estimatedChamberDepth: z.string().optional(),
   }),
-  currentCanal: z.string(),
-  canals: z.array(CanalRecordSchema),
+  currentCanal: z.string().trim().min(1),
+  canals: z.array(CanalRecordSchema).min(1),
   globalEvents: z.array(ClinicalEventSchema),
   events: z.array(ClinicalEventSchema).optional(),
   closure: ClosureRecordSchema.nullable(),

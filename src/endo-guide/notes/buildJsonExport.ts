@@ -13,6 +13,7 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     tooth: caseData.tooth,
     procedureType: caseData.procedureType,
     caseStatus: getCaseStatus(caseData),
+    currentCanal: caseData.currentCanal,
     nextVisitPlan: caseData.nextVisitPlan,
     diagnosis: caseData.diagnosis,
     difficulty: caseData.difficulty,
