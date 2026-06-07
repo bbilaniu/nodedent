@@ -12,7 +12,7 @@ import { buildJsonExport } from "../notes/buildJsonExport";
 import { buildPatientSummary } from "../notes/buildPatientSummary";
 import { eventFragment } from "../notes/fragments";
 import { getNextRecommendedNodeForCanal } from "../protocol/continuation";
-import { protocolNodes } from "../protocol/nodes";
+import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
@@ -74,6 +74,31 @@ test("engine and notes modules stay free of React, DOM, and browser storage depe
     forbiddenPatterns.forEach((pattern) => {
       assert.equal(pattern.test(source), false, `${file} should not match ${pattern}`);
     });
+  });
+});
+
+test("protocol option targets resolve to existing nodes", () => {
+  Object.values(protocolNodes).forEach((node) => {
+    node.options.forEach((option) => {
+      assert.ok(
+        protocolNodes[option.nextNodeId],
+        `${node.id} option "${option.label}" points to missing node ${option.nextNodeId}`
+      );
+    });
+  });
+});
+
+test("handoff nodes are intentional and resolvable", () => {
+  const expectedHandoffs = [
+    "ready-for-obturation",
+    "ready-for-sealer-cone-seating",
+    "canal-obturation-complete",
+    "endodontic-pathway-complete",
+  ];
+
+  assert.deepEqual([...handoffNodeIds].sort(), expectedHandoffs.sort());
+  expectedHandoffs.forEach((nodeId) => {
+    assert.ok(protocolNodes[nodeId], `Handoff node ${nodeId} should exist`);
   });
 });
 
