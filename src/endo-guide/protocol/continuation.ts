@@ -40,12 +40,12 @@ export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): Cana
     },
     medicated: {
       label: `Resume ${canalName} from medication/next-visit pathway`,
-      nextNodeId: "mvp-complete",
+      nextNodeId: "pathway-complete",
       reason: `resumed ${canalName} from medication/next-visit pathway`,
     },
     paused: {
       label: `Resume ${canalName} from paused pathway`,
-      nextNodeId: "mvp-complete",
+      nextNodeId: "pathway-complete",
       reason: `resumed ${canalName} from paused pathway`,
     },
     complete: {

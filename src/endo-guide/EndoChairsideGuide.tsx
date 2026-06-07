@@ -508,7 +508,7 @@ export default function EndoChairsideGuide() {
         <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Canvas MVP · layout pass</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Chairside guide · clinical workflow</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Endodontic Chairside Decision Guide</h1>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">State-machine chairside workflow with event-based notes and local case persistence.</p>
             </div>

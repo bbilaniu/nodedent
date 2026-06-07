@@ -1,9 +1,9 @@
 import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
 
-export const STORAGE_KEY = "endo-chairside-mvp-current-case";
-export const CASE_INDEX_KEY = "endo-chairside-mvp-case-index";
-export const CASE_RECORD_PREFIX = "endo-chairside-mvp-case-record:";
+export const STORAGE_KEY = "endo-chairside-guide-current-case";
+export const CASE_INDEX_KEY = "endo-chairside-guide-case-index";
+export const CASE_RECORD_PREFIX = "endo-chairside-guide-case-record:";
 
 export const caseStatusOptions = [
   "RCT planned",

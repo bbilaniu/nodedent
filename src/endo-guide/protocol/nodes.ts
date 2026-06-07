@@ -659,9 +659,9 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Close the access using the selected closure method.",
     materials: ["Sponge", "Temporary restorative material", "Orifice barrier", "Final restorative material"],
     options: [
-      { label: "Sponge and temporary restoration placed", nextNodeId: "mvp-complete", noteEvent: { type: "closure.temporary" } },
-      { label: "Orifice barrier and temporary restoration placed", nextNodeId: "mvp-complete", noteEvent: { type: "closure.orificeBarrierTemporary" } },
-      { label: "Final restoration placed", nextNodeId: "mvp-complete", noteEvent: { type: "closure.finalRestoration" } },
+      { label: "Sponge and temporary restoration placed", nextNodeId: "pathway-complete", noteEvent: { type: "closure.temporary" } },
+      { label: "Orifice barrier and temporary restoration placed", nextNodeId: "pathway-complete", noteEvent: { type: "closure.orificeBarrierTemporary" } },
+      { label: "Final restoration placed", nextNodeId: "pathway-complete", noteEvent: { type: "closure.finalRestoration" } },
     ],
   },
   "persistent-wet": {
@@ -691,7 +691,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Temporary closure",
     chairsideInstruction: "Close access with sponge and temporary restorative material.",
     materials: ["Sponge", "Temporary restorative material"],
-    options: [{ label: "Access temporized", nextNodeId: "mvp-complete", noteEvent: { type: "closure.temporary" } }],
+    options: [{ label: "Access temporized", nextNodeId: "pathway-complete", noteEvent: { type: "closure.temporary" } }],
   },
   "refer-pathway": {
     id: "refer-pathway",
@@ -700,14 +700,14 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Document difficulty and consider medication/temporization or referral.",
     safetyNotes: ["Referral is appropriate when treatment exceeds comfort, skill, equipment, or case difficulty limits."],
     options: [
-      { label: "Document referral recommended", nextNodeId: "mvp-complete", difficultyFlag: "refer", noteEvent: { type: "treatment.referralRecommended" } },
+      { label: "Document referral recommended", nextNodeId: "pathway-complete", difficultyFlag: "refer", noteEvent: { type: "treatment.referralRecommended" } },
       { label: "Medicate and temporize instead", nextNodeId: "calcium-hydroxide", difficultyFlag: "refer", noteEvent: { type: "treatment.medicateTemporizeSelected" } },
     ],
   },
-  "mvp-complete": {
-    id: "mvp-complete",
+  "pathway-complete": {
+    id: "pathway-complete",
     phase: "Export",
-    title: "MVP pathway complete",
+    title: "Pathway complete",
     chairsideInstruction: "This pathway has enough structured data to generate note outputs. Continue another canal, undo, or copy the note.",
     options: [
       { label: "Return to pre-op", nextNodeId: "preop", noteEvent: { type: "workflow.returnedToStart" } },
@@ -718,5 +718,5 @@ export const protocolNodes: Record<string, ProtocolNode> = {
 export const handoffNodeIds = new Set([
   "ready-for-obturation",
   "canal-obturation-complete",
-  "mvp-complete",
+  "pathway-complete",
 ]);
