@@ -3,7 +3,7 @@ Refactor the current endodontic chairside guide Canvas/JSX MVP into production-r
 Context:
 The current JSX file now represents the true MVP for the interactive endodontic chairside decision guide. It includes multi-canal workflow, decision-card navigation, canal-aware continuation, measurements, validation, case management, phase/canal map, event log, note outputs, JSON import/export, local persistence, and responsive layouts.
 
-The previously provided file `codex_endo_guide_mvp_instructions.md` described the original MVP architecture. The current Canvas exceeds the user-facing MVP scope, but it still needs a productionization/refactor pass.
+The previously provided file `docs/specs/codex-endo-guide-mvp-instructions.md` described the original MVP architecture. The current Canvas exceeds the user-facing MVP scope, but it still needs a productionization/refactor pass.
 
 Primary goal:
 Refactor the current implementation into maintainable TypeScript modules without changing the user-visible behavior.
