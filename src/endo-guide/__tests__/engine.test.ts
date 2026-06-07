@@ -102,6 +102,43 @@ test("handoff nodes are intentional and resolvable", () => {
   });
 });
 
+test("every protocol note event has a note fragment", () => {
+  const noteEventTypes = [
+    ...new Set(
+      Object.values(protocolNodes).flatMap((node) =>
+        node.options.map((option) => option.noteEvent?.type).filter((type): type is string => Boolean(type))
+      )
+    ),
+  ];
+
+  noteEventTypes.forEach((type) => {
+    const fragment = eventFragment({
+      id: `evt_${type}`,
+      timestamp: "2026-01-01T00:00:00.000Z",
+      type,
+      canal: "MB",
+      details: {
+        canalSnapshot: {
+          estimatedWorkingLength: "20",
+          fileTerminalLength: "18",
+          availableTreatmentSpace: "17",
+          eal0: "20",
+          patencyLength: "21",
+          shapingLength: "19",
+          referencePoint: "MB cusp",
+          wlRadiographStatus: "acceptable",
+          finalShape: "30/.04",
+          obturationGauge: "30",
+          masterCone: "30/.04",
+          coneFitRadiograph: "acceptable",
+        },
+      },
+    });
+
+    assert.notEqual(fragment, `MB: ${type}.`, `Missing event fragment for ${type}`);
+  });
+});
+
 test("valid transition produces next node and event", () => {
   const input = baseCase();
   const output = applyDecision({
