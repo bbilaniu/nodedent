@@ -124,6 +124,11 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     if (isBlank(activeCanal?.referencePoint)) addMissing("Reference point");
   }
   if (nodeId === "cone-fit-radiograph" && isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+  if (nodeId === "ready-for-sealer-cone-seating") {
+    if (isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+    if (isBlank(activeCanal?.masterCone)) addMissing("Master cone");
+    if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
+  }
   if (nodeId === "dry-for-obturation") {
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
     const dryingCompatibility = getDryingCompatibility(option, activeCanal);

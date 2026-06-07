@@ -278,6 +278,28 @@ test("post-shaping required fields guard EDTA gauging and cone fit decisions", (
   assert.ok(getMissingRequirements("cone-fit-radiograph", protocolNodes["cone-fit-radiograph"].options[0], blank, blank.canals[0]).includes("Cone fit radiograph status"));
 });
 
+test("sealer cone seating handoff enforces required inputs", () => {
+  const option = protocolNodes["ready-for-sealer-cone-seating"].options[0];
+  const blank = baseCase({ canals: [{ ...blankCanal("MB") }] });
+  const complete = baseCase({
+    canals: [
+      {
+        ...blankCanal("MB"),
+        shapingLength: "19",
+        masterCone: "30/.04",
+        coneFitRadiograph: "acceptable",
+      },
+    ],
+  });
+
+  assert.deepEqual(getMissingRequirements("ready-for-sealer-cone-seating", option, blank, blank.canals[0]), [
+    "Cone fit radiograph status",
+    "Master cone",
+    "Shaping length in mm",
+  ]);
+  assert.deepEqual(getMissingRequirements("ready-for-sealer-cone-seating", option, complete, complete.canals[0]), []);
+});
+
 test("cone fit troubleshooting branches follow protocol loops", () => {
   const coneShort = protocolNodes["cone-short"].options;
   const coneLong = protocolNodes["cone-long"].options;
