@@ -459,9 +459,19 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["PA radiograph"],
     requiredInputs: ["Cone fit radiograph status"],
     options: [
-      { label: "Cone fit radiograph acceptable", nextNodeId: "dry-for-obturation", noteEvent: { type: "coneFit.radiographAcceptable" } },
+      { label: "Cone fit radiograph acceptable", nextNodeId: "ready-for-sealer-cone-seating", noteEvent: { type: "coneFit.radiographAcceptable" } },
       { label: "Cone fit radiograph short", nextNodeId: "cone-short", difficultyFlag: "caution", noteEvent: { type: "coneFit.radiographShort" } },
       { label: "Cone fit radiograph long", nextNodeId: "cone-long", difficultyFlag: "caution", noteEvent: { type: "coneFit.radiographLong" } },
+    ],
+  },
+  "ready-for-sealer-cone-seating": {
+    id: "ready-for-sealer-cone-seating",
+    phase: "Cone fit",
+    title: "Ready for sealer / cone seating",
+    chairsideInstruction: "Cone fit has been confirmed radiographically. The active canal is ready for the existing sealer and cone seating workflow when the clinician chooses to continue.",
+    requiredInputs: ["Cone fit radiograph status", "Master cone", "Shaping length"],
+    options: [
+      { label: "Proceed to sealer / cone seating workflow", nextNodeId: "dry-for-obturation", noteEvent: { type: "coneFit.readyForSealerConeSeating" } },
     ],
   },
   "dry-for-obturation": {
@@ -717,6 +727,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
 
 export const handoffNodeIds = new Set([
   "ready-for-obturation",
+  "ready-for-sealer-cone-seating",
   "canal-obturation-complete",
   "endodontic-pathway-complete",
 ]);

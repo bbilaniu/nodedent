@@ -1,11 +1,21 @@
 import type { CanalContinuationTarget, CanalRecord, EndoCase } from "../types";
-import { getCanalStatus } from "../engine/deriveCanalStatus";
+import { getCanalStatus, hasEvent } from "../engine/deriveCanalStatus";
 import { getCanalCheckpointNodeId } from "../engine/getCurrentNode";
 import { protocolNodes } from "./nodes";
 
 export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): CanalContinuationTarget {
   const canalName = canal?.name || "Canal";
   const status = getCanalStatus(canal);
+
+  if (hasEvent(canal, "coneFit.readyForSealerConeSeating") || hasEvent(canal, "coneFit.radiographAcceptable")) {
+    return {
+      canalName,
+      status,
+      label: `Proceed with ${canalName} to sealer / cone seating`,
+      nextNodeId: "ready-for-sealer-cone-seating",
+      reason: `proceeded with ${canalName} to sealer / cone seating`,
+    };
+  }
 
   const targets: Record<string, Omit<CanalContinuationTarget, "canalName" | "status">> = {
     notStarted: {

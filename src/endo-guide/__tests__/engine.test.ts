@@ -43,6 +43,22 @@ function listFiles(directory: string): string[] {
   });
 }
 
+function applyFirstOption(caseData: EndoCase, currentNodeId: string) {
+  const option = protocolNodes[currentNodeId].options[0];
+  const result = applyDecision({
+    currentNodeId,
+    selectedOptionLabel: option.label,
+    caseData,
+    activeCanalName: caseData.currentCanal,
+    eventId: `evt_${currentNodeId}`,
+    timestamp: "2026-01-01T00:00:00.000Z",
+  });
+
+  assert.deepEqual(result.errors, [], `${currentNodeId} should apply without validation errors`);
+  assert.equal(result.generatedEvent?.type, option.noteEvent?.type);
+  return result;
+}
+
 test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
   const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
   const forbiddenPatterns = [
@@ -187,12 +203,108 @@ test("final shape validation rejects clearly invalid values", () => {
   assert.ok(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]).includes("Final shape/size, e.g. 30/.04"));
 });
 
+test("post-shaping protocol chain reaches sealer cone seating handoff", () => {
+  let caseData = baseCase({
+    canals: [
+      {
+        ...blankCanal("MB"),
+        estimatedWorkingLength: "20",
+        eal0: "20",
+        patencyLength: "21",
+        shapingLength: "19",
+        referencePoint: "MB cusp",
+        finalShape: "30/.04",
+        obturationGauge: "30",
+        masterCone: "30/.04",
+        coneFitRadiograph: "acceptable",
+      },
+    ],
+  });
+
+  const expectedTransitions = [
+    ["irrigate-recapitulate", "remove-smear-layer", "shaping.completed"],
+    ["remove-smear-layer", "agitate-edta", "smearLayer.edtaPlaced"],
+    ["agitate-edta", "final-naocl", "smearLayer.edtaAgitated"],
+    ["final-naocl", "ready-for-obturation", "disinfection.finalNaOClCompleted"],
+    ["ready-for-obturation", "gauge-obturation-30", "disinfection.readyForObturation"],
+    ["gauge-obturation-30", "record-obturation-gauge", "obturationGauge.size30Stop"],
+    ["record-obturation-gauge", "fit-master-cone", "obturationGauge.recorded"],
+    ["fit-master-cone", "cone-fit-radiograph", "coneFit.masterConeFits"],
+    ["cone-fit-radiograph", "ready-for-sealer-cone-seating", "coneFit.radiographAcceptable"],
+    ["ready-for-sealer-cone-seating", "dry-for-obturation", "coneFit.readyForSealerConeSeating"],
+  ] as const;
+
+  expectedTransitions.forEach(([currentNodeId, nextNodeId, eventType]) => {
+    const result = applyFirstOption(caseData, currentNodeId);
+    assert.equal(result.nextNodeId, nextNodeId);
+    assert.equal(result.generatedEvent?.type, eventType);
+    caseData = result.updatedCaseData;
+  });
+});
+
+test("post-shaping required fields guard EDTA gauging and cone fit decisions", () => {
+  const blank = baseCase({ canals: [{ ...blankCanal("MB") }] });
+
+  assert.ok(getMissingRequirements("remove-smear-layer", protocolNodes["remove-smear-layer"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
+  assert.ok(getMissingRequirements("remove-smear-layer", protocolNodes["remove-smear-layer"].options[0], blank, blank.canals[0]).includes("Final shape/size, e.g. 30/.04"));
+  assert.ok(getMissingRequirements("gauge-obturation-30", protocolNodes["gauge-obturation-30"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
+  assert.ok(getMissingRequirements("record-obturation-gauge", protocolNodes["record-obturation-gauge"].options[0], blank, blank.canals[0]).includes("Obturation gauge size, e.g. 30"));
+  assert.ok(getMissingRequirements("fit-master-cone", protocolNodes["fit-master-cone"].options[0], blank, blank.canals[0]).includes("Master cone, e.g. 30/.04"));
+  assert.ok(getMissingRequirements("cone-fit-radiograph", protocolNodes["cone-fit-radiograph"].options[0], blank, blank.canals[0]).includes("Cone fit radiograph status"));
+});
+
+test("cone fit troubleshooting branches follow protocol loops", () => {
+  const coneShort = protocolNodes["cone-short"].options;
+  const coneLong = protocolNodes["cone-long"].options;
+  const conePa = protocolNodes["cone-fit-radiograph"].options;
+
+  assert.equal(coneShort[0].nextNodeId, "cone-fit-radiograph");
+  assert.equal(coneShort[1].nextNodeId, "create-final-shape");
+  assert.equal(coneShort[1].noteEvent?.type, "coneFit.smallerConeStillShort");
+  assert.equal(coneShort[2].nextNodeId, "cone-long");
+  assert.equal(coneLong[0].nextNodeId, "cone-fit-radiograph");
+  assert.equal(coneLong[1].nextNodeId, "cone-short");
+  assert.equal(coneLong[2].nextNodeId, "cone-long");
+  assert.equal(conePa[0].nextNodeId, "ready-for-sealer-cone-seating");
+  assert.equal(conePa[1].nextNodeId, "cone-short");
+  assert.equal(conePa[2].nextNodeId, "cone-long");
+});
+
+test("post-shaping event fragments narrate protocol events", () => {
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), shapingLength: "19", obturationGauge: "30", masterCone: "30/.04" }],
+  });
+  const eventTypes = [
+    "obturationGauge.size30Stop",
+    "obturationGauge.size25Short",
+    "coneFit.masterConeFits",
+    "coneFit.smallerConeStillShort",
+    "coneFit.trimmedConeFits",
+    "coneFit.radiographShort",
+    "coneFit.readyForSealerConeSeating",
+  ];
+
+  eventTypes.forEach((type) => {
+    const fragment = eventFragment({
+      id: `evt_${type}`,
+      timestamp: "2026-01-01T00:00:00.000Z",
+      type,
+      canal: "MB",
+      details: { canalSnapshot: caseData.canals[0] },
+    });
+
+    assert.notEqual(fragment, `MB: ${type}.`);
+    assert.match(fragment, /^MB: /);
+  });
+});
+
 test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal(blankCanal("MB")).nextNodeId, "estimate-wl");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), estimatedWorkingLength: "20" }).nextNodeId, "open-orifice");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), eal0: "20" }).nextNodeId, "patency-10c");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "glidePath.created", canal: "MB" }] }).nextNodeId, "gauge-final-shape");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "ready-for-obturation");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "MB" }] }).nextNodeId, "ready-for-sealer-cone-seating");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "endodontic-pathway-complete");
   const referred = { ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.referred", canal: "MB" }] };
   assert.equal(getNextRecommendedNodeForCanal(referred).disabled, true);
