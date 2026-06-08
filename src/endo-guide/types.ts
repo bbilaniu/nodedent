@@ -78,6 +78,8 @@ export type DiagnosisRecord = {
 
 export type PreOpRecord = {
   radiographsReviewed?: boolean;
+  paReviewed?: boolean;
+  bwReviewed?: boolean;
   cbctReviewed?: boolean;
   estimatedChamberDepth?: string;
 };

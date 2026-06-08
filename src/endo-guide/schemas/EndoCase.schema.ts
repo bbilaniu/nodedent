@@ -71,6 +71,8 @@ export const EndoCaseSchema = z.object({
   difficulty: z.union([z.literal("none"), z.literal("caution"), z.literal("high"), z.literal("refer")]),
   preOp: z.object({
     radiographsReviewed: z.boolean().optional(),
+    paReviewed: z.boolean().optional(),
+    bwReviewed: z.boolean().optional(),
     cbctReviewed: z.boolean().optional(),
     estimatedChamberDepth: z.string().optional(),
   }),

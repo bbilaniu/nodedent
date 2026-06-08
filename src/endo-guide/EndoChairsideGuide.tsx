@@ -143,7 +143,7 @@ export default function EndoChairsideGuide() {
     setValidationMessage(null);
   }
 
-  function updatePreOp(field: string, value: string) {
+  function updatePreOp(field: string, value: string | boolean) {
     setCaseData((prev) => ({ ...prev, preOp: { ...prev.preOp, [field]: value } }));
     setValidationMessage(null);
   }
@@ -662,6 +662,10 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
+              onUpdateCase={updateCase}
+              onUpdateDiagnosis={updateDiagnosis}
+              onUpdatePreOp={updatePreOp}
+              onUpdateActiveCanal={updateActiveCanal}
             />
           </section>
 

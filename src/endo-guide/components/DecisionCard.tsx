@@ -2,8 +2,9 @@ import React from "react";
 import type { CanalContinuationTarget, CanalRecord, DecisionOption, EndoCase, ProtocolNode, ValidationMessage } from "../types";
 import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
-import { compactList } from "../engine/measurements";
+import { compactList, isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
+import { SelectInput, TextInput } from "./FormControls";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -24,6 +25,10 @@ export function DecisionCard({
   onApplyDecision,
   onContinueCanal,
   onCreateNewCanal,
+  onUpdateCase,
+  onUpdateDiagnosis,
+  onUpdatePreOp,
+  onUpdateActiveCanal,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -36,7 +41,14 @@ export function DecisionCard({
   onApplyDecision: (option: DecisionOption) => void;
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
+  onUpdateCase: (updates: Partial<EndoCase>) => void;
+  onUpdateDiagnosis: (field: string, value: string) => void;
+  onUpdatePreOp: (field: string, value: string | boolean) => void;
+  onUpdateActiveCanal: (field: string, value: string) => void;
 }) {
+  const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
+  const bwReviewed = caseData.preOp?.bwReviewed ?? false;
+
   return (
     <section className="order-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm xl:col-start-1 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -48,6 +60,39 @@ export function DecisionCard({
         <h2 className="mt-1 text-2xl font-bold text-slate-950">{currentNode.title}</h2>
       </div>
       <p className="rounded-2xl bg-slate-50 p-4 text-base leading-7 text-slate-800">{currentNode.chairsideInstruction}</p>
+      {currentNode.id === "preop" ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <h4 className="text-sm font-bold text-slate-900">Case setup</h4>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
+            <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
+            <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
+            <TextInput label="Estimated chamber depth" value={caseData.preOp?.estimatedChamberDepth} onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)} placeholder="mm" invalid={!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)} />
+            <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
+            <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
+          </div>
+          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Pre-op radiographs reviewed</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                <input type="checkbox" checked={paReviewed} onChange={(event) => onUpdatePreOp("paReviewed", event.target.checked)} />
+                PA
+              </label>
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                <input type="checkbox" checked={bwReviewed} onChange={(event) => onUpdatePreOp("bwReviewed", event.target.checked)} />
+                BW
+              </label>
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+                <input type="checkbox" checked={Boolean(caseData.preOp?.cbctReviewed)} onChange={(event) => onUpdatePreOp("cbctReviewed", event.target.checked)} />
+                CBCT
+              </label>
+            </div>
+          </div>
+          <div className="mt-3">
+            <TextInput label={`Estimated WL for ${activeCanal?.name || "active canal"}`} value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
+          </div>
+        </div>
+      ) : null}
       {(currentNode.instruments?.length || currentNode.materials?.length || currentNode.requiredInputs?.length) && (
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {currentNode.instruments?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Instruments</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.instruments)}</p></div> : null}

@@ -15,12 +15,24 @@ export function MeasurementPanel({
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
   currentNodeId: string;
-  onUpdatePreOp: (field: string, value: string) => void;
+  onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplyEalDerivedLengths: () => void;
   className?: string;
 }) {
   const suggestedLengths = getSuggestedLengths(activeCanal);
+
+  if (currentNodeId === "preop") {
+    return (
+      <aside className={`order-4 min-w-0 space-y-4 xl:col-start-2 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none ${className}`}>
+        <SectionCard title="Measurements">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+            Enter tooth, pre-op radiographs, chamber depth, and estimated WL in the case setup section before beginning access.
+          </div>
+        </SectionCard>
+      </aside>
+    );
+  }
 
   return (
     <aside className={`order-4 min-w-0 space-y-4 xl:col-start-2 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none ${className}`}>
@@ -33,11 +45,11 @@ export function MeasurementPanel({
               value={caseData.preOp.estimatedChamberDepth}
               onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)}
               placeholder="mm"
-              invalid={["preop", "access-chamber"].includes(currentNodeId) && !isPositiveMeasurement(caseData.preOp.estimatedChamberDepth)}
+              invalid={currentNodeId === "access-chamber" && !isPositiveMeasurement(caseData.preOp.estimatedChamberDepth)}
             />
             <p className="mt-2 text-xs text-slate-500">Used for access planning and pre-op/access validation.</p>
           </div>
-          <TextInput label="Estimated WL" value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" invalid={["preop", "estimate-wl", "advance-10c"].includes(currentNodeId) && !isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
+          <TextInput label="Estimated WL" value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" invalid={["estimate-wl", "advance-10c"].includes(currentNodeId) && !isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
           <TextInput label="10C terminal length" value={activeCanal?.fileTerminalLength} onChange={(value) => onUpdateActiveCanal("fileTerminalLength", value)} placeholder="if stopped short" />
           <TextInput label="Available treatment space" value={activeCanal?.availableTreatmentSpace} onChange={(value) => onUpdateActiveCanal("availableTreatmentSpace", value)} placeholder="mm" invalid={currentNodeId === "measure-available-space" && !isPositiveMeasurement(activeCanal?.availableTreatmentSpace)} />
           <TextInput label="Reference point" value={activeCanal?.referencePoint} onChange={(value) => onUpdateActiveCanal("referencePoint", value)} placeholder="e.g., MB cusp" invalid={["measure-available-space", "establish-eal0"].includes(currentNodeId) && isBlank(activeCanal?.referencePoint)} />
