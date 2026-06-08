@@ -38,7 +38,7 @@ export function buildPrintableSummary(caseData: EndoCase) {
   caseData.canals.forEach((canal) => {
     lines.push(`- ${canal.name} (${statusLabels[getCanalStatus(canal)]})`);
     lines.push(`  Est WL: ${canal.estimatedWorkingLength || "___"} mm | EAL0: ${canal.eal0 || "___"} mm | Patency: ${canal.patencyLength || "___"} mm | Shaping: ${canal.shapingLength || "___"} mm`);
-    lines.push(`  WL PA: ${canal.wlRadiographStatus || "___"} | Ref: ${canal.referencePoint || "___"} | Final shape: ${canal.finalShape || "___"} | Gauge: ${canal.obturationGauge || "___"} | MC: ${canal.masterCone || "___"} | Cone fit PA: ${canal.coneFitRadiograph || "___"}`);
+    lines.push(`  WL PA: ${canal.wlRadiographStatus || "___"} | Ref: ${canal.referencePoint || "___"} | Final shaping file: ${canal.finalShape || "___"} | Gauge: ${canal.obturationGauge || "___"} | MC: ${canal.masterCone || "___"} | Cone fit PA: ${canal.coneFitRadiograph || "___"}`);
   });
   lines.push("");
   lines.push("COMPACT NOTE");

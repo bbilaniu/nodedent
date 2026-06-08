@@ -316,16 +316,46 @@ test("WL PA blank blocks EAL completion and not taken allows it", () => {
   assert.deepEqual(getMissingRequirements("establish-eal0", option, notTaken, notTaken.canals[0]), []);
 });
 
-test("final shape validation accepts 30/.04", () => {
+test("final shaping file validation accepts size/taper and system-specific labels", () => {
   const option = protocolNodes["create-final-shape"].options[0];
-  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), finalShape: "30/.04" }] });
-  assert.deepEqual(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]), []);
+  ["30/.04", "25/.06", "PTN X2 25/.06", "PTG F2 25/.08", "WaveOne Gold Primary 25/.07", "Reciproc R25"].forEach((finalShape) => {
+    const caseData = baseCase({ canals: [{ ...blankCanal("MB"), finalShape }] });
+    assert.deepEqual(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]), []);
+  });
 });
 
-test("final shape validation rejects clearly invalid values", () => {
+test("final shaping file validation rejects blank values", () => {
   const option = protocolNodes["create-final-shape"].options[0];
-  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), finalShape: "large file" }] });
-  assert.ok(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]).includes("Final shape/size, e.g. 30/.04"));
+  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), finalShape: "" }] });
+  assert.ok(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]).includes("Final shaping file, e.g. 30/.04 or PTN X2 25/.06"));
+});
+
+test("final shaping protocol labels are system-flexible", () => {
+  const node = protocolNodes["create-final-shape"];
+
+  assert.equal(node.title, "Complete final shaping");
+  assert.equal(node.options[0].label, "Final shaping file reached shaping length");
+  assert.equal(node.options[1].label, "Final shaping file did not reach shaping length");
+  assert.match(node.chairsideInstruction, /final shaping file\/system/);
+});
+
+test("final shaping notes include the recorded file or system", () => {
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), finalShape: "PTN X2 25/.06" }],
+    globalEvents: [
+      {
+        id: "evt_shape",
+        timestamp: "2026-01-01T00:00:00.000Z",
+        type: "shaping.finalShapeAchieved",
+        canal: "MB",
+        details: { canalSnapshot: { finalShape: "PTN X2 25/.06" } },
+      },
+    ],
+  });
+
+  assert.match(buildCompactNote(caseData), /final shaping file PTN X2 25\/\.06/);
+  assert.match(buildFullNote(caseData), /MB final shaping file: PTN X2 25\/\.06/);
+  assert.match(buildFullNote(caseData), /MB: Final shaping completed with PTN X2 25\/\.06/);
 });
 
 test("final shape gauge options identify the 25 NiTi file", () => {
@@ -381,7 +411,7 @@ test("post-shaping required fields guard EDTA gauging and cone fit decisions", (
   const blank = baseCase({ canals: [{ ...blankCanal("MB") }] });
 
   assert.ok(getMissingRequirements("remove-smear-layer", protocolNodes["remove-smear-layer"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
-  assert.ok(getMissingRequirements("remove-smear-layer", protocolNodes["remove-smear-layer"].options[0], blank, blank.canals[0]).includes("Final shape/size, e.g. 30/.04"));
+  assert.ok(getMissingRequirements("remove-smear-layer", protocolNodes["remove-smear-layer"].options[0], blank, blank.canals[0]).includes("Final shaping file, e.g. 30/.04 or PTN X2 25/.06"));
   assert.ok(getMissingRequirements("gauge-obturation-30", protocolNodes["gauge-obturation-30"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
   assert.ok(getMissingRequirements("record-obturation-gauge", protocolNodes["record-obturation-gauge"].options[0], blank, blank.canals[0]).includes("Obturation gauge size, e.g. 30"));
   assert.ok(getMissingRequirements("fit-master-cone", protocolNodes["fit-master-cone"].options[0], blank, blank.canals[0]).includes("Master cone, e.g. 30/.04"));
