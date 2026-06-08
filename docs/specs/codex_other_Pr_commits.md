@@ -36,6 +36,7 @@ Completed commits that should be treated as baseline:
 2ffc289 test(endo-guide): verify protocol graph integrity
 66e9d31 fix(endo-guide): validate sealer handoff requirements
 534f777 test(endo-guide): require fragments for protocol events
+1dec453 ready-for-sealer-cone-seating through drying, patency, sealer placement, paper point, sealer re-application, and GP cone seating.
 ```
 
 Implemented and verified:
@@ -52,13 +53,18 @@ Implemented and verified:
 - ready-for-sealer-cone-seating validates cone fit PA status, master cone, and shaping length.
 - Cone short/long troubleshooting loops are verified at the protocol-routing level.
 - Cone-fit-ready canals resume at ready-for-sealer-cone-seating.
+- Sealer and cone seating workflow is verified from ready-for-sealer-cone-seating through drying, patency confirmation, sealer placement, paper point through sealer, sealer re-application, and GP cone seating.
+- Sealer troubleshooting routes are verified for wet canal, persistent wet canal, unsafe NaviTip placement, paper point short, sealer re-application unsafe, and GP cone short/long after sealer.
+- Persistent wet canal can route to calcium hydroxide and temporary closure.
+- Downpack/backfill workflow is verified through no-gap searing/vertical compaction and modified downpack/backfill/compact-backfill paths.
+- Downpack/backfill branch connectivity is verified for no-gap, round/ovoid gap, modified downpack, accessory cones, vertical compaction, reapply-sealer-on-GP, backfill, and compact-backfill.
+- Canal status now waits for final obturation completion outcomes; backfill.completed alone no longer marks the canal complete.
 ```
 
 Known remaining gaps before later roadmap PRs:
 
 ```text
 - PR 2 still needs deeper branch tests for obturation gauge alternates and deferred wet/medication routes.
-- PR 3 nodes and fragments exist, but sealer, cone seating, downpack, and backfill need workflow-level tests.
 - Closure, multi-visit resume, clinical fixture scenarios, note ergonomics, and usability polish remain future work.
 ```
 
@@ -68,8 +74,8 @@ Known remaining gaps before later roadmap PRs:
 1. COMPLETE - Verify current refactor baseline
 2. MOSTLY COMPLETE - Harden disinfection, obturation gauging, and cone-fit happy path
 3. NEXT - Finish PR 2 alternate-branch verification
-4. NEXT - Harden sealer and cone seating workflow
-5. NEXT - Harden downpack, backfill, and canal obturation completion
+4. COMPLETE - Harden sealer and cone seating workflow
+5. COMPLETE - Harden downpack, backfill, and canal obturation completion
 6. Harden closure, post-op, and case-completion workflow
 7. Add multi-visit pause/resume workflow
 8. Add clinical scenario regression fixtures
@@ -197,7 +203,7 @@ Acceptance criteria:
 - No clinical routing is changed unless a test exposes a clear bug.
 ```
 
-## PR 3A - Harden Sealer And Cone Seating Workflow
+## PR 3A - Harden Sealer And Cone Seating Workflow - COMPLETE
 
 ```git
 test(endo-guide): verify sealer and cone seating workflow
@@ -219,6 +225,19 @@ Scope:
 - Verify GP cone long after sealer routes safely back to obturation gauging.
 ```
 
+Completed:
+
+```text
+- ready-for-sealer-cone-seating can continue through dry/slightly damp drying, patency confirmation, sealer placement, paper point through sealer, sealer re-application, and GP cone seating.
+- Full note coverage is verified for drying, sealer placement, paper point distribution, and GP cone seating.
+- Drying validation blocks dry/slightly damp selection when drying status is wet.
+- Wet paper point loops back to drying.
+- Persistent wet canal routes to calcium hydroxide and temporary closure.
+- Unsafe NaviTip placement and unsafe sealer re-application route to calcium hydroxide.
+- Paper point short and GP cone short after sealer route back to patency-before-sealer.
+- GP cone long after sealer routes back to obturation gauging.
+```
+
 Acceptance criteria:
 
 ```text
@@ -228,7 +247,7 @@ Acceptance criteria:
 - Full note documents drying, sealer placement, paper point distribution, sealer re-application, and GP cone seating.
 ```
 
-## PR 3B - Harden Downpack, Backfill, And Canal Obturation Completion
+## PR 3B - Harden Downpack, Backfill, And Canal Obturation Completion - COMPLETE
 
 ```git
 test(endo-guide): verify downpack and backfill completion workflow
@@ -245,6 +264,17 @@ Scope:
 - Verify reapply-sealer-on-GP before backfill.
 - Verify backfill success, difficulty, apical GP movement, excess GP in chamber, and plugger-hole branches.
 - Verify canal status becomes complete only after active canal obturation workflow is complete.
+```
+
+Completed:
+
+```text
+- No-gap branch is verified through GP searing and vertical compaction to canal-obturation-complete.
+- Modified downpack/backfill path is verified through reapply-sealer-on-GP, backfill, compact-backfill, and canal-obturation-complete.
+- Branch connectivity is verified for no-gap, round/ovoid gap, modified downpack, accessory cones, vertical compaction, backfill, and compact-backfill routes.
+- Full note coverage is verified for vertical compaction and compacted backfill completion.
+- Canal status no longer treats backfill.completed alone as complete.
+- Canal status treats backfill.compactedStable, backfill.excessInChamber, and downpack.gpStableAfterCompaction as complete.
 ```
 
 Acceptance criteria:
