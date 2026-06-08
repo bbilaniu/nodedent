@@ -6,7 +6,7 @@ export function inferCurrentNodeIdFromEvents(caseData?: Partial<EndoCase> | null
   const lastEvent = events[events.length - 1];
   if (!lastEvent?.type) return "preop";
   const switchNextNodeId = lastEvent.details?.nextNodeId || lastEvent.details?.nextNode;
-  if (lastEvent.type === "workflow.switchedCanal" && switchNextNodeId && protocolNodes[switchNextNodeId]) {
+  if ((lastEvent.type === "workflow.switchedCanal" || lastEvent.type === "workflow.resumedFromPriorVisit") && switchNextNodeId && protocolNodes[switchNextNodeId]) {
     return switchNextNodeId;
   }
 

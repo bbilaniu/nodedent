@@ -58,6 +58,15 @@ export const EndoCaseSchema = z.object({
   procedureType: ProcedureTypeSchema,
   caseStatus: z.string().optional(),
   nextVisitPlan: z.string().optional(),
+  priorVisit: z.object({
+    continuedFromPriorVisit: z.boolean().optional(),
+    priorVisitDate: z.string().optional(),
+    accessPreviouslyOpened: z.boolean().optional(),
+    temporaryRestorationPresent: z.boolean().optional(),
+    medicationPresent: z.union([z.literal(""), z.literal("yes"), z.literal("no"), z.literal("unknown")]).optional(),
+    priorRadiographsAvailable: z.boolean().optional(),
+    sourceNote: z.string().optional(),
+  }).optional(),
   diagnosis: z.object({ pulpal: z.string().optional(), apical: z.string().optional() }).optional(),
   difficulty: z.union([z.literal("none"), z.literal("caution"), z.literal("high"), z.literal("refer")]),
   preOp: z.object({

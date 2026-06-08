@@ -15,6 +15,7 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     caseStatus: getCaseStatus(caseData),
     currentCanal: caseData.currentCanal,
     nextVisitPlan: caseData.nextVisitPlan,
+    priorVisit: caseData.priorVisit,
     diagnosis: caseData.diagnosis,
     difficulty: caseData.difficulty,
     preOp: caseData.preOp,

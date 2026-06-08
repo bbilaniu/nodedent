@@ -23,6 +23,8 @@ export function makeCaseId(caseData: Pick<EndoCase, "patientNumber" | "tooth" | 
 
 export const blankCanal = (name: string): CanalRecord => ({
   name,
+  priorVisitStatus: "",
+  priorVisitNote: "",
   estimatedWorkingLength: "",
   fileTerminalLength: "",
   availableTreatmentSpace: "",
@@ -46,6 +48,15 @@ export const initialCase: EndoCase = {
   procedureType: "RCT",
   caseStatus: "",
   nextVisitPlan: "",
+  priorVisit: {
+    continuedFromPriorVisit: false,
+    priorVisitDate: "",
+    accessPreviouslyOpened: false,
+    temporaryRestorationPresent: false,
+    medicationPresent: "",
+    priorRadiographsAvailable: false,
+    sourceNote: "",
+  },
   diagnosis: { pulpal: "", apical: "" },
   difficulty: "none",
   preOp: { radiographsReviewed: true, cbctReviewed: false, estimatedChamberDepth: "" },
@@ -108,6 +119,7 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
   return {
     ...initialCase,
     ...data,
+    priorVisit: { ...(initialCase.priorVisit || {}), ...asRecord(data.priorVisit) },
     canals: importedCanals,
     currentCanal: typeof data.currentCanal === "string" && data.currentCanal ? data.currentCanal : importedCanals[0]?.name || initialCase.currentCanal,
     globalEvents,

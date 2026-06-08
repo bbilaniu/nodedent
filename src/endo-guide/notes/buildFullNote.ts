@@ -3,6 +3,7 @@ import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { appendSection, groupEventsByPrefix } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
+import { getPriorVisitLines } from "./priorVisit";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
@@ -21,6 +22,7 @@ export function buildFullNote(caseData: EndoCase) {
     `CBCT reviewed: ${caseData.preOp?.cbctReviewed ? "yes" : "no/not recorded"}`,
     caseData.preOp?.estimatedChamberDepth ? `Estimated chamber depth: ${caseData.preOp.estimatedChamberDepth} mm` : null,
   ].filter(Boolean) as string[]);
+  appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));
   appendSection(lines, "Access / canals:", groupEventsByPrefix(caseData, ["access."]));
   const canalLines: string[] = [];
   caseData.canals.forEach((canal) => {

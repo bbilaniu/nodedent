@@ -1,5 +1,6 @@
 import React from "react";
-import type { EndoCase } from "../types";
+import type { EndoCase, PriorCanalStatus } from "../types";
+import { priorCanalStatusLabels } from "../engine/resume";
 import { caseStatusOptions } from "../state/persistence";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
@@ -33,6 +34,8 @@ export function CaseManagementModal({
   onResetAllSavedCases,
   onLoadSavedCase,
   onDeleteSavedCase,
+  onContinueFromPriorVisit,
+  onResumeActiveCanalFromPriorVisit,
 }: {
   caseData: EndoCase;
   savedCases: SavedCaseSummary[];
@@ -51,10 +54,18 @@ export function CaseManagementModal({
   onResetAllSavedCases: () => void;
   onLoadSavedCase: (caseId: string) => void;
   onDeleteSavedCase: (caseId: string) => void;
+  onContinueFromPriorVisit: () => void;
+  onResumeActiveCanalFromPriorVisit: () => void;
 }) {
+  const priorCanalStatusOptions = Object.entries(priorCanalStatusLabels) as [PriorCanalStatus, string][];
+  const updatePriorVisit = (updates: Partial<NonNullable<EndoCase["priorVisit"]>>) => onUpdateCase({ priorVisit: { ...(caseData.priorVisit || {}), ...updates } });
+  const updateCanal = (canalName: string, updates: Partial<EndoCase["canals"][number]>) => {
+    onUpdateCase({ canals: caseData.canals.map((canal) => canal.name === canalName ? { ...canal, ...updates } : canal) });
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
-      <section className="mt-6 w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+      <section className="mt-6 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Case management</p>
@@ -88,6 +99,53 @@ export function CaseManagementModal({
                 <textarea value={caseData.nextVisitPlan || ""} onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })} placeholder="e.g., continue obturation, crown recommended, refer" className="h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
               </label>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-amber-950">Prior visit / fast-forward</h3>
+              <p className="mt-1 text-sm text-amber-900">Record treatment history that happened before this system-tracked visit.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onContinueFromPriorVisit} className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100">Continue from prior visit</button>
+              <button onClick={onResumeActiveCanalFromPriorVisit} className="rounded-xl border border-amber-400 bg-amber-900 px-3 py-2 text-xs font-bold text-white hover:bg-amber-800">Resume active canal</button>
+            </div>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <TextInput label="Prior visit date / timing" value={caseData.priorVisit?.priorVisitDate || ""} onChange={(value) => updatePriorVisit({ priorVisitDate: value })} placeholder="optional" />
+            <SelectInput label="Medication present" value={caseData.priorVisit?.medicationPresent || ""} onChange={(value) => updatePriorVisit({ medicationPresent: value as NonNullable<EndoCase["priorVisit"]>["medicationPresent"] })} options={["", "yes", "no", "unknown"]} />
+            <label className="flex items-center gap-2 rounded-xl border border-amber-100 bg-white px-3 py-2 text-sm font-semibold text-amber-950">
+              <input type="checkbox" checked={Boolean(caseData.priorVisit?.accessPreviouslyOpened)} onChange={(event) => updatePriorVisit({ accessPreviouslyOpened: event.target.checked })} />
+              Access previously opened
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amber-100 bg-white px-3 py-2 text-sm font-semibold text-amber-950">
+              <input type="checkbox" checked={Boolean(caseData.priorVisit?.temporaryRestorationPresent)} onChange={(event) => updatePriorVisit({ temporaryRestorationPresent: event.target.checked })} />
+              Temporary restoration present
+            </label>
+            <label className="flex items-center gap-2 rounded-xl border border-amber-100 bg-white px-3 py-2 text-sm font-semibold text-amber-950">
+              <input type="checkbox" checked={Boolean(caseData.priorVisit?.priorRadiographsAvailable)} onChange={(event) => updatePriorVisit({ priorRadiographsAvailable: event.target.checked })} />
+              Prior radiographs / notes available
+            </label>
+            <label className="block md:col-span-2">
+              <span className="mb-1 block text-xs font-medium text-amber-900">Prior history note / source</span>
+              <textarea value={caseData.priorVisit?.sourceNote || ""} onChange={(event) => updatePriorVisit({ sourceNote: event.target.value })} placeholder="e.g., prior access, CaOH placed, temp restoration, outside notes reviewed" className="h-20 w-full rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+            </label>
+          </div>
+          <div className="mt-3 grid gap-2">
+            {caseData.canals.map((canal) => (
+              <div key={canal.name} className="grid gap-2 rounded-xl border border-amber-100 bg-white p-3 md:grid-cols-[140px_minmax(160px,220px)_minmax(0,1fr)] md:items-end">
+                <div className="text-sm font-bold text-amber-950">{canal.name}</div>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Prior canal status</span>
+                  <select value={canal.priorVisitStatus || ""} onChange={(event) => updateCanal(canal.name, { priorVisitStatus: event.target.value as PriorCanalStatus })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100">
+                    {priorCanalStatusOptions.map(([value, label]) => <option key={value || "not-set"} value={value}>{label}</option>)}
+                  </select>
+                </label>
+                <TextInput label="Prior canal note" value={canal.priorVisitNote || ""} onChange={(value) => updateCanal(canal.name, { priorVisitNote: value })} placeholder="optional" />
+              </div>
+            ))}
           </div>
         </div>
 

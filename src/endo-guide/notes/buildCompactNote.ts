@@ -1,6 +1,7 @@
 import type { EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
+import { getPriorVisitLines } from "./priorVisit";
 
 export function buildCompactNote(caseData: EndoCase) {
   const canals = caseData.canals || [];
@@ -11,6 +12,8 @@ export function buildCompactNote(caseData: EndoCase) {
   note.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}.`);
   if (caseData.patientNumber) note.push(`Patient #: ${caseData.patientNumber}.`);
   note.push(`Visit status: ${getCaseStatus(caseData)}.`);
+  const priorVisitLines = getPriorVisitLines(caseData);
+  if (priorVisitLines.length) note.push(`Prior visit history: ${priorVisitLines.join(" ")}`);
   note.push("RD isolation planned/used as clinically appropriate.");
   if (caseData.preOp?.estimatedChamberDepth) note.push(`Estimated chamber depth ${caseData.preOp.estimatedChamberDepth} mm.`);
   if (events.some((type) => type.startsWith("access."))) note.push("Access completed/refined and chamber/canal negotiation documented.");

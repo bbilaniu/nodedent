@@ -19,8 +19,24 @@ export const OptionalMeasurementStringSchema = z.union([
   z.undefined(),
 ]);
 
+export const PriorCanalStatusSchema = z.union([
+  z.literal(""),
+  z.literal("unknown"),
+  z.literal("accessOnly"),
+  z.literal("locatedScouted"),
+  z.literal("wlEstablished"),
+  z.literal("glidePath"),
+  z.literal("shaped"),
+  z.literal("medicatedTemporized"),
+  z.literal("coneFitVerified"),
+  z.literal("partiallyObturated"),
+  z.undefined(),
+]);
+
 export const CanalRecordSchema = z.object({
   name: z.string().trim().min(1),
+  priorVisitStatus: PriorCanalStatusSchema.optional(),
+  priorVisitNote: z.string().optional(),
   estimatedWorkingLength: OptionalMeasurementStringSchema.optional(),
   fileTerminalLength: OptionalMeasurementStringSchema.optional(),
   availableTreatmentSpace: OptionalMeasurementStringSchema.optional(),

@@ -881,9 +881,23 @@ test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "glidePath.created", canal: "MB" }] }).nextNodeId, "gauge-final-shape");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "remove-smear-layer");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "MB" }] }).nextNodeId, "ready-for-sealer-cone-seating");
-  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "endodontic-pathway-complete");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04", events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "remove-smear-layer");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.paused", canal: "MB", details: { nodeId: "gauge-final-shape" } }] }).nextNodeId, "gauge-final-shape");
+  assert.equal(getCanalStatus({ ...blankCanal("MB"), events: [{ id: "evt_cone", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "MB" }, { id: "evt_pause", timestamp: "t", type: "canal.paused", canal: "MB" }] }), "paused");
   const referred = { ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.referred", canal: "MB" }] };
   assert.equal(getNextRecommendedNodeForCanal(referred).disabled, true);
+});
+
+test("prior undocumented visit statuses fast-forward to conservative resume nodes", () => {
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "accessOnly" }).nextNodeId, "identify-canals");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "wlEstablished" }).nextNodeId, "patency-10c");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized" }).nextNodeId, "remove-smear-layer");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "coneFitVerified" }).nextNodeId, "cone-fit-radiograph");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "coneFitVerified", masterCone: "30/.04", shapingLength: "19", coneFitRadiograph: "acceptable" }).nextNodeId, "ready-for-sealer-cone-seating");
+
+  const target = getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized", priorVisitNote: "CaOH and temp placed elsewhere" });
+  assert.match(target.label, /prior visit/);
+  assert.match(target.reason, /prior visit history/);
 });
 
 test("phase-aware canal targets are canal-specific at early handoff nodes", () => {
@@ -984,6 +998,22 @@ test("phase-aware switch event fragment and resume inference use canonical switc
   assert.equal(inferCurrentNodeIdFromEvents({ globalEvents: [event] }), "patency-10c");
 });
 
+test("prior-visit resume event inference uses confirmed resume node", () => {
+  const event = {
+    id: "evt_resume_prior",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "workflow.resumedFromPriorVisit",
+    canal: "MB",
+    details: {
+      nextNodeId: "remove-smear-layer",
+      phaseLabel: "Remove smear layer",
+    },
+  };
+
+  assert.match(eventFragment(event), /resumed MB from prior visit history/);
+  assert.equal(inferCurrentNodeIdFromEvents({ globalEvents: [event] }), "remove-smear-layer");
+});
+
 test("compact and full notes include measurements and event fragments", () => {
   const event = {
     id: "evt_wl",
@@ -1037,6 +1067,34 @@ test("JSON export preserves canal status and radiograph statuses", () => {
   assert.equal(exported.events.length, 1);
 });
 
+test("notes and JSON export separate prior visit history from today's events", () => {
+  const caseData = baseCase({
+    priorVisit: {
+      continuedFromPriorVisit: true,
+      priorVisitDate: "last week",
+      accessPreviouslyOpened: true,
+      temporaryRestorationPresent: true,
+      medicationPresent: "yes",
+      priorRadiographsAvailable: true,
+      sourceNote: "Outside note reviewed; CaOH placed.",
+    },
+    canals: [{ ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized", priorVisitNote: "Temporized before app use", finalShape: "30/.04" }],
+    globalEvents: [{ id: "evt_marker", timestamp: "2026-01-01T00:00:00.000Z", type: "case.continuedFromPriorVisit", canal: "All" }],
+  });
+
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "remove-smear-layer");
+
+  assert.match(compact, /Prior visit history:/);
+  assert.match(compact, /Continued from prior visit \/ outside system/);
+  assert.match(full, /Prior visit history:/);
+  assert.match(full, /MB: Medicated \/ temporized; Temporized before app use/);
+  assert.equal(exported.priorVisit?.continuedFromPriorVisit, true);
+  assert.equal(exported.canals[0].priorVisitStatus, "medicatedTemporized");
+  assert.equal(exported.events.length, 1);
+});
+
 test("exported JSON can be imported without losing canals, events, or measurements", () => {
   const caseData = baseCase({
     canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "20" }],
@@ -1084,9 +1142,16 @@ test("normalized JSON import preserves exported case data", () => {
     caseStatus: "Resume next visit",
     difficulty: "high",
     nextVisitPlan: "Continue obturation",
+    priorVisit: {
+      continuedFromPriorVisit: true,
+      accessPreviouslyOpened: true,
+      temporaryRestorationPresent: true,
+      medicationPresent: "yes",
+      sourceNote: "Prior opening before app use.",
+    },
     currentCanal: "DB",
     canals: [
-      { ...blankCanal("MB"), estimatedWorkingLength: "20", wlRadiographStatus: "not taken", coneFitRadiograph: "acceptable" },
+      { ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized", priorVisitNote: "CaOH placed", estimatedWorkingLength: "20", wlRadiographStatus: "not taken", coneFitRadiograph: "acceptable" },
       { ...blankCanal("DB"), estimatedWorkingLength: "21", shapingLength: "20", wlRadiographStatus: "short", coneFitRadiograph: "not taken" },
     ],
     globalEvents: [
@@ -1102,10 +1167,14 @@ test("normalized JSON import preserves exported case data", () => {
   assert.equal(imported.canals[0].estimatedWorkingLength, "20");
   assert.equal(imported.canals[0].wlRadiographStatus, "not taken");
   assert.equal(imported.canals[0].coneFitRadiograph, "acceptable");
+  assert.equal(imported.canals[0].priorVisitStatus, "medicatedTemporized");
+  assert.equal(imported.canals[0].priorVisitNote, "CaOH placed");
   assert.equal(imported.canals[1].shapingLength, "20");
   assert.equal(imported.canals[1].events?.length, 1);
   assert.equal(imported.globalEvents.length, 2);
   assert.equal(imported.caseStatus, "Resume next visit");
   assert.equal(imported.difficulty, "high");
   assert.equal(imported.nextVisitPlan, "Continue obturation");
+  assert.equal(imported.priorVisit?.continuedFromPriorVisit, true);
+  assert.equal(imported.priorVisit?.sourceNote, "Prior opening before app use.");
 });

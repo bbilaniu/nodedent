@@ -21,6 +21,7 @@ import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
+import { getConservativeResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 
 type HistoryEntry = {
@@ -176,6 +177,76 @@ export default function EndoChairsideGuide() {
     setCaseData(fresh);
     setCurrentNodeId("preop");
     setHistory([]);
+    setValidationMessage(null);
+  }
+
+  function continueFromPriorVisit() {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const event = makeRuntimeEvent({
+      type: "case.continuedFromPriorVisit",
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: currentNode.id,
+      label: "Continue from prior visit",
+      activeCanal,
+    });
+
+    setCaseData((prev) => ({
+      ...prev,
+      caseStatus: prev.caseStatus || "Resume next visit",
+      priorVisit: {
+        ...(prev.priorVisit || {}),
+        continuedFromPriorVisit: true,
+      },
+      globalEvents: prev.globalEvents.some((item) => item.type === "case.continuedFromPriorVisit")
+        ? prev.globalEvents
+        : [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
+  }
+
+  function resumeActiveCanalFromPriorVisit() {
+    if (!activeCanal) return;
+    const nextNodeId = getPriorVisitResumeNodeForCanal(activeCanal) || getConservativeResumeNodeForCanal(activeCanal);
+    if (!protocolNodes[nextNodeId]) {
+      setValidationMessage({ optionLabel: "Resume active canal", missing: [`No resume node exists for ${nextNodeId}`] });
+      return;
+    }
+
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const event = makeRuntimeEvent({
+      type: "workflow.resumedFromPriorVisit",
+      tooth: caseData.tooth,
+      canal: activeCanal.name,
+      nodeId: currentNode.id,
+      label: `Resume ${activeCanal.name} from prior visit`,
+      activeCanal,
+    });
+    event.details = {
+      ...event.details,
+      nextNodeId,
+      nextNode: nextNodeId,
+      phaseLabel: protocolNodes[nextNodeId]?.title,
+      reason: `resumed ${activeCanal.name} from prior visit history`,
+    };
+
+    setCaseData((prev) => ({
+      ...prev,
+      currentCanal: activeCanal.name,
+      priorVisit: {
+        ...(prev.priorVisit || {}),
+        continuedFromPriorVisit: true,
+      },
+      canals: prev.canals.map((canal) =>
+        canal.name === activeCanal.name
+          ? { ...canal, events: [...(canal.events || []), event] }
+          : canal
+      ),
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCurrentNodeId(nextNodeId);
+    setCopied(false);
     setValidationMessage(null);
   }
 
@@ -618,6 +689,8 @@ export default function EndoChairsideGuide() {
             onResetAllSavedCases={resetAllSavedCases}
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
+            onContinueFromPriorVisit={continueFromPriorVisit}
+            onResumeActiveCanalFromPriorVisit={resumeActiveCanalFromPriorVisit}
           />
         ) : null}
 

@@ -1,6 +1,7 @@
 import type { CanalContinuationTarget, CanalRecord, EndoCase } from "../types";
 import { getCanalStatus, hasEvent } from "../engine/deriveCanalStatus";
 import { getCanalCheckpointNodeId } from "../engine/getCurrentNode";
+import { getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal, priorCanalStatusLabels } from "../engine/resume";
 import { handoffNodeIds, protocolNodes } from "./nodes";
 
 export function isPhaseAwareCanalHandoffNode(nodeId: string) {
@@ -10,6 +11,33 @@ export function isPhaseAwareCanalHandoffNode(nodeId: string) {
 export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): CanalContinuationTarget {
   const canalName = canal?.name || "Canal";
   const status = getCanalStatus(canal);
+  const priorResumeNodeId = getPriorVisitResumeNodeForCanal(canal);
+  const manualResumeNodeId = getManualResumeNodeForCanal(canal);
+
+  if (priorResumeNodeId) {
+    const priorStatus = canal?.priorVisitStatus || "";
+    const phaseLabel = protocolNodes[priorResumeNodeId]?.title.toLowerCase() || "prior-visit continuation";
+    return {
+      canalName,
+      status,
+      label: `Resume ${canalName} from prior visit (${priorCanalStatusLabels[priorStatus]})`,
+      phaseLabel,
+      nextNodeId: priorResumeNodeId,
+      reason: `resumed ${canalName} from prior visit history at ${phaseLabel}`,
+    };
+  }
+
+  if ((status === "paused" || status === "medicated") && manualResumeNodeId) {
+    const phaseLabel = protocolNodes[manualResumeNodeId]?.title.toLowerCase() || "resume pathway";
+    return {
+      canalName,
+      status,
+      label: status === "medicated" ? `Resume ${canalName} from medication / temporary closure` : `Resume ${canalName} from paused visit`,
+      phaseLabel,
+      nextNodeId: manualResumeNodeId,
+      reason: `resumed ${canalName} at ${phaseLabel}`,
+    };
+  }
 
   if (hasEvent(canal, "coneFit.readyForSealerConeSeating") || hasEvent(canal, "coneFit.radiographAcceptable")) {
     return {
@@ -68,13 +96,13 @@ export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): Cana
     medicated: {
       label: `Resume ${canalName} from medication/next-visit pathway`,
       phaseLabel: "medication / next visit",
-      nextNodeId: "endodontic-pathway-complete",
+      nextNodeId: "remove-smear-layer",
       reason: `resumed ${canalName} from medication/next-visit pathway`,
     },
     paused: {
       label: `Resume ${canalName} from paused pathway`,
       phaseLabel: "paused pathway",
-      nextNodeId: "endodontic-pathway-complete",
+      nextNodeId: "estimate-wl",
       reason: `resumed ${canalName} from paused pathway`,
     },
     complete: {
