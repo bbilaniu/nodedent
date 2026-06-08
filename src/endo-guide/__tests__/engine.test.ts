@@ -102,6 +102,26 @@ function coneFitReadyCase(overrides: Partial<EndoCase> = {}): EndoCase {
   });
 }
 
+function postShapingCase(overrides: Partial<EndoCase> = {}): EndoCase {
+  return baseCase({
+    canals: [
+      {
+        ...blankCanal("MB"),
+        estimatedWorkingLength: "20",
+        eal0: "20",
+        patencyLength: "21",
+        shapingLength: "19",
+        referencePoint: "MB cusp",
+        finalShape: "30/.04",
+        obturationGauge: "30",
+        masterCone: "30/.04",
+        coneFitRadiograph: "acceptable",
+      },
+    ],
+    ...overrides,
+  });
+}
+
 test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
   const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
   const forbiddenPatterns = [
@@ -356,6 +376,100 @@ test("post-shaping required fields guard EDTA gauging and cone fit decisions", (
   assert.ok(getMissingRequirements("record-obturation-gauge", protocolNodes["record-obturation-gauge"].options[0], blank, blank.canals[0]).includes("Obturation gauge size, e.g. 30"));
   assert.ok(getMissingRequirements("fit-master-cone", protocolNodes["fit-master-cone"].options[0], blank, blank.canals[0]).includes("Master cone, e.g. 30/.04"));
   assert.ok(getMissingRequirements("cone-fit-radiograph", protocolNodes["cone-fit-radiograph"].options[0], blank, blank.canals[0]).includes("Cone fit radiograph status"));
+});
+
+test("obturation gauge alternate branches route to expected protocol nodes", () => {
+  const caseData = postShapingCase();
+  const size30Beyond = applyOption(caseData, "gauge-obturation-30", 1);
+  const size30Short = applyOption(caseData, "gauge-obturation-30", 2);
+  const size25Stop = applyOption(caseData, "gauge-obturation-25", 0);
+  const size25Beyond = applyOption(caseData, "gauge-obturation-25", 1);
+  const size25Short = applyOption(caseData, "gauge-obturation-25", 2);
+  const largerStop = applyOption(caseData, "gauge-obturation-larger", 0);
+  const largerBeyond = applyOption(caseData, "gauge-obturation-larger", 1);
+
+  assert.equal(size30Beyond.nextNodeId, "gauge-obturation-larger");
+  assert.equal(size30Beyond.updatedCaseData.difficulty, "caution");
+  assert.equal(size30Short.nextNodeId, "gauge-obturation-25");
+  assert.equal(size30Short.updatedCaseData.difficulty, "caution");
+  assert.equal(size25Stop.nextNodeId, "record-obturation-gauge");
+  assert.equal(size25Beyond.nextNodeId, "gauge-obturation-larger");
+  assert.equal(size25Beyond.updatedCaseData.difficulty, "caution");
+  assert.equal(size25Short.nextNodeId, "patency-10c");
+  assert.equal(size25Short.updatedCaseData.difficulty, "high");
+  assert.equal(largerStop.nextNodeId, "record-obturation-gauge");
+  assert.equal(largerBeyond.nextNodeId, "gauge-obturation-larger");
+});
+
+test("obturation gauge alternate branches enforce required measurements", () => {
+  const blank = baseCase({ canals: [{ ...blankCanal("MB") }] });
+
+  assert.ok(getMissingRequirements("gauge-obturation-30", protocolNodes["gauge-obturation-30"].options[1], blank, blank.canals[0]).includes("Shaping length in mm"));
+  assert.ok(getMissingRequirements("gauge-obturation-25", protocolNodes["gauge-obturation-25"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
+  assert.ok(getMissingRequirements("gauge-obturation-larger", protocolNodes["gauge-obturation-larger"].options[0], blank, blank.canals[0]).includes("Obturation gauge size, e.g. 30"));
+});
+
+test("smear layer and final NaOCl deferred routes can medicate and temporize", () => {
+  let caseData = postShapingCase();
+  let result = applyOption(caseData, "remove-smear-layer", 1);
+  assert.equal(result.nextNodeId, "calcium-hydroxide");
+  assert.equal(result.generatedEvent?.type, "smearLayer.deferred");
+
+  result = applyFirstOption(result.updatedCaseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  assert.equal(result.generatedEvent?.type, "medication.calciumHydroxidePlaced");
+
+  result = applyFirstOption(result.updatedCaseData, "temporary-closure");
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(result.generatedEvent?.type, "closure.temporary");
+
+  caseData = postShapingCase();
+  result = applyOption(caseData, "agitate-edta", 1);
+  assert.equal(result.nextNodeId, "calcium-hydroxide");
+  assert.equal(result.generatedEvent?.type, "smearLayer.agitationDeferred");
+
+  caseData = postShapingCase();
+  result = applyOption(caseData, "final-naocl", 1);
+  assert.equal(result.nextNodeId, "persistent-wet");
+  assert.equal(result.generatedEvent?.type, "disinfection.cannotCompleteToday");
+  assert.equal(result.updatedCaseData.difficulty, "high");
+
+  result = applyOption(result.updatedCaseData, "persistent-wet", 1);
+  assert.equal(result.nextNodeId, "calcium-hydroxide");
+  assert.equal(result.generatedEvent?.type, "drying.persistentWetConfirmed");
+});
+
+test("realistic PR2 note output includes EDTA NaOCl gauge master cone and cone fit PA", () => {
+  let caseData = postShapingCase();
+
+  const path = [
+    "remove-smear-layer",
+    "agitate-edta",
+    "final-naocl",
+    "ready-for-obturation",
+    "gauge-obturation-30",
+    "record-obturation-gauge",
+    "fit-master-cone",
+    "cone-fit-radiograph",
+  ];
+
+  path.forEach((nodeId) => {
+    caseData = applyFirstOption(caseData, nodeId).updatedCaseData;
+  });
+
+  const compactNote = buildCompactNote(caseData);
+  const fullNote = buildFullNote(caseData);
+
+  assert.match(compactNote, /17% EDTA smear layer removal performed/);
+  assert.match(compactNote, /Final NaOCl disinfection completed/);
+  assert.match(compactNote, /gauge 30/);
+  assert.match(compactNote, /MC 30\/.04/);
+  assert.match(compactNote, /Master cone fit confirmed radiographically/);
+  assert.match(fullNote, /17% EDTA placed/);
+  assert.match(fullNote, /Final NaOCl disinfection completed/);
+  assert.match(fullNote, /Obturation gauge recorded as 30/);
+  assert.match(fullNote, /Master cone selected as 30\/.04/);
+  assert.match(fullNote, /Cone fit radiograph acceptable/);
 });
 
 test("sealer cone seating handoff enforces required inputs", () => {

@@ -53,6 +53,9 @@ Implemented and verified:
 - ready-for-sealer-cone-seating validates cone fit PA status, master cone, and shaping length.
 - Cone short/long troubleshooting loops are verified at the protocol-routing level.
 - Cone-fit-ready canals resume at ready-for-sealer-cone-seating.
+- Obturation gauge alternate branches are verified for size 30 beyond, size 30 short, size 25 stop, size 25 beyond, size 25 short, larger-gauge stop, and larger-gauge loop.
+- Smear-layer and final NaOCl deferred routes are verified through medication/temporary closure pathways.
+- Realistic PR 2 note output is verified for EDTA, NaOCl, obturation gauge, master cone, and cone-fit PA.
 - Sealer and cone seating workflow is verified from ready-for-sealer-cone-seating through drying, patency confirmation, sealer placement, paper point through sealer, sealer re-application, and GP cone seating.
 - Sealer troubleshooting routes are verified for wet canal, persistent wet canal, unsafe NaviTip placement, paper point short, sealer re-application unsafe, and GP cone short/long after sealer.
 - Persistent wet canal can route to calcium hydroxide and temporary closure.
@@ -64,7 +67,6 @@ Implemented and verified:
 Known remaining gaps before later roadmap PRs:
 
 ```text
-- PR 2 still needs deeper branch tests for obturation gauge alternates and deferred wet/medication routes.
 - Closure, multi-visit resume, clinical fixture scenarios, note ergonomics, and usability polish remain future work.
 ```
 
@@ -72,8 +74,8 @@ Known remaining gaps before later roadmap PRs:
 
 ```text
 1. COMPLETE - Verify current refactor baseline
-2. MOSTLY COMPLETE - Harden disinfection, obturation gauging, and cone-fit happy path
-3. NEXT - Finish PR 2 alternate-branch verification
+2. COMPLETE - Harden disinfection, obturation gauging, and cone-fit workflow
+3. COMPLETE - Finish PR 2 alternate-branch verification
 4. COMPLETE - Harden sealer and cone seating workflow
 5. COMPLETE - Harden downpack, backfill, and canal obturation completion
 6. Harden closure, post-op, and case-completion workflow
@@ -117,7 +119,7 @@ Status:
 Complete. Baseline verification exists in 28f5cff and later protocol hardening commits.
 ```
 
-## PR 2 - Harden Disinfection, Obturation Gauging, And Cone Fit - MOSTLY COMPLETE
+## PR 2 - Harden Disinfection, Obturation Gauging, And Cone Fit - COMPLETE
 
 ```git
 feat(endo-guide): harden disinfection and cone-fit workflow
@@ -157,14 +159,13 @@ Completed:
 - Note fragments cover all protocol noteEvent types, including disinfection, gauge, master cone, and cone-fit outcomes.
 - Cone-fit-ready canal continuation maps to ready-for-sealer-cone-seating.
 - Protocol graph integrity and note-fragment coverage tests are in place.
+- PR 2B adds alternate obturation-gauge branch coverage, deferred-route coverage, and realistic compact/full note assertions.
 ```
 
 Remaining PR 2 gaps:
 
 ```text
-- Add deeper workflow tests for size 30 advances beyond, size 30 short, size 25 reaches, size 25 advances beyond, size 25 short, and larger-gauge loop.
-- Add deferred wet / cannot-complete-today tests for final NaOCl and smear-layer paths routing through medication/temporary closure.
-- Confirm compact and full notes include the key PR 2 facts in realistic cases, not only fragment-level coverage.
+- None currently known from the PR 2 scope.
 ```
 
 Acceptance criteria:
@@ -177,7 +178,7 @@ Acceptance criteria:
 - Tests cover the happy path and short/long troubleshooting loops.
 ```
 
-## PR 2B - Finish Obturation Gauging And Deferred-Route Verification
+## PR 2B - Finish Obturation Gauging And Deferred-Route Verification - COMPLETE
 
 ```git
 test(endo-guide): verify obturation gauge alternate branches
@@ -193,6 +194,22 @@ Scope:
 - Exercise size 25 short returning to patency/shaping.
 - Exercise final NaOCl cannot-complete-today and smear-layer deferral to medication/temporary closure.
 - Verify compact/full notes for a realistic PR 2 case include EDTA, NaOCl, gauge, master cone, and cone-fit PA.
+```
+
+Completed:
+
+```text
+- Size 30 advances beyond routes to gauge-obturation-larger and applies caution difficulty.
+- Size 30 short routes to gauge-obturation-25 and applies caution difficulty.
+- Size 25 stop routes to record-obturation-gauge.
+- Size 25 advances beyond routes to gauge-obturation-larger and applies caution difficulty.
+- Size 25 short routes to patency-10c and applies high difficulty.
+- Larger gauge stop routes to record-obturation-gauge.
+- Larger gauge continues beyond loops to gauge-obturation-larger.
+- Alternate gauge branches enforce shaping length or obturation gauge where required.
+- Smear-layer deferral and EDTA agitation deferral route to calcium hydroxide and temporary closure.
+- Final NaOCl cannot-complete-today routes to persistent-wet, then calcium hydroxide.
+- Compact/full notes for a realistic PR 2 case include EDTA, NaOCl, gauge, master cone, and cone-fit PA.
 ```
 
 Acceptance criteria:
