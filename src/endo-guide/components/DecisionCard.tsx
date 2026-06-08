@@ -48,9 +48,11 @@ export function DecisionCard({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
+  const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
+  const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
-    <section className="order-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm xl:col-start-1 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none">
+    <section className="order-2 min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-slate-900">Decision card</h3>
         <button onClick={onUndo} disabled={!historyLength} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Undo last decision</button>
@@ -94,7 +96,7 @@ export function DecisionCard({
         </div>
       ) : null}
       {(currentNode.instruments?.length || currentNode.materials?.length || currentNode.requiredInputs?.length) && (
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className={`mt-4 grid gap-3 ${supportGridClass}`}>
           {currentNode.instruments?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Instruments</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.instruments)}</p></div> : null}
           {currentNode.materials?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Materials</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.materials)}</p></div> : null}
           {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Record before continuing</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.requiredInputs)}</p></div> : null}

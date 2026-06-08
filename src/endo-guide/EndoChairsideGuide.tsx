@@ -651,8 +651,8 @@ export default function EndoChairsideGuide() {
           }}
         />
 
-        <main className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
-          <aside className="contents 2xl:block 2xl:min-w-0 2xl:space-y-4">
+        <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
+          <aside className="contents">
             <CanalSelector
               caseData={caseData}
               newCanalName={newCanalName}
@@ -665,11 +665,11 @@ export default function EndoChairsideGuide() {
               onDeleteActiveCanal={deleteActiveCanal}
               onManualEvent={addManualCanalEvent}
               onResetManualStatus={resetActiveCanalManualStatus}
-              className="order-1 xl:col-start-1 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
+              className="order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1"
             />
           </aside>
 
-          <section className="contents 2xl:block 2xl:min-w-0 2xl:space-y-4">
+          <section className="contents">
             <DecisionCard
               currentNode={currentNode}
               caseData={caseData}
@@ -698,7 +698,7 @@ export default function EndoChairsideGuide() {
             onApplyEalDerivedLengths={applyEalDerivedLengths}
           />
 
-          <aside className="order-6 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:block xl:space-y-4 2xl:col-auto 2xl:row-auto 2xl:order-none">
+          <aside className="order-4 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-3 xl:col-start-1 xl:row-start-2 2xl:col-span-1 2xl:col-start-4 2xl:row-start-1 2xl:block 2xl:space-y-4">
             <NotePreview
               noteMode={noteMode}
               displayedNote={displayedNote}

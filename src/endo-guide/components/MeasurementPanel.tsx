@@ -24,7 +24,7 @@ export function MeasurementPanel({
 
   if (currentNodeId === "preop") {
     return (
-      <aside className={`order-4 min-w-0 space-y-4 xl:col-start-2 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none ${className}`}>
+      <aside className={`order-3 min-w-0 space-y-4 lg:col-start-1 lg:row-start-2 xl:col-start-3 xl:row-start-1 ${className}`}>
         <SectionCard title="Measurements">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
             Enter tooth, pre-op radiographs, chamber depth, and estimated WL in the case setup section before beginning access.
@@ -35,7 +35,7 @@ export function MeasurementPanel({
   }
 
   return (
-    <aside className={`order-4 min-w-0 space-y-4 xl:col-start-2 xl:row-start-2 2xl:col-auto 2xl:row-auto 2xl:order-none ${className}`}>
+    <aside className={`order-3 min-w-0 space-y-4 lg:col-start-1 lg:row-start-2 xl:col-start-3 xl:row-start-1 ${className}`}>
       <SectionCard title="Measurements">
         <div className="grid gap-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
