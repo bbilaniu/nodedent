@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import type { EndoCase, PriorCanalStatus } from "../types";
+import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { blankCanal, caseStatusOptions, makeDefaultNewCanalName } from "../state/persistence";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
+import { protocolNodes } from "../protocol/nodes";
 import { SelectInput, TextInput } from "./FormControls";
 
 type SavedCaseSummary = {
@@ -18,6 +20,7 @@ type SavedCaseSummary = {
 
 export function CaseManagementModal({
   caseData,
+  currentNodeId,
   savedCases,
   importText,
   showImportBox,
@@ -25,7 +28,6 @@ export function CaseManagementModal({
   onUpdateCase,
   onUpdateDiagnosis,
   onApplySuggestedCaseStatus,
-  onStartNewCase,
   onDownloadCaseJson,
   onToggleImportBox,
   onImportTextChange,
@@ -39,6 +41,7 @@ export function CaseManagementModal({
   canResumeActiveCanalFromPriorVisit,
 }: {
   caseData: EndoCase;
+  currentNodeId: string;
   savedCases: SavedCaseSummary[];
   importText: string;
   showImportBox: boolean;
@@ -46,7 +49,6 @@ export function CaseManagementModal({
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
-  onStartNewCase: () => void;
   onDownloadCaseJson: () => void;
   onToggleImportBox: () => void;
   onImportTextChange: (value: string) => void;
@@ -74,6 +76,10 @@ export function CaseManagementModal({
     caseData.priorVisit?.medicationPresent ? `medication ${caseData.priorVisit.medicationPresent}` : null,
     priorCanalCount ? `${priorCanalCount} canal(s) staged` : null,
   ].filter(Boolean);
+  const closureLabel = caseData.closure?.type
+    ? caseData.closure.type.replace("closure.", "").replace(/([A-Z])/g, " $1").toLowerCase()
+    : "not recorded";
+  const currentNodeTitle = protocolNodes[currentNodeId]?.title || currentNodeId || "Not recorded";
 
   function addPriorCanal() {
     const typedName = newPriorCanalName.trim();
@@ -119,16 +125,48 @@ export function CaseManagementModal({
       <section className="mt-6 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Case management</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">Patient / visit / saved cases</h2>
-            <p className="mt-1 text-sm text-slate-600">Edit case identity, diagnosis, visit status, next-visit plan, and saved-case JSON actions.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Case panel</p>
+            <h2 className="mt-1 text-2xl font-bold text-slate-950">Current case</h2>
+            <p className="mt-1 text-sm text-slate-600">Review case state, edit visit context, manage prior-visit setup, and access the case library.</p>
           </div>
           <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
             Close
           </button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Case audit</h3>
+              <p className="mt-1 text-sm text-slate-600">
+                Visit: <strong>{getCaseStatus(caseData)}</strong> · Current step: <strong>{currentNodeTitle}</strong> · Closure: <strong>{closureLabel}</strong>
+              </p>
+              {caseData.nextVisitPlan ? <p className="mt-1 text-sm text-slate-600">Next visit: <strong>{caseData.nextVisitPlan}</strong></p> : null}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[24rem]">
+              {(caseData.canals || []).map((canal) => {
+                const status = getCanalStatus(canal);
+                const facts = [
+                  canal.estimatedWorkingLength ? `est WL ${canal.estimatedWorkingLength} mm` : null,
+                  canal.eal0 ? `EAL0 ${canal.eal0} mm` : null,
+                  canal.finalShape ? `shape ${canal.finalShape}` : null,
+                  canal.priorVisitStatus ? `prior ${priorCanalStatusLabels[canal.priorVisitStatus]}` : null,
+                ].filter(Boolean);
+                return (
+                  <div key={canal.name} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <strong className="text-sm text-slate-900">{canal.name}</strong>
+                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[status]}`}>{statusLabels[status]}</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{facts.length ? facts.join(" · ") : "No measurements yet"}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <h3 className="mb-3 text-sm font-semibold text-slate-900">Patient / visit</h3>
             <div className="grid gap-3">
@@ -174,9 +212,8 @@ export function CaseManagementModal({
         </div>
 
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-slate-900">Saved cases / JSON</h3>
+          <h3 className="mb-3 text-sm font-semibold text-slate-900">Case library / JSON</h3>
           <div className="grid gap-3 md:grid-cols-2">
-            <button onClick={onStartNewCase} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">New case</button>
             <button onClick={onDownloadCaseJson} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100">Download case JSON</button>
             <button onClick={onToggleImportBox} className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50">Import case JSON</button>
             <div className="flex gap-2">

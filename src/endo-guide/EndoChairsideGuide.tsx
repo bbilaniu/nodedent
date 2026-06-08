@@ -83,6 +83,7 @@ export default function EndoChairsideGuide() {
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>(getSavedCaseIndex);
@@ -188,6 +189,9 @@ export default function EndoChairsideGuide() {
     setCurrentNodeId("preop");
     setHistory([]);
     setValidationMessage(null);
+    setCopied(false);
+    setIsNewCaseConfirmOpen(false);
+    setIsCasePanelOpen(false);
   }
 
   function continueFromPriorVisit() {
@@ -604,7 +608,14 @@ export default function EndoChairsideGuide() {
                 onClick={() => setIsCasePanelOpen(true)}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-slate-800"
               >
-                Case management
+                Case panel
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNewCaseConfirmOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold leading-none text-slate-800 transition hover:bg-slate-100"
+              >
+                New case
               </button>
             </div>
           </div>
@@ -678,6 +689,7 @@ export default function EndoChairsideGuide() {
         {isCasePanelOpen ? (
           <CaseManagementModal
             caseData={caseData}
+            currentNodeId={currentNodeId}
             savedCases={savedCases}
             importText={importText}
             showImportBox={showImportBox}
@@ -685,7 +697,6 @@ export default function EndoChairsideGuide() {
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
-            onStartNewCase={startNewCase}
             onDownloadCaseJson={downloadCaseJson}
             onToggleImportBox={() => setShowImportBox((value) => !value)}
             onImportTextChange={setImportText}
@@ -698,6 +709,32 @@ export default function EndoChairsideGuide() {
             onResumeActiveCanalFromPriorVisit={resumeActiveCanalFromPriorVisit}
             canResumeActiveCanalFromPriorVisit={canResumeActiveCanalFromPriorVisit}
           />
+        ) : null}
+
+        {isNewCaseConfirmOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
+            <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">New case</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950">Start a blank case?</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCaseConfirmOpen(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={startNewCase}
+                  className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Start new case
+                </button>
+              </div>
+            </section>
+          </div>
         ) : null}
 
         {isProgressDetailOpen ? (
