@@ -1,6 +1,16 @@
 import type { CanalRecord, DecisionOption, EndoCase } from "../types";
+import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
 import { isBlank, isPositiveMeasurement, isValidFinalShape } from "./measurements";
+
+const closureReadyStatuses = new Set(["complete", "paused", "medicated", "referred"]);
+
+export function getCanalsBlockingClosure(caseData: EndoCase) {
+  return (caseData.canals || [])
+    .map((canal) => ({ canal, status: getCanalStatus(canal) }))
+    .filter(({ status }) => !closureReadyStatuses.has(status))
+    .map(({ canal, status }) => `${canal.name || "Unnamed canal"} (${statusLabels[status]})`);
+}
 
 export function getDryingCompatibility(option: DecisionOption | null | undefined, activeCanal?: CanalRecord | null) {
   const label = option?.label || "";
@@ -139,6 +149,10 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   if (nodeId === "seat-gp-cone") {
     if (isBlank(activeCanal?.masterCone)) addMissing("Master cone");
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
+  }
+  if (nodeId === "canal-obturation-complete" && option?.noteEvent?.type === "workflow.allCanalsReadyForClosure") {
+    const blockingCanals = getCanalsBlockingClosure(caseData);
+    if (blockingCanals.length) addMissing(`Canals not ready for final closure: ${blockingCanals.join(", ")}`);
   }
   return missing;
 }

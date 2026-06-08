@@ -37,6 +37,7 @@ Completed commits that should be treated as baseline:
 66e9d31 fix(endo-guide): validate sealer handoff requirements
 534f777 test(endo-guide): require fragments for protocol events
 1dec453 ready-for-sealer-cone-seating through drying, patency, sealer placement, paper point, sealer re-application, and GP cone seating.
+a4cefb5 feat(endo-guide): add phase-aware canal handoffs
 ```
 
 Implemented and verified:
@@ -62,12 +63,16 @@ Implemented and verified:
 - Downpack/backfill workflow is verified through no-gap searing/vertical compaction and modified downpack/backfill/compact-backfill paths.
 - Downpack/backfill branch connectivity is verified for no-gap, round/ovoid gap, modified downpack, accessory cones, vertical compaction, reapply-sealer-on-GP, backfill, and compact-backfill.
 - Canal status now waits for final obturation completion outcomes; backfill.completed alone no longer marks the canal complete.
+- Phase-aware canal handoff menus are implemented at earlier endodontic handoff nodes and preserve the late obturation/sealer handoffs.
+- Canal switch events include previous/next canal, previous/next node, and phase labels while preserving legacy switch-event detail fields.
+- Closure guard blocks final chamber cleanup when another canal is still active/incomplete.
+- Closure, temporary closure, medicated/temporized, referred, and completed RCT states are covered by tests.
 ```
 
 Known remaining gaps before later roadmap PRs:
 
 ```text
-- Closure, multi-visit resume, clinical fixture scenarios, note ergonomics, and usability polish remain future work.
+- Multi-visit resume, clinical fixture scenarios, note ergonomics, and usability polish remain future work.
 ```
 
 ## Recommended PR Sequence
@@ -78,12 +83,13 @@ Known remaining gaps before later roadmap PRs:
 3. COMPLETE - Finish PR 2 alternate-branch verification
 4. COMPLETE - Harden sealer and cone seating workflow
 5. COMPLETE - Harden downpack, backfill, and canal obturation completion
-6. Harden closure, post-op, and case-completion workflow
-7. Add multi-visit pause/resume workflow
-8. Add clinical scenario regression fixtures
-9. Improve note templates and export ergonomics
-10. Polish chairside usability
-11. Only then consider framework generalization
+6. COMPLETE - Add phase-aware multi-canal handoff menus
+7. COMPLETE - Harden closure, post-op, and case-completion workflow
+8. Add multi-visit pause/resume workflow
+9. Add clinical scenario regression fixtures
+10. Improve note templates and export ergonomics
+11. Polish chairside usability
+12. Only then consider framework generalization
 ```
 
 ## PR 1 - Verify Current Refactor Baseline - COMPLETE
@@ -335,7 +341,33 @@ Acceptance criteria:
 - Tests cover dry canal, persistent wet canal, cone seating failure, downpack, and backfill branches.
 ```
 
-## PR 4 - Harden Closure, Post-Op, And Completion
+## Phase-Aware Multi-Canal Handoffs - COMPLETE
+
+```git
+feat(endo-guide): add phase-aware canal handoffs
+```
+
+Completed:
+
+```text
+- Added phase-aware canal targets at earlier handoff nodes.
+- Preserved existing late obturation and sealer/cone seating handoff behavior.
+- Added canal-specific, phase-specific target labels.
+- Added canonical workflow.switchedCanal details for previous/next canal, previous/next node, and phase label.
+- Kept legacy switch-event detail fields for compatibility.
+- Added tests for early handoff targets, late handoff preservation, switch-event notes, and resume inference.
+```
+
+Acceptance criteria:
+
+```text
+- A clinician can switch existing canals at phase handoffs without creating a new canal.
+- Existing Add new canal behavior remains separate.
+- Switching canals preserves measurements and events.
+- Full note/event narrative includes the canal switch.
+```
+
+## PR 4 - Harden Closure, Post-Op, And Completion - COMPLETE
 
 ```git
 feat(endo-guide): harden closure and completion workflow
@@ -354,6 +386,19 @@ Scope:
 - Add post-op instruction capture where useful.
 - Ensure closure updates case status and note output.
 - Ensure closure does not erase canal-specific events.
+```
+
+Completed:
+
+```text
+- Added getCanalsBlockingClosure() and canal-obturation-complete validation.
+- Final chamber cleanup is blocked when another canal is not started, estimated, scouted, WL-established, glide-path, shaped, or disinfected.
+- Closure is allowed when other canals are complete, paused, medicated, or referred.
+- Completed RCT closure is verified through cleanup, rinse, and final restoration.
+- Temporary closure after completed obturation remains RCT completed.
+- Medicated temporary closure remains Medicated and temporized instead of being mislabeled complete.
+- Referred cases remain Referred in notes and JSON export.
+- JSON export preserves closure type and derived case status.
 ```
 
 Acceptance criteria:

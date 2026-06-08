@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { EndoCase } from "../types";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
-import { getMissingRequirements } from "../engine/validateDecision";
+import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
 import { buildJsonExport } from "../notes/buildJsonExport";
@@ -675,6 +675,129 @@ test("excess GP after backfill is also treated as canal obturation complete", ()
   const caseData = coneFitReadyCase({ canals: [{ ...coneFitReadyCase().canals[0], events: [event] }], globalEvents: [event] });
 
   assert.equal(getCanalStatus(caseData.canals[0]), "complete");
+});
+
+test("closure guard blocks final chamber cleanup when another canal is still active", () => {
+  const option = protocolNodes["canal-obturation-complete"].options[0];
+  const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.compactedStable", canal: "MB" };
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [completeEvent] },
+      { ...blankCanal("ML"), finalShape: "30/.04" },
+      { ...blankCanal("DB"), estimatedWorkingLength: "19" },
+    ],
+    globalEvents: [completeEvent],
+  });
+
+  assert.deepEqual(getCanalsBlockingClosure(caseData), ["ML (Shaped)", "DB (Estimated)"]);
+  const missing = getMissingRequirements("canal-obturation-complete", option, caseData, caseData.canals[0]);
+  assert.deepEqual(missing, ["Canals not ready for final closure: ML (Shaped), DB (Estimated)"]);
+
+  const result = applyDecision({
+    currentNodeId: "canal-obturation-complete",
+    selectedOptionLabel: option.label,
+    caseData,
+    activeCanalName: "MB",
+  });
+  assert.equal(result.nextNodeId, "canal-obturation-complete");
+  assert.deepEqual(result.errors, ["Canals not ready for final closure: ML (Shaped), DB (Estimated)"]);
+});
+
+test("closure guard allows complete paused medicated and referred canals", () => {
+  const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.compactedStable", canal: "MB" };
+  const pausedEvent = { id: "evt_paused", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.paused", canal: "ML" };
+  const medicatedEvent = { id: "evt_med", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "DB" };
+  const referredEvent = { id: "evt_ref", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.referred", canal: "DL" };
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [completeEvent] },
+      { ...blankCanal("ML"), events: [pausedEvent] },
+      { ...blankCanal("DB"), events: [medicatedEvent] },
+      { ...blankCanal("DL"), events: [referredEvent] },
+    ],
+    globalEvents: [completeEvent, pausedEvent, medicatedEvent, referredEvent],
+  });
+
+  assert.deepEqual(getCanalsBlockingClosure(caseData), []);
+  assert.deepEqual(getMissingRequirements("canal-obturation-complete", protocolNodes["canal-obturation-complete"].options[0], caseData, caseData.canals[0]), []);
+});
+
+test("completed RCT closure records cleanup rinse final restoration and export status", () => {
+  let caseData = coneFitReadyCase();
+  const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.compactedStable", canal: "MB" };
+  caseData = {
+    ...caseData,
+    canals: [{ ...caseData.canals[0], events: [...(caseData.canals[0].events || []), completeEvent] }],
+    globalEvents: [...caseData.globalEvents, completeEvent],
+  };
+
+  let result = applyFirstOption(caseData, "canal-obturation-complete");
+  assert.equal(result.nextNodeId, "cleanup-chamber");
+  assert.equal(result.generatedEvent?.type, "workflow.allCanalsReadyForClosure");
+
+  result = applyFirstOption(result.updatedCaseData, "cleanup-chamber");
+  assert.equal(result.nextNodeId, "rinse-chamber");
+  assert.equal(result.generatedEvent?.type, "closure.chamberGpRemoved");
+
+  result = applyFirstOption(result.updatedCaseData, "rinse-chamber");
+  assert.equal(result.nextNodeId, "close-access");
+  assert.equal(result.generatedEvent?.type, "closure.chamberRinsed");
+
+  result = applyOption(result.updatedCaseData, "close-access", 2);
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(result.generatedEvent?.type, "closure.finalRestoration");
+  assert.equal(result.updatedCaseData.closure?.type, "closure.finalRestoration");
+  assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).caseStatus, "RCT completed");
+  assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).closure?.type, "closure.finalRestoration");
+  assert.match(buildCompactNote(result.updatedCaseData), /Visit status: RCT completed/);
+  assert.match(buildCompactNote(result.updatedCaseData), /Final restoration placed/);
+  assert.match(buildFullNote(result.updatedCaseData), /Pulp chamber rinsed until residual sealer was removed/);
+});
+
+test("temporary closure after completed obturation is still a completed RCT", () => {
+  const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "downpack.gpStableAfterCompaction", canal: "MB" };
+  const temporaryEvent = { id: "evt_temp", timestamp: "2026-01-01T00:00:00.000Z", type: "closure.temporary", canal: "MB" };
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), events: [completeEvent, temporaryEvent] }],
+    globalEvents: [completeEvent, temporaryEvent],
+    closure: { type: "closure.temporary" },
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "complete");
+  assert.equal(buildJsonExport(caseData, "endodontic-pathway-complete").caseStatus, "RCT completed");
+  assert.match(buildCompactNote(caseData), /Access closed with sponge and temporary restorative material/);
+});
+
+test("medicated temporary closure remains medicated and temporized", () => {
+  const medicationEvent = { id: "evt_med", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
+  const temporaryEvent = { id: "evt_temp", timestamp: "2026-01-01T00:00:00.000Z", type: "closure.temporary", canal: "MB" };
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), events: [medicationEvent, temporaryEvent] }],
+    globalEvents: [medicationEvent, temporaryEvent],
+    closure: { type: "closure.temporary" },
+    nextVisitPlan: "Continue RCT after medication",
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "medicated");
+  assert.equal(buildJsonExport(caseData, "endodontic-pathway-complete").caseStatus, "Medicated and temporized");
+  assert.match(buildCompactNote(caseData), /Visit status: Medicated and temporized/);
+  assert.match(buildFullNote(caseData), /Next visit \/ plan: Continue RCT after medication/);
+});
+
+test("referred closure state remains referred in notes and export", () => {
+  const referralEvent = { id: "evt_ref", timestamp: "2026-01-01T00:00:00.000Z", type: "treatment.referralRecommended", canal: "MB" };
+  const caseData = baseCase({
+    difficulty: "refer",
+    canals: [{ ...blankCanal("MB"), events: [referralEvent] }],
+    globalEvents: [referralEvent],
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "referred");
+  assert.equal(buildJsonExport(caseData, "endodontic-pathway-complete").caseStatus, "Referred");
+  assert.match(buildCompactNote(caseData), /Visit status: Referred/);
+  assert.match(buildFullNote(caseData), /Referral or specialist continuation recommended/);
 });
 
 test("cone fit troubleshooting branches follow protocol loops", () => {

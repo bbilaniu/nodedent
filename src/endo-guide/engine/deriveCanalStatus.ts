@@ -40,7 +40,6 @@ export function isManualCanalStatusEvent(type: string) {
 export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (!canal) return "notStarted";
   if (hasEvent(canal, "canal.referred") || hasEvent(canal, "treatment.referralRecommended")) return "referred";
-  if (hasEvent(canal, "closure.finalRestoration") || hasEvent(canal, "closure.orificeBarrierTemporary") || hasEvent(canal, "closure.temporary")) return "complete";
   if (
     hasEvent(canal, "backfill.compactedStable") ||
     hasEvent(canal, "backfill.excessInChamber") ||
@@ -52,6 +51,7 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (hasEvent(canal, "disinfection.readyForObturation") || hasEvent(canal, "disinfection.finalNaOClCompleted")) return "disinfected";
   if (hasEvent(canal, "canal.paused")) return "paused";
   if (hasEvent(canal, "canal.medicated") || hasEvent(canal, "medication.calciumHydroxidePlaced")) return "medicated";
+  if (hasEvent(canal, "closure.finalRestoration") || hasEvent(canal, "closure.orificeBarrierTemporary") || hasEvent(canal, "closure.temporary")) return "complete";
   if (hasEvent(canal, "shaping.completed") || !isBlank(canal.finalShape)) return "shaped";
   if (hasEvent(canal, "glidePath.created")) return "glidePath";
   if (hasEvent(canal, "workingLength.established") || !isBlank(canal.eal0)) return "wlEstablished";
