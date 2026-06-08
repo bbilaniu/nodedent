@@ -416,9 +416,9 @@ export const protocolNodes: Record<string, ProtocolNode> = {
   "fit-master-cone": {
     id: "fit-master-cone",
     phase: "Cone fit",
-    title: "Fit .04 tapered master cone",
-    chairsideInstruction: "Choose a .04 tapered GP cone matching the recorded obturation gauge size. Measure to shaping length and place to shaping length.",
-    instruments: [".04 tapered GP cone"],
+    title: "Fit tapered master cone",
+    chairsideInstruction: "Choose a tapered GP cone matching the recorded obturation gauge size. Measure to shaping length and place to shaping length.",
+    instruments: ["tapered GP cone"],
     requiredInputs: ["Master cone", "Shaping length"],
     options: [
       { label: "Master cone fits to shaping length", nextNodeId: "cone-fit-radiograph", noteEvent: { type: "coneFit.masterConeFits" } },
