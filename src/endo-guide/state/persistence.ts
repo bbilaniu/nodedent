@@ -84,3 +84,33 @@ export function hydrateCanalEventsFromGlobalEvents(canal: CanalRecord, globalEve
 
   return [...explicitEvents, ...restoredEvents];
 }
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Date().toISOString()): EndoCase {
+  const data = asRecord(parsed);
+  const globalEvents = Array.isArray(data.events)
+    ? data.events as ClinicalEvent[]
+    : Array.isArray(data.globalEvents)
+      ? data.globalEvents as ClinicalEvent[]
+      : [];
+  const parsedCanals = Array.isArray(data.canals) ? data.canals : [];
+  const importedCanals = parsedCanals.length
+    ? parsedCanals.map((canal) => {
+        const canalRecord = asRecord(canal);
+        const normalizedCanal = { ...blankCanal(String(canalRecord.name || "Canal")), ...canalRecord } as CanalRecord;
+        return { ...normalizedCanal, events: hydrateCanalEventsFromGlobalEvents(normalizedCanal, globalEvents) };
+      })
+    : initialCase.canals;
+
+  return {
+    ...initialCase,
+    ...data,
+    canals: importedCanals,
+    currentCanal: typeof data.currentCanal === "string" && data.currentCanal ? data.currentCanal : importedCanals[0]?.name || initialCase.currentCanal,
+    globalEvents,
+    autosavedAt,
+  } as EndoCase;
+}

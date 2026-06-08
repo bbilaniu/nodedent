@@ -2,6 +2,7 @@ export type DifficultyFlag = "none" | "caution" | "high" | "refer";
 
 export type CanalStatus =
   | "notStarted"
+  | "estimated"
   | "scouted"
   | "wlEstablished"
   | "glidePath"
@@ -121,6 +122,7 @@ export type CanalContinuationTarget = {
   canalName: string;
   status: CanalStatus;
   label: string;
+  phaseLabel?: string;
   nextNodeId: string | null;
   disabled?: boolean;
   reason: string;

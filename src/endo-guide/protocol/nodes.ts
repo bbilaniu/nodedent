@@ -268,22 +268,22 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     id: "gauge-final-shape",
     phase: "Shaping",
     title: "Gauge for final shape",
-    chairsideInstruction: "Set 25 NiTi hand file to shaping length. Advance and assess resistance. If it reaches length with no resistance, sequentially gauge larger NiTi hand files before selecting the final .04 rotary shape. If it reaches within 0 to 2 mm with resistance, proceed to final .04 shaping.",
+    chairsideInstruction: "Set 25 NiTi hand file to shaping length. Advance and assess resistance. If it reaches length with no resistance, sequentially gauge larger NiTi hand files before selecting the final shaping file/system. If it reaches within 0 to 2 mm with resistance, proceed to final shaping.",
     instruments: ["25 NiTi hand file", "Sequentially larger NiTi hand files"],
     requiredInputs: ["Shaping length"],
     options: [
       { label: "25 NiTi reaches shaping length with no resistance", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.gaugeNoResistance" } },
-      { label: "NiTi reaches within 0 to 2 mm with resistance", nextNodeId: "create-final-shape", difficultyFlag: "caution", noteEvent: { type: "shaping.gaugeResistanceNearLength" } },
-      { label: "NiTi more than 2 mm short", nextNodeId: "patency-10c", difficultyFlag: "high", noteEvent: { type: "shaping.gaugeMoreThan2mmShort" } },
+      { label: "25 NiTi reaches within 0 to 2 mm with resistance", nextNodeId: "create-final-shape", difficultyFlag: "caution", noteEvent: { type: "shaping.gaugeResistanceNearLength" } },
+      { label: "25 NiTi more than 2 mm short", nextNodeId: "patency-10c", difficultyFlag: "high", noteEvent: { type: "shaping.gaugeMoreThan2mmShort" } },
     ],
   },
   "increase-shaping-gauge": {
     id: "increase-shaping-gauge",
     phase: "Shaping",
     title: "Increase NiTi hand-file gauge",
-    chairsideInstruction: "Use the next size NiTi hand file at shaping length. Continue increasing one ISO size at a time until the next larger file no longer reaches shaping length or has clear binding/resistance. Record the largest size that predictably reaches shaping length as the final apical gauge, then choose the matching .04 engine-driven file.",
+    chairsideInstruction: "Use the next size NiTi hand file at shaping length. Continue increasing one ISO size at a time until the next larger file no longer reaches shaping length or has clear binding/resistance. Record the largest size that predictably reaches shaping length, then choose the final shaping file/system.",
     instruments: ["Sequential NiTi hand files"],
-    requiredInputs: ["Shaping length", "Final shape"],
+    requiredInputs: ["Shaping length", "Final shaping file"],
     options: [
       { label: "Next larger NiTi reaches shaping length; continue gauging", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.nextGaugeReachedLength" } },
       { label: "Next larger NiTi binds / does not reach shaping length", nextNodeId: "create-final-shape", noteEvent: { type: "shaping.finalGaugeSelected" } },
@@ -293,18 +293,18 @@ export const protocolNodes: Record<string, ProtocolNode> = {
   "create-final-shape": {
     id: "create-final-shape",
     phase: "Shaping",
-    title: "Create final .04 shape",
-    chairsideInstruction: "Choose matching .04 engine-driven file. Set stopper to shaping length and advance to shaping length.",
-    instruments: [".04 tapered engine-driven file"],
-    requiredInputs: ["Final shape"],
+    title: "Complete final shaping",
+    chairsideInstruction: "Select the final shaping file according to the canal anatomy, glide path, gauging result, and file system being used. Shape to the recorded shaping length. Record the final shaping file/system.",
+    instruments: ["Final shaping file/system"],
+    requiredInputs: ["Final shaping file"],
     options: [
       {
-        label: ".04 file reached shaping length",
+        label: "Final shaping file reached shaping length",
         nextNodeId: "irrigate-recapitulate",
         noteEvent: { type: "shaping.finalShapeAchieved" },
-        guards: [{ type: "custom", id: "validFinalShape", message: "Final shape/size, e.g. 30/.04" }],
+        guards: [{ type: "custom", id: "validFinalShape", message: "Final shaping file, e.g. 30/.04 or PTN X2 25/.06" }],
       },
-      { label: ".04 file did not reach shaping length", nextNodeId: "patency-10c", difficultyFlag: "caution", noteEvent: { type: "shaping.finalShapeShort" } },
+      { label: "Final shaping file did not reach shaping length", nextNodeId: "patency-10c", difficultyFlag: "caution", noteEvent: { type: "shaping.finalShapeShort" } },
     ],
   },
   "irrigate-recapitulate": {
@@ -326,7 +326,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Remove smear layer",
     chairsideInstruction: "Irrigate with 17% EDTA. Ideal canal exposure to EDTA is 90 to 120 seconds.",
     materials: ["17% EDTA"],
-    requiredInputs: ["Shaping length", "Final shape"],
+    requiredInputs: ["Shaping length", "Final shaping file"],
     safetyNotes: ["Do not proceed to final disinfection until shaping is complete and canal length data are recorded."],
     options: [
       { label: "17% EDTA placed for 90 to 120 seconds", nextNodeId: "agitate-edta", noteEvent: { type: "smearLayer.edtaPlaced" } },
@@ -459,9 +459,19 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["PA radiograph"],
     requiredInputs: ["Cone fit radiograph status"],
     options: [
-      { label: "Cone fit radiograph acceptable", nextNodeId: "dry-for-obturation", noteEvent: { type: "coneFit.radiographAcceptable" } },
+      { label: "Cone fit radiograph acceptable", nextNodeId: "ready-for-sealer-cone-seating", noteEvent: { type: "coneFit.radiographAcceptable" } },
       { label: "Cone fit radiograph short", nextNodeId: "cone-short", difficultyFlag: "caution", noteEvent: { type: "coneFit.radiographShort" } },
       { label: "Cone fit radiograph long", nextNodeId: "cone-long", difficultyFlag: "caution", noteEvent: { type: "coneFit.radiographLong" } },
+    ],
+  },
+  "ready-for-sealer-cone-seating": {
+    id: "ready-for-sealer-cone-seating",
+    phase: "Cone fit",
+    title: "Ready for sealer / cone seating",
+    chairsideInstruction: "Cone fit has been confirmed radiographically. The active canal is ready for the existing sealer and cone seating workflow when the clinician chooses to continue.",
+    requiredInputs: ["Cone fit radiograph status", "Master cone", "Shaping length"],
+    options: [
+      { label: "Proceed to sealer / cone seating workflow", nextNodeId: "dry-for-obturation", noteEvent: { type: "coneFit.readyForSealerConeSeating" } },
     ],
   },
   "dry-for-obturation": {
@@ -716,7 +726,14 @@ export const protocolNodes: Record<string, ProtocolNode> = {
 };
 
 export const handoffNodeIds = new Set([
+  "identify-canals",
+  "estimate-wl",
+  "advance-10c",
+  "patency-10c",
+  "gauge-final-shape",
+  "remove-smear-layer",
   "ready-for-obturation",
+  "ready-for-sealer-cone-seating",
   "canal-obturation-complete",
   "endodontic-pathway-complete",
 ]);

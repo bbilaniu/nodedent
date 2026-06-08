@@ -32,7 +32,7 @@ export function buildFullNote(caseData: EndoCase) {
     if (canal.wlRadiographStatus) canalLines.push(`  ${canal.name} WL PA: ${canal.wlRadiographStatus}`);
     if (canal.patencyLength) canalLines.push(`  ${canal.name} patency length: ${canal.patencyLength} mm`);
     if (canal.shapingLength) canalLines.push(`  ${canal.name} shaping length: ${canal.shapingLength} mm`);
-    if (canal.finalShape) canalLines.push(`  ${canal.name} final shape: ${canal.finalShape}`);
+    if (canal.finalShape) canalLines.push(`  ${canal.name} final shaping file: ${canal.finalShape}`);
     if (canal.obturationGauge) canalLines.push(`  ${canal.name} obturation gauge: ${canal.obturationGauge}`);
     if (canal.masterCone) canalLines.push(`  ${canal.name} master cone: ${canal.masterCone}`);
     if (canal.coneFitRadiograph) canalLines.push(`  ${canal.name} cone fit PA: ${canal.coneFitRadiograph}`);

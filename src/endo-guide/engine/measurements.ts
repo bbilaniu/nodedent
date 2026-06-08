@@ -24,18 +24,8 @@ export function getSuggestedLengths(canal?: CanalRecord | null) {
   };
 }
 
-export function isLikelyShape(value: unknown) {
-  if (isBlank(value)) return false;
-  const compact = String(value).trim().split(" ").join("");
-  const parts = compact.split("/");
-  if (parts.length !== 2) return false;
-  const size = Number(parts[0]);
-  const taper = parts[1];
-  return Number.isFinite(size) && size > 0 && taper.startsWith(".") && Number.isFinite(Number(taper));
-}
-
 export function isValidFinalShape(value: unknown) {
-  return isLikelyShape(value);
+  return !isBlank(value);
 }
 
 export function compactList(values: string[] = []) {
@@ -50,7 +40,7 @@ export function formatCanalMeasurements(canal: CanalRecord) {
   if (canal.eal0) bits.push(`EAL0 ${canal.eal0} mm`);
   if (canal.patencyLength) bits.push(`patency ${canal.patencyLength} mm`);
   if (canal.shapingLength) bits.push(`shape ${canal.shapingLength} mm`);
-  if (canal.finalShape) bits.push(`final ${canal.finalShape}`);
+  if (canal.finalShape) bits.push(`final shaping file ${canal.finalShape}`);
   if (canal.obturationGauge) bits.push(`gauge ${canal.obturationGauge}`);
   if (canal.masterCone) bits.push(`MC ${canal.masterCone}`);
   return bits.length ? `${canal.name}: ${bits.join("; ")}` : null;

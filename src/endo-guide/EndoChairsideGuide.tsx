@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { CanalContinuationTarget, ClinicalEvent, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
+import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
 import { CanalControls } from "./components/CanalControls";
 import { CanalSelector } from "./components/CanalSelector";
@@ -19,9 +19,9 @@ import { buildCompactNote } from "./notes/buildCompactNote";
 import { buildEventLogExport, buildJsonExport, buildPrintableSummary } from "./notes/buildJsonExport";
 import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
-import { getCanalContinuationTargets, getNextRecommendedNodeForCanal } from "./protocol/continuation";
+import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
-import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, hydrateCanalEventsFromGlobalEvents, initialCase, makeCaseId, makeDefaultNewCanalName, STORAGE_KEY } from "./state/persistence";
+import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 
 type HistoryEntry = {
   caseData: EndoCase;
@@ -93,8 +93,8 @@ export default function EndoChairsideGuide() {
   const progressPhase = selectedProgressPhase || currentNode.phase;
   const isHandoffNode = handoffNodeIds.has(currentNode.id);
   const continuationTargets = useMemo(
-    () => getCanalContinuationTargets(caseData, activeCanal?.name),
-    [caseData, activeCanal?.name]
+    () => getPhaseAwareCanalTargets(caseData, currentNode.id, activeCanal?.name),
+    [caseData, currentNode.id, activeCanal?.name]
   );
 
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
@@ -232,14 +232,8 @@ export default function EndoChairsideGuide() {
   function importCaseJson() {
     try {
       const parsed = JSON.parse(importText);
-      const globalEvents: ClinicalEvent[] = Array.isArray(parsed.events) ? parsed.events : Array.isArray(parsed.globalEvents) ? parsed.globalEvents : [];
-      const importedCanals = Array.isArray(parsed.canals) && parsed.canals.length
-        ? parsed.canals.map((canal: any) => {
-            const normalizedCanal = { ...blankCanal(canal.name || "Canal"), ...canal };
-            return { ...normalizedCanal, events: hydrateCanalEventsFromGlobalEvents(normalizedCanal, globalEvents) };
-          })
-        : initialCase.canals;
-      const imported = { ...initialCase, ...parsed, caseStatus: hydrateCaseStatusOverride(parsed), canals: importedCanals, globalEvents, autosavedAt: new Date().toISOString() };
+      const imported = normalizeImportedEndoCase(parsed);
+      imported.caseStatus = hydrateCaseStatusOverride(parsed);
       setCaseData(imported);
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
@@ -394,9 +388,14 @@ export default function EndoChairsideGuide() {
       ...event.details,
       previousActiveCanal: caseData.currentCanal,
       newActiveCanal: target.canalName,
+      previousCanal: caseData.currentCanal,
+      nextCanal: target.canalName,
       previousNode: currentNode.id,
       nextNode: target.nextNodeId,
+      previousNodeId: currentNode.id,
+      nextNodeId: target.nextNodeId,
       reason: target.reason || target.label,
+      phaseLabel: target.phaseLabel,
     };
 
     setCaseData((prev) => ({
@@ -637,4 +636,4 @@ export default function EndoChairsideGuide() {
   );
 }
 
-export { getNextRecommendedNodeForCanal };
+export { getNextRecommendedNodeForCanal } from "./protocol/continuation";

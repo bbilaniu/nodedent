@@ -52,7 +52,7 @@ export function MeasurementPanel({
           </div>
           <button onClick={onApplyEalDerivedLengths} className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-900 hover:bg-violet-100">Use EAL ±1 {suggestedLengths.patency && suggestedLengths.shaping ? `(patency ${suggestedLengths.patency}, shaping ${suggestedLengths.shaping})` : ""}</button>
           <div className="grid grid-cols-2 gap-2">
-            <TextInput label="Final shape" value={activeCanal?.finalShape} onChange={(value) => onUpdateActiveCanal("finalShape", value)} placeholder="30/.04" />
+            <TextInput label="Final shaping file" value={activeCanal?.finalShape} onChange={(value) => onUpdateActiveCanal("finalShape", value)} placeholder="e.g., 30/.04 or PTN X2 25/.06" />
             <TextInput label="Master cone" value={activeCanal?.masterCone} onChange={(value) => onUpdateActiveCanal("masterCone", value)} placeholder="30/.04" />
           </div>
           <div className="grid grid-cols-2 gap-2">

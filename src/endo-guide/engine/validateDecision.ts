@@ -1,6 +1,16 @@
 import type { CanalRecord, DecisionOption, EndoCase } from "../types";
+import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
 import { isBlank, isPositiveMeasurement, isValidFinalShape } from "./measurements";
+
+const closureReadyStatuses = new Set(["complete", "paused", "medicated", "referred"]);
+
+export function getCanalsBlockingClosure(caseData: EndoCase) {
+  return (caseData.canals || [])
+    .map((canal) => ({ canal, status: getCanalStatus(canal) }))
+    .filter(({ status }) => !closureReadyStatuses.has(status))
+    .map(({ canal, status }) => `${canal.name || "Unnamed canal"} (${statusLabels[status]})`);
+}
 
 export function getDryingCompatibility(option: DecisionOption | null | undefined, activeCanal?: CanalRecord | null) {
   const label = option?.label || "";
@@ -104,12 +114,12 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   if (nodeId === "gauge-final-shape" && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
   if (nodeId === "increase-shaping-gauge") {
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
-    if (label.includes("binds") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shape/size, e.g. 30/.04");
+    if (label.includes("binds") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
   }
-  if (nodeId === "create-final-shape" && label.includes("reached") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shape/size, e.g. 30/.04");
+  if (nodeId === "create-final-shape" && label.includes("reached") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
   if (nodeId === "remove-smear-layer") {
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
-    if (!isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shape/size, e.g. 30/.04");
+    if (!isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
   }
   if (nodeId === "agitate-edta" && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
   if (["gauge-obturation-30", "gauge-obturation-25"].includes(nodeId) && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
@@ -124,6 +134,11 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     if (isBlank(activeCanal?.referencePoint)) addMissing("Reference point");
   }
   if (nodeId === "cone-fit-radiograph" && isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+  if (nodeId === "ready-for-sealer-cone-seating") {
+    if (isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+    if (isBlank(activeCanal?.masterCone)) addMissing("Master cone");
+    if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
+  }
   if (nodeId === "dry-for-obturation") {
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
     const dryingCompatibility = getDryingCompatibility(option, activeCanal);
@@ -134,6 +149,10 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   if (nodeId === "seat-gp-cone") {
     if (isBlank(activeCanal?.masterCone)) addMissing("Master cone");
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
+  }
+  if (nodeId === "canal-obturation-complete" && option?.noteEvent?.type === "workflow.allCanalsReadyForClosure") {
+    const blockingCanals = getCanalsBlockingClosure(caseData);
+    if (blockingCanals.length) addMissing(`Canals not ready for final closure: ${blockingCanals.join(", ")}`);
   }
   return missing;
 }
