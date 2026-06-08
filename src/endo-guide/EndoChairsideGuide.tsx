@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
-import { CanalControls } from "./components/CanalControls";
 import { CanalSelector } from "./components/CanalSelector";
 import { CaseManagementModal } from "./components/CaseManagementModal";
 import { DifficultyBanner } from "./components/DifficultyBanner";
@@ -633,14 +632,9 @@ export default function EndoChairsideGuide() {
               onAddCanal={addCanal}
               onRenameActiveCanal={renameActiveCanal}
               onDeleteActiveCanal={deleteActiveCanal}
-              className="order-1 xl:col-start-1 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
-            />
-
-            <CanalControls
-              activeCanal={activeCanal}
               onManualEvent={addManualCanalEvent}
               onResetManualStatus={resetActiveCanalManualStatus}
-              className="order-2 xl:col-start-2 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
+              className="order-1 xl:col-start-1 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
             />
           </aside>
 
