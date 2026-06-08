@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { EndoCase } from "../types";
 import { applyDecision } from "../engine/applyDecision";
-import { getCanalStatus } from "../engine/deriveCanalStatus";
+import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
@@ -677,7 +677,10 @@ test("post-shaping event fragments narrate protocol events", () => {
 
 test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal(blankCanal("MB")).nextNodeId, "estimate-wl");
-  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), estimatedWorkingLength: "20" }).nextNodeId, "open-orifice");
+  assert.equal(getCanalStatus({ ...blankCanal("MB"), estimatedWorkingLength: "20" }), "estimated");
+  assert.equal(statusLabels[getCanalStatus({ ...blankCanal("MB"), estimatedWorkingLength: "20" })], "Estimated");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), estimatedWorkingLength: "20" }).nextNodeId, "estimate-wl");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "scouting.estimatedWLSet", canal: "MB" }] }).nextNodeId, "open-orifice");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), eal0: "20" }).nextNodeId, "patency-10c");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "glidePath.created", canal: "MB" }] }).nextNodeId, "gauge-final-shape");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "ready-for-obturation");

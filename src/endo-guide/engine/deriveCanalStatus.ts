@@ -3,6 +3,7 @@ import { isBlank } from "./measurements";
 
 export const statusStyles: Record<CanalStatus, string> = {
   notStarted: "bg-slate-100 text-slate-600 border-slate-200",
+  estimated: "bg-sky-50 text-sky-800 border-sky-200",
   scouted: "bg-blue-50 text-blue-800 border-blue-200",
   wlEstablished: "bg-violet-50 text-violet-800 border-violet-200",
   glidePath: "bg-cyan-50 text-cyan-800 border-cyan-200",
@@ -16,6 +17,7 @@ export const statusStyles: Record<CanalStatus, string> = {
 
 export const statusLabels: Record<CanalStatus, string> = {
   notStarted: "Not started",
+  estimated: "Estimated",
   scouted: "Scouted",
   wlEstablished: "WL established",
   glidePath: "Glide path",
@@ -53,6 +55,7 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (hasEvent(canal, "shaping.completed") || !isBlank(canal.finalShape)) return "shaped";
   if (hasEvent(canal, "glidePath.created")) return "glidePath";
   if (hasEvent(canal, "workingLength.established") || !isBlank(canal.eal0)) return "wlEstablished";
-  if (!isBlank(canal.estimatedWorkingLength) || hasEvent(canal, "scouting.estimatedWLSet")) return "scouted";
+  if (hasEvent(canal, "scouting.estimatedWLSet")) return "scouted";
+  if (!isBlank(canal.estimatedWorkingLength)) return "estimated";
   return "notStarted";
 }

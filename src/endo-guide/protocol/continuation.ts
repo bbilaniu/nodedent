@@ -23,6 +23,11 @@ export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): Cana
       nextNodeId: "estimate-wl",
       reason: `started ${canalName} at initial scouting`,
     },
+    estimated: {
+      label: `Start ${canalName} at initial scouting`,
+      nextNodeId: "estimate-wl",
+      reason: `started ${canalName} at initial scouting`,
+    },
     scouted: {
       label: `Continue ${canalName} at working length`,
       nextNodeId: "open-orifice",

@@ -2,6 +2,7 @@ export type DifficultyFlag = "none" | "caution" | "high" | "refer";
 
 export type CanalStatus =
   | "notStarted"
+  | "estimated"
   | "scouted"
   | "wlEstablished"
   | "glidePath"
