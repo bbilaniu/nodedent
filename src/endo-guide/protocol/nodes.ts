@@ -273,8 +273,8 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     requiredInputs: ["Shaping length"],
     options: [
       { label: "25 NiTi reaches shaping length with no resistance", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.gaugeNoResistance" } },
-      { label: "NiTi reaches within 0 to 2 mm with resistance", nextNodeId: "create-final-shape", difficultyFlag: "caution", noteEvent: { type: "shaping.gaugeResistanceNearLength" } },
-      { label: "NiTi more than 2 mm short", nextNodeId: "patency-10c", difficultyFlag: "high", noteEvent: { type: "shaping.gaugeMoreThan2mmShort" } },
+      { label: "25 NiTi reaches within 0 to 2 mm with resistance", nextNodeId: "create-final-shape", difficultyFlag: "caution", noteEvent: { type: "shaping.gaugeResistanceNearLength" } },
+      { label: "25 NiTi more than 2 mm short", nextNodeId: "patency-10c", difficultyFlag: "high", noteEvent: { type: "shaping.gaugeMoreThan2mmShort" } },
     ],
   },
   "increase-shaping-gauge": {

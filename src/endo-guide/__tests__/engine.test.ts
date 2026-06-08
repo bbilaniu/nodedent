@@ -328,6 +328,16 @@ test("final shape validation rejects clearly invalid values", () => {
   assert.ok(getMissingRequirements("create-final-shape", option, caseData, caseData.canals[0]).includes("Final shape/size, e.g. 30/.04"));
 });
 
+test("final shape gauge options identify the 25 NiTi file", () => {
+  const labels = protocolNodes["gauge-final-shape"].options.map((option) => option.label);
+
+  assert.deepEqual(labels, [
+    "25 NiTi reaches shaping length with no resistance",
+    "25 NiTi reaches within 0 to 2 mm with resistance",
+    "25 NiTi more than 2 mm short",
+  ]);
+});
+
 test("post-shaping protocol chain reaches sealer cone seating handoff", () => {
   let caseData = baseCase({
     canals: [
