@@ -416,24 +416,137 @@ Acceptance criteria:
 feat(endo-guide): add multi-visit resume workflow
 ```
 
+Clinical edge case to support:
+
+```text
+A clinician may complete a later visit in the app after the tooth was previously opened,
+medicated, and temporized outside the app or before the app workflow was used.
+
+Example: prior visit access/pulpectomy/medication/temporary closure happened, but was not
+charted in the system. At the next appointment, the clinician completes the RCT using the
+system.
+```
+
+Decision:
+
+```text
+Do not pretend this was an in-app pause/resume event.
+
+Model it as an external prior visit / historical continuation. The app should let the
+clinician summarize known prior treatment facts, choose the appropriate clinical resume
+point, and clearly separate prior-visit history from today's system-recorded events in
+notes, JSON export, and tests.
+```
+
 Scope:
 
 ```text
 - Let the clinician pause a case with a next-visit plan.
+- Let the clinician start/resume from a prior undocumented visit without requiring fake
+  protocol events.
 - Track per-canal state when some canals are complete and others are medicated or unfinished.
 - Resume at the best next protocol node for each canal.
 - Make continuation actions explicit and clinically meaningful.
 - Add a next-visit note template.
+- Add a prior-visit summary section for externally documented treatment history.
 - Preserve pause/resume state through local persistence and JSON import/export.
+```
+
+Prior undocumented visit behavior:
+
+```text
+- Add an explicit "Continue from prior visit" or equivalent case-start action.
+- Capture prior facts as historical metadata, not as today's generated protocol events.
+- Minimum useful prior facts:
+  - prior access completed
+  - canals previously located/treated
+  - prior WL or estimated WL if known
+  - prior shaping/disinfection state if known
+  - medication placed, if known
+  - temporary restoration/closure type, if known
+  - prior visit date or approximate timing, if known
+  - free-text prior-visit note/source
+- Let the clinician select the resume point when derived state is incomplete or uncertain.
+- Prefer conservative resume points when prior facts are uncertain.
+- Preserve historical prior-visit facts through local persistence and JSON import/export.
+- Note output must label these facts as prior history / previous visit, not as actions
+  performed today.
+```
+
+New patient fast-forward workflow:
+
+```text
+Use this when a patient is new to the system but the tooth was already opened,
+medicated, temporized, or partially treated elsewhere or before the app was used.
+
+Suggested UI flow:
+
+1. Start new case.
+2. Choose "Continue from prior visit" instead of "Start from access".
+3. Enter normal case identity fields: patient number, tooth, procedure type, diagnosis.
+4. Add prior-visit facts in a dedicated prior-history panel:
+   - access already opened
+   - temporary restoration present
+   - medication present or unknown
+   - canals previously located/treated
+   - WLs known/unknown
+   - shaping status known/unknown
+   - prior radiographs/notes available or not available
+5. Choose per-canal starting status:
+   - not started / unknown
+   - access only
+   - located/scouted
+   - WL established
+   - glide path complete
+   - shaped
+   - medicated/temporized
+   - cone fit verified
+   - partially obturated
+6. App suggests the safest resume node for each canal.
+7. Clinician confirms or adjusts the resume node before chairside workflow begins.
+```
+
+Fast-forward rules:
+
+```text
+- Fast-forward creates historical prior-state metadata and a single
+  case.continuedFromPriorVisit marker.
+- Fast-forward must not create detailed protocol events such as WL established, shaped,
+  EDTA completed, cone fit PA taken, or medication placed unless those actions happen
+  during the current system-recorded visit.
+- Fast-forwarded canal status should display as historical/externally documented until
+  the clinician performs or reconfirms the relevant step today.
+- Unknown prior details should route earlier, not later.
+- High-risk resume points such as cone-fit-ready or partially obturated require explicit
+  confirmation and enough supporting details to avoid accidental over-advancement.
+```
+
+Suggested resume examples:
+
+```text
+- Prior access and temporary closure only -> resume around canal identification/scouting.
+- Prior WL established -> resume at patency/glide path or shaping, depending on prior facts.
+- Prior calcium hydroxide and temporization -> resume at medication removal / irrigation /
+  disinfection pathway.
+- Prior cone fit but no obturation -> resume at ready-for-sealer-cone-seating only if
+  cone-fit details and radiograph status are known; otherwise resume at cone-fit verification.
+- Prior partial obturation -> require explicit clinician-selected canal state before
+  proceeding; do not infer completion from sparse history.
 ```
 
 Acceptance criteria:
 
 ```text
 - A case can be paused after access, working length, shaping, disinfection, cone fit, medication, or partial obturation.
+- A case can be continued from a prior undocumented temporization/medication visit and
+  completed today without fabricating prior in-app events.
 - Resume chooses the correct next node for each canal without losing measurements.
-- The generated note includes what was completed today and what remains.
+- The generated note includes what was completed today, what remains, and any prior-visit
+  history in a clearly separated section.
+- JSON export/import distinguishes in-app pause/resume state from external prior-visit
+  history.
 - Tests cover pause/resume from at least access, shaped, cone-fit-ready, medicated, and partially obturated states.
+- Tests cover completing an RCT today after prior undocumented medicated/temporized care.
 ```
 
 ## PR 6 - Add Clinical Scenario Regression Fixtures
