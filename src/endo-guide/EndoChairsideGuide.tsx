@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
 import { CanalSelector } from "./components/CanalSelector";
-import { CaseManagementModal } from "./components/CaseManagementModal";
+import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
@@ -83,6 +83,8 @@ export default function EndoChairsideGuide() {
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
+  const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
@@ -192,6 +194,8 @@ export default function EndoChairsideGuide() {
     setCopied(false);
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(false);
+    setIsSavedCasesOpen(false);
+    setIsPriorVisitOpen(false);
   }
 
   function continueFromPriorVisit() {
@@ -277,6 +281,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(normalized));
       setHistory([]);
       setValidationMessage(null);
+      setIsSavedCasesOpen(false);
     } catch {
       setValidationMessage({ optionLabel: "Load saved case", missing: ["Could not load saved case from local storage"] });
     }
@@ -328,6 +333,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
       setShowImportBox(false);
+      setIsSavedCasesOpen(false);
       setImportText("");
       setValidationMessage(null);
     } catch {
@@ -612,6 +618,20 @@ export default function EndoChairsideGuide() {
               </button>
               <button
                 type="button"
+                onClick={() => setIsSavedCasesOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold leading-none text-blue-900 transition hover:bg-blue-100"
+              >
+                Resume saved workflow
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPriorVisitOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold leading-none text-amber-950 transition hover:bg-amber-100"
+              >
+                Prior visit
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsNewCaseConfirmOpen(true)}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold leading-none text-slate-800 transition hover:bg-slate-100"
               >
@@ -694,14 +714,20 @@ export default function EndoChairsideGuide() {
           <CaseManagementModal
             caseData={caseData}
             currentNodeId={currentNodeId}
-            savedCases={savedCases}
-            importText={importText}
-            showImportBox={showImportBox}
             onClose={() => setIsCasePanelOpen(false)}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onDownloadCaseJson={downloadCaseJson}
+          />
+        ) : null}
+
+        {isSavedCasesOpen ? (
+          <SavedCasesModal
+            savedCases={savedCases}
+            importText={importText}
+            showImportBox={showImportBox}
+            onClose={() => setIsSavedCasesOpen(false)}
             onToggleImportBox={() => setShowImportBox((value) => !value)}
             onImportTextChange={setImportText}
             onImportCaseJson={importCaseJson}
@@ -709,6 +735,14 @@ export default function EndoChairsideGuide() {
             onResetAllSavedCases={resetAllSavedCases}
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
+          />
+        ) : null}
+
+        {isPriorVisitOpen ? (
+          <PriorVisitModal
+            caseData={caseData}
+            onClose={() => setIsPriorVisitOpen(false)}
+            onUpdateCase={updateCase}
             onContinueFromPriorVisit={continueFromPriorVisit}
             onResumeActiveCanalFromPriorVisit={resumeActiveCanalFromPriorVisit}
             canResumeActiveCanalFromPriorVisit={canResumeActiveCanalFromPriorVisit}
