@@ -59,6 +59,49 @@ function applyFirstOption(caseData: EndoCase, currentNodeId: string) {
   return result;
 }
 
+function applyOption(caseData: EndoCase, currentNodeId: string, optionIndex: number) {
+  const option = protocolNodes[currentNodeId].options[optionIndex];
+  const result = applyDecision({
+    currentNodeId,
+    selectedOptionLabel: option.label,
+    caseData,
+    activeCanalName: caseData.currentCanal,
+    eventId: `evt_${currentNodeId}_${optionIndex}`,
+    timestamp: "2026-01-01T00:00:00.000Z",
+  });
+
+  assert.deepEqual(result.errors, [], `${currentNodeId} option ${optionIndex} should apply without validation errors`);
+  assert.equal(result.generatedEvent?.type, option.noteEvent?.type);
+  return result;
+}
+
+function coneFitReadyCase(overrides: Partial<EndoCase> = {}): EndoCase {
+  return baseCase({
+    canals: [
+      {
+        ...blankCanal("MB"),
+        estimatedWorkingLength: "20",
+        eal0: "20",
+        patencyLength: "21",
+        shapingLength: "19",
+        referencePoint: "MB cusp",
+        finalShape: "30/.04",
+        obturationGauge: "30",
+        masterCone: "30/.04",
+        coneFitRadiograph: "acceptable",
+        dryingStatus: "dry",
+        events: [
+          { id: "evt_cone_pa", timestamp: "2026-01-01T00:00:00.000Z", type: "coneFit.radiographAcceptable", canal: "MB" },
+        ],
+      },
+    ],
+    globalEvents: [
+      { id: "evt_cone_pa", timestamp: "2026-01-01T00:00:00.000Z", type: "coneFit.radiographAcceptable", canal: "MB" },
+    ],
+    ...overrides,
+  });
+}
+
 test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
   const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
   const forbiddenPatterns = [
@@ -335,6 +378,142 @@ test("sealer cone seating handoff enforces required inputs", () => {
     "Shaping length in mm",
   ]);
   assert.deepEqual(getMissingRequirements("ready-for-sealer-cone-seating", option, complete, complete.canals[0]), []);
+});
+
+test("sealer and cone seating happy path reaches orifice gap evaluation", () => {
+  let caseData = coneFitReadyCase();
+
+  const expectedTransitions = [
+    ["ready-for-sealer-cone-seating", "dry-for-obturation", "coneFit.readyForSealerConeSeating"],
+    ["dry-for-obturation", "patency-before-sealer", "drying.readyForSealer"],
+    ["patency-before-sealer", "apply-sealer", "sealer.patencyConfirmed"],
+    ["apply-sealer", "paper-point-through-sealer", "sealer.applied"],
+    ["paper-point-through-sealer", "reapply-sealer", "sealer.paperPointDistributed"],
+    ["reapply-sealer", "seat-gp-cone", "sealer.reapplied"],
+    ["seat-gp-cone", "evaluate-orifice-gap", "gpSeating.coneSeated"],
+  ] as const;
+
+  expectedTransitions.forEach(([currentNodeId, nextNodeId, eventType]) => {
+    const result = applyFirstOption(caseData, currentNodeId);
+    assert.equal(result.nextNodeId, nextNodeId);
+    assert.equal(result.generatedEvent?.type, eventType);
+    caseData = result.updatedCaseData;
+  });
+
+  const fullNote = buildFullNote(caseData);
+  assert.match(fullNote, /Canal dried to dry\/slightly damp paper point/);
+  assert.match(fullNote, /Bioceramic sealer applied/);
+  assert.match(fullNote, /Paper point passed through sealer/);
+  assert.match(fullNote, /Pre-fit GP cone seated to shaping length/);
+});
+
+test("drying and sealer troubleshooting branches route safely", () => {
+  const wet = coneFitReadyCase({ canals: [{ ...coneFitReadyCase().canals[0], dryingStatus: "wet" }] });
+  const persistentWet = coneFitReadyCase({ canals: [{ ...coneFitReadyCase().canals[0], dryingStatus: "persistent wet" }] });
+  const dryOption = protocolNodes["dry-for-obturation"].options[0];
+  const wetResult = applyOption(wet, "dry-for-obturation", 1);
+  const persistentWetResult = applyOption(persistentWet, "dry-for-obturation", 2);
+  const naviTipUnsafe = applyOption(coneFitReadyCase(), "apply-sealer", 1);
+  const paperPointShort = applyOption(coneFitReadyCase(), "paper-point-through-sealer", 1);
+  const reapplyUnsafe = applyOption(coneFitReadyCase(), "reapply-sealer", 1);
+  const coneShort = applyOption(coneFitReadyCase(), "seat-gp-cone", 1);
+  const coneLong = applyOption(coneFitReadyCase(), "seat-gp-cone", 2);
+
+  assert.ok(getMissingRequirements("dry-for-obturation", dryOption, wet, wet.canals[0]).includes("Requires dry or slightly damp"));
+  assert.equal(wetResult.nextNodeId, "dry-for-obturation");
+  assert.equal(persistentWetResult.nextNodeId, "calcium-hydroxide");
+  assert.equal(naviTipUnsafe.nextNodeId, "calcium-hydroxide");
+  assert.equal(paperPointShort.nextNodeId, "patency-before-sealer");
+  assert.equal(reapplyUnsafe.nextNodeId, "calcium-hydroxide");
+  assert.equal(coneShort.nextNodeId, "patency-before-sealer");
+  assert.equal(coneLong.nextNodeId, "gauge-obturation-30");
+});
+
+test("persistent wet sealer route can medicate and temporize", () => {
+  let caseData = coneFitReadyCase({ canals: [{ ...coneFitReadyCase().canals[0], dryingStatus: "persistent wet" }] });
+
+  let result = applyOption(caseData, "dry-for-obturation", 2);
+  assert.equal(result.nextNodeId, "calcium-hydroxide");
+  caseData = result.updatedCaseData;
+
+  result = applyFirstOption(caseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  assert.equal(result.generatedEvent?.type, "medication.calciumHydroxidePlaced");
+  caseData = result.updatedCaseData;
+
+  result = applyFirstOption(caseData, "temporary-closure");
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(result.generatedEvent?.type, "closure.temporary");
+});
+
+test("downpack no-gap path completes canal after vertical compaction", () => {
+  let caseData = coneFitReadyCase();
+
+  const expectedTransitions = [
+    ["evaluate-orifice-gap", "sear-gp-cones", "downpack.noGapSpace"],
+    ["sear-gp-cones", "vertical-compaction", "downpack.gpSeared"],
+    ["vertical-compaction", "canal-obturation-complete", "downpack.gpStableAfterCompaction"],
+  ] as const;
+
+  expectedTransitions.forEach(([currentNodeId, nextNodeId, eventType]) => {
+    const result = applyFirstOption(caseData, currentNodeId);
+    assert.equal(result.nextNodeId, nextNodeId);
+    assert.equal(result.generatedEvent?.type, eventType);
+    caseData = result.updatedCaseData;
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "complete");
+  assert.match(buildFullNote(caseData), /GP maintained position after vertical compaction/);
+});
+
+test("downpack and backfill branch routes remain clinically connected", () => {
+  assert.equal(protocolNodes["evaluate-orifice-gap"].options[0].nextNodeId, "sear-gp-cones");
+  assert.equal(protocolNodes["evaluate-orifice-gap"].options[1].nextNodeId, "modified-downpack");
+  assert.equal(protocolNodes["evaluate-orifice-gap"].options[2].nextNodeId, "add-accessory-cones");
+  assert.equal(protocolNodes["modified-downpack"].options[0].nextNodeId, "reapply-sealer-on-gp");
+  assert.equal(protocolNodes["modified-downpack"].options[1].nextNodeId, "modified-downpack");
+  assert.equal(protocolNodes["modified-downpack"].options[2].nextNodeId, "fit-master-cone");
+  assert.equal(protocolNodes["add-accessory-cones"].options[0].nextNodeId, "sear-gp-cones");
+  assert.equal(protocolNodes["add-accessory-cones"].options[1].nextNodeId, "modified-downpack");
+  assert.equal(protocolNodes["vertical-compaction"].options[1].nextNodeId, "reapply-sealer-on-gp");
+  assert.equal(protocolNodes["backfill-canal"].options[1].nextNodeId, "reapply-sealer-on-gp");
+  assert.equal(protocolNodes["compact-backfill"].options[0].nextNodeId, "canal-obturation-complete");
+  assert.equal(protocolNodes["compact-backfill"].options[1].nextNodeId, "reapply-sealer-on-gp");
+  assert.equal(protocolNodes["compact-backfill"].options[2].nextNodeId, "canal-obturation-complete");
+  assert.equal(protocolNodes["compact-backfill"].options[3].nextNodeId, "backfill-canal");
+});
+
+test("modified downpack and backfill path reaches canal completion after compaction", () => {
+  let caseData = coneFitReadyCase();
+
+  const expectedTransitions = [
+    ["evaluate-orifice-gap", 1, "modified-downpack", "downpack.roundGapSpace"],
+    ["modified-downpack", 0, "reapply-sealer-on-gp", "downpack.modifiedSuccessful"],
+    ["reapply-sealer-on-gp", 0, "backfill-canal", "backfill.sealerOnGp"],
+    ["backfill-canal", 0, "compact-backfill", "backfill.completed"],
+  ] as const;
+
+  expectedTransitions.forEach(([currentNodeId, optionIndex, nextNodeId, eventType]) => {
+    const result = applyOption(caseData, currentNodeId, optionIndex);
+    assert.equal(result.nextNodeId, nextNodeId);
+    assert.equal(result.generatedEvent?.type, eventType);
+    caseData = result.updatedCaseData;
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "disinfected");
+
+  const compacted = applyOption(caseData, "compact-backfill", 0);
+  assert.equal(compacted.nextNodeId, "canal-obturation-complete");
+  assert.equal(compacted.generatedEvent?.type, "backfill.compactedStable");
+  assert.equal(getCanalStatus(compacted.updatedCaseData.canals[0]), "complete");
+  assert.match(buildFullNote(compacted.updatedCaseData), /Backfilled GP compacted and remained stable/);
+});
+
+test("excess GP after backfill is also treated as canal obturation complete", () => {
+  const event = { id: "evt_excess", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.excessInChamber", canal: "MB" };
+  const caseData = coneFitReadyCase({ canals: [{ ...coneFitReadyCase().canals[0], events: [event] }], globalEvents: [event] });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "complete");
 });
 
 test("cone fit troubleshooting branches follow protocol loops", () => {

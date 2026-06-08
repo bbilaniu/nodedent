@@ -39,7 +39,11 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (!canal) return "notStarted";
   if (hasEvent(canal, "canal.referred") || hasEvent(canal, "treatment.referralRecommended")) return "referred";
   if (hasEvent(canal, "closure.finalRestoration") || hasEvent(canal, "closure.orificeBarrierTemporary") || hasEvent(canal, "closure.temporary")) return "complete";
-  if (hasEvent(canal, "backfill.completed") || hasEvent(canal, "backfill.compactedStable") || hasEvent(canal, "downpack.gpStableAfterCompaction")) return "complete";
+  if (
+    hasEvent(canal, "backfill.compactedStable") ||
+    hasEvent(canal, "backfill.excessInChamber") ||
+    hasEvent(canal, "downpack.gpStableAfterCompaction")
+  ) return "complete";
   if (hasEvent(canal, "canal.completed")) return "complete";
   if (hasEvent(canal, "sealer.reapplied") || hasEvent(canal, "sealer.applied")) return "disinfected";
   if (hasEvent(canal, "coneFit.radiographAcceptable")) return "disinfected";
