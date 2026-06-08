@@ -128,6 +128,7 @@ export function eventFragment(event: ClinicalEvent) {
     "workflow.resumedFromPriorVisit": `Workflow resumed ${event.canal || "selected canal"} from prior visit history at ${event.details?.phaseLabel || event.details?.nextNodeId || "confirmed resume point"}.`,
     "workflow.allCanalsReadyForClosure": "All canals ready for chamber cleanup and closure.",
     "treatment.referralRecommended": `${canal}Referral or specialist continuation recommended.`,
+    "treatment.referralOnlyCompleted": `${canal}Referral note completed without medication/temporization at this visit.`,
     "workflow.returnedToStart": "Workflow returned to start.",
   };
   return fragments[event.type] || `${canal}${event.type}.`;

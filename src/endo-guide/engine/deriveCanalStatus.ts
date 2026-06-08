@@ -63,6 +63,5 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (canal.priorVisitStatus === "glidePath") return "glidePath";
   if (canal.priorVisitStatus === "wlEstablished") return "wlEstablished";
   if (canal.priorVisitStatus === "locatedScouted") return "scouted";
-  if (canal.priorVisitStatus === "accessOnly" || canal.priorVisitStatus === "unknown") return "estimated";
   return "notStarted";
 }

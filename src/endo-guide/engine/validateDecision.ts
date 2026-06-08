@@ -159,6 +159,10 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     const blockingCanals = getCanalsBlockingClosure(caseData);
     if (blockingCanals.length) addMissing(`Canals not ready for final closure: ${blockingCanals.join(", ")}`);
   }
+  if (nodeId === "temporary-closure" && option?.noteEvent?.type === "closure.temporary") {
+    const blockingCanals = getCanalsBlockingClosure(caseData);
+    if (blockingCanals.length) addMissing(`Canals need declared status before temporary closure: ${blockingCanals.join(", ")}`);
+  }
   return missing;
 }
 

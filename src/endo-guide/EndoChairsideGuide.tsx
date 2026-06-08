@@ -21,7 +21,7 @@ import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
-import { getConservativeResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
+import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 
 type HistoryEntry = {
@@ -60,7 +60,9 @@ export default function EndoChairsideGuide() {
   const [caseData, setCaseData] = useState<EndoCase>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
-      return saved ? { ...initialCase, ...JSON.parse(saved) } : initialCase;
+      if (!saved) return initialCase;
+      const parsed = JSON.parse(saved);
+      return normalizeImportedEndoCase(parsed, parsed.autosavedAt || new Date().toISOString());
     } catch {
       return initialCase;
     }
@@ -90,6 +92,15 @@ export default function EndoChairsideGuide() {
   const activeCanal = useMemo(
     () => caseData.canals.find((canal) => canal.name === caseData.currentCanal) || caseData.canals[0],
     [caseData.canals, caseData.currentCanal]
+  );
+  const activeCanalStatus = getCanalStatus(activeCanal);
+  const canResumeActiveCanalFromPriorVisit = Boolean(
+    caseData.priorVisit?.continuedFromPriorVisit ||
+    caseData.globalEvents.some((event) => event.type === "case.continuedFromPriorVisit") ||
+    activeCanal?.priorVisitStatus ||
+    activeCanal?.priorVisitNote ||
+    activeCanalStatus === "paused" ||
+    activeCanalStatus === "medicated"
   );
   const progressPhase = selectedProgressPhase || currentNode.phase;
   const isHandoffNode = handoffNodeIds.has(currentNode.id);
@@ -208,7 +219,11 @@ export default function EndoChairsideGuide() {
 
   function resumeActiveCanalFromPriorVisit() {
     if (!activeCanal) return;
-    const nextNodeId = getPriorVisitResumeNodeForCanal(activeCanal) || getConservativeResumeNodeForCanal(activeCanal);
+    if (!canResumeActiveCanalFromPriorVisit) {
+      setValidationMessage({ optionLabel: "Resume active canal", missing: ["Set up prior visit history or prior status for the active canal first"] });
+      return;
+    }
+    const nextNodeId = getPriorVisitResumeNodeForCanal(activeCanal) || getManualResumeNodeForCanal(activeCanal) || getConservativeResumeNodeForCanal(activeCanal);
     if (!protocolNodes[nextNodeId]) {
       setValidationMessage({ optionLabel: "Resume active canal", missing: [`No resume node exists for ${nextNodeId}`] });
       return;
@@ -254,8 +269,9 @@ export default function EndoChairsideGuide() {
     try {
       const saved = JSON.parse(window.localStorage.getItem(`${CASE_RECORD_PREFIX}${caseId}`) || "null");
       if (!saved) return;
-      setCaseData({ ...initialCase, ...saved });
-      setCurrentNodeId(getSavedCurrentNodeId(saved));
+      const normalized = normalizeImportedEndoCase(saved, saved.autosavedAt || new Date().toISOString());
+      setCaseData(normalized);
+      setCurrentNodeId(getSavedCurrentNodeId(normalized));
       setHistory([]);
       setValidationMessage(null);
     } catch {
@@ -691,6 +707,7 @@ export default function EndoChairsideGuide() {
             onDeleteSavedCase={deleteSavedCase}
             onContinueFromPriorVisit={continueFromPriorVisit}
             onResumeActiveCanalFromPriorVisit={resumeActiveCanalFromPriorVisit}
+            canResumeActiveCanalFromPriorVisit={canResumeActiveCanalFromPriorVisit}
           />
         ) : null}
 

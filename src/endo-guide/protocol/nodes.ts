@@ -710,8 +710,19 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Document difficulty and consider medication/temporization or referral.",
     safetyNotes: ["Referral is appropriate when treatment exceeds comfort, skill, equipment, or case difficulty limits."],
     options: [
-      { label: "Document referral recommended", nextNodeId: "endodontic-pathway-complete", difficultyFlag: "refer", noteEvent: { type: "treatment.referralRecommended" } },
+      { label: "Document referral recommended", nextNodeId: "referral-next-step", difficultyFlag: "refer", noteEvent: { type: "treatment.referralRecommended" } },
       { label: "Medicate and temporize instead", nextNodeId: "calcium-hydroxide", difficultyFlag: "refer", noteEvent: { type: "treatment.medicateTemporizeSelected" } },
+    ],
+  },
+  "referral-next-step": {
+    id: "referral-next-step",
+    phase: "Medication / temporisation",
+    title: "After referral documentation",
+    chairsideInstruction: "Referral recommendation has been documented. Choose whether the canal also needs medication and temporary closure before specialist continuation.",
+    safetyNotes: ["If the tooth is open, symptomatic, contaminated, or cannot be definitively restored today, stabilize with medication/temporization before referral when clinically appropriate."],
+    options: [
+      { label: "Medicate and temporize before referral", nextNodeId: "calcium-hydroxide", difficultyFlag: "refer", noteEvent: { type: "treatment.medicateTemporizeSelected" } },
+      { label: "No medication needed; finish referral note", nextNodeId: "endodontic-pathway-complete", difficultyFlag: "refer", noteEvent: { type: "treatment.referralOnlyCompleted" } },
     ],
   },
   "endodontic-pathway-complete": {

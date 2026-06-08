@@ -12,6 +12,7 @@ import { buildJsonExport } from "../notes/buildJsonExport";
 import { buildPatientSummary } from "../notes/buildPatientSummary";
 import { eventFragment } from "../notes/fragments";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
+import { getManualResumeNodeForCanal } from "../engine/resume";
 import { getNextRecommendedNodeForCanal, getPhaseAwareCanalTargets } from "../protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
@@ -724,6 +725,54 @@ test("closure guard allows complete paused medicated and referred canals", () =>
   assert.deepEqual(getMissingRequirements("canal-obturation-complete", protocolNodes["canal-obturation-complete"].options[0], caseData, caseData.canals[0]), []);
 });
 
+test("temporary closure requires every existing canal to have declared status", () => {
+  const medicationEvent = { id: "evt_med", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
+  const pausedEvent = { id: "evt_pause", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.paused", canal: "ML" };
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [medicationEvent] },
+      { ...blankCanal("ML"), events: [pausedEvent] },
+      blankCanal("DB"),
+    ],
+    globalEvents: [medicationEvent, pausedEvent],
+  });
+  const option = protocolNodes["temporary-closure"].options[0];
+  const missing = getMissingRequirements("temporary-closure", option, caseData, caseData.canals[0]);
+
+  assert.deepEqual(missing, ["Canals need declared status before temporary closure: DB (Not started)"]);
+
+  const result = applyDecision({
+    currentNodeId: "temporary-closure",
+    selectedOptionLabel: option.label,
+    caseData,
+    activeCanalName: "MB",
+  });
+
+  assert.deepEqual(result.errors, ["Canals need declared status before temporary closure: DB (Not started)"]);
+  assert.equal(result.nextNodeId, "temporary-closure");
+});
+
+test("temporary closure proceeds when every existing canal is declared", () => {
+  const medicationEvent = { id: "evt_med", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
+  const pausedEvent = { id: "evt_pause", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.paused", canal: "ML" };
+  const referredEvent = { id: "evt_ref", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.referred", canal: "DB" };
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [medicationEvent] },
+      { ...blankCanal("ML"), events: [pausedEvent] },
+      { ...blankCanal("DB"), events: [referredEvent] },
+    ],
+    globalEvents: [medicationEvent, pausedEvent, referredEvent],
+  });
+
+  const result = applyFirstOption(caseData, "temporary-closure");
+
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(result.generatedEvent?.type, "closure.temporary");
+});
+
 test("completed RCT closure records cleanup rinse final restoration and export status", () => {
   let caseData = coneFitReadyCase();
   const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.compactedStable", canal: "MB" };
@@ -798,6 +847,35 @@ test("referred closure state remains referred in notes and export", () => {
   assert.equal(buildJsonExport(caseData, "endodontic-pathway-complete").caseStatus, "Referred");
   assert.match(buildCompactNote(caseData), /Visit status: Referred/);
   assert.match(buildFullNote(caseData), /Referral or specialist continuation recommended/);
+});
+
+test("referral documentation can still route to medication and temporary closure", () => {
+  let result = applyFirstOption(baseCase(), "refer-pathway");
+  assert.equal(result.nextNodeId, "referral-next-step");
+  assert.equal(result.generatedEvent?.type, "treatment.referralRecommended");
+
+  result = applyFirstOption(result.updatedCaseData, "referral-next-step");
+  assert.equal(result.nextNodeId, "calcium-hydroxide");
+  assert.equal(result.generatedEvent?.type, "treatment.medicateTemporizeSelected");
+
+  result = applyFirstOption(result.updatedCaseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+
+  result = applyFirstOption(result.updatedCaseData, "temporary-closure");
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).caseStatus, "Referred");
+  assert.match(buildCompactNote(result.updatedCaseData), /Calcium hydroxide placed/);
+  assert.match(buildCompactNote(result.updatedCaseData), /Access closed with sponge and temporary restorative material/);
+});
+
+test("referral documentation can finish without medication when appropriate", () => {
+  let result = applyFirstOption(baseCase(), "refer-pathway");
+  result = applyOption(result.updatedCaseData, "referral-next-step", 1);
+
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
+  assert.equal(result.generatedEvent?.type, "treatment.referralOnlyCompleted");
+  assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).caseStatus, "Referred");
+  assert.match(buildFullNote(result.updatedCaseData), /Referral note completed without medication/);
 });
 
 test("cone fit troubleshooting branches follow protocol loops", () => {
@@ -890,6 +968,8 @@ test("canal continuation maps key statuses", () => {
 
 test("prior undocumented visit statuses fast-forward to conservative resume nodes", () => {
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "accessOnly" }).nextNodeId, "identify-canals");
+  assert.equal(getCanalStatus({ ...blankCanal("MB"), priorVisitStatus: "unknown" }), "notStarted");
+  assert.equal(getCanalStatus({ ...blankCanal("MB"), priorVisitStatus: "accessOnly" }), "notStarted");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "wlEstablished" }).nextNodeId, "patency-10c");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized" }).nextNodeId, "remove-smear-layer");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "coneFitVerified" }).nextNodeId, "cone-fit-radiograph");
@@ -898,6 +978,23 @@ test("prior undocumented visit statuses fast-forward to conservative resume node
   const target = getNextRecommendedNodeForCanal({ ...blankCanal("MB"), priorVisitStatus: "medicatedTemporized", priorVisitNote: "CaOH and temp placed elsewhere" });
   assert.match(target.label, /prior visit/);
   assert.match(target.reason, /prior visit history/);
+});
+
+test("app-tracked paused and medicated canals expose manual resume nodes after import", () => {
+  const pausedCanal = {
+    ...blankCanal("MB"),
+    events: [{ id: "evt_pause", timestamp: "t", type: "canal.paused", canal: "MB", details: { nodeId: "gauge-final-shape" } }],
+  };
+  const medicatedCanal = {
+    ...blankCanal("ML"),
+    finalShape: "30/.04",
+    events: [{ id: "evt_med", timestamp: "t", type: "canal.medicated", canal: "ML" }],
+  };
+
+  assert.equal(getCanalStatus(pausedCanal), "paused");
+  assert.equal(getManualResumeNodeForCanal(pausedCanal), "gauge-final-shape");
+  assert.equal(getCanalStatus(medicatedCanal), "medicated");
+  assert.equal(getManualResumeNodeForCanal(medicatedCanal), "remove-smear-layer");
 });
 
 test("phase-aware canal targets are canal-specific at early handoff nodes", () => {
