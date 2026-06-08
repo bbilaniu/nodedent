@@ -55,6 +55,7 @@ export function getManualResumeNodeForCanal(canal?: CanalRecord | null) {
   if (!manualEvent) return null;
 
   const recordedNode = manualEvent.details?.resumeNodeId || manualEvent.details?.nodeId;
+  if (manualEvent.type === "canal.paused" && recordedNode === "endodontic-pathway-complete") return null;
   if (manualEvent.type === "canal.paused" && recordedNode && recordedNode !== "endodontic-pathway-complete" && recordedNode !== "temporary-closure") {
     return recordedNode;
   }

@@ -8,6 +8,18 @@ export function isPhaseAwareCanalHandoffNode(nodeId: string) {
   return handoffNodeIds.has(nodeId);
 }
 
+function getReferredContinuationNodeId(canal?: CanalRecord | null) {
+  if (!canal) return null;
+  if (hasEvent(canal, "canal.referred")) return null;
+  if (hasEvent(canal, "closure.temporary") || hasEvent(canal, "closure.orificeBarrierTemporary") || hasEvent(canal, "closure.finalRestoration")) return null;
+  if (hasEvent(canal, "treatment.referralOnlyCompleted")) return null;
+  if (hasEvent(canal, "medication.calciumHydroxidePlaced") || hasEvent(canal, "canal.medicated")) return "temporary-closure";
+  if (hasEvent(canal, "treatment.medicateTemporizeSelected")) return "calcium-hydroxide";
+  if (hasEvent(canal, "treatment.referralRecommended")) return "referral-next-step";
+  if (hasEvent(canal, "treatment.referralSelected")) return "refer-pathway";
+  return null;
+}
+
 export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): CanalContinuationTarget {
   const canalName = canal?.name || "Canal";
   const status = getCanalStatus(canal);
@@ -37,6 +49,21 @@ export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): Cana
       nextNodeId: manualResumeNodeId,
       reason: `resumed ${canalName} at ${phaseLabel}`,
     };
+  }
+
+  if (status === "referred") {
+    const referralContinuationNodeId = getReferredContinuationNodeId(canal);
+    if (referralContinuationNodeId) {
+      const phaseLabel = protocolNodes[referralContinuationNodeId]?.title.toLowerCase() || "referral continuation";
+      return {
+        canalName,
+        status,
+        label: `Continue ${canalName} at ${phaseLabel}`,
+        phaseLabel,
+        nextNodeId: referralContinuationNodeId,
+        reason: `continued ${canalName} at ${phaseLabel}`,
+      };
+    }
   }
 
   if (hasEvent(canal, "coneFit.readyForSealerConeSeating") || hasEvent(canal, "coneFit.radiographAcceptable")) {
@@ -100,10 +127,11 @@ export function getNextRecommendedNodeForCanal(canal?: CanalRecord | null): Cana
       reason: `resumed ${canalName} from medication/next-visit pathway`,
     },
     paused: {
-      label: `Resume ${canalName} from paused pathway`,
-      phaseLabel: "paused pathway",
-      nextNodeId: "estimate-wl",
-      reason: `resumed ${canalName} from paused pathway`,
+      label: `${canalName} paused; no continuation action`,
+      phaseLabel: "paused",
+      nextNodeId: null,
+      disabled: true,
+      reason: "Paused",
     },
     complete: {
       label: `${canalName} complete; no continuation action`,
@@ -135,7 +163,13 @@ function withCheckpointTarget(caseData: EndoCase, target: CanalContinuationTarge
 
   if (!target.disabled && hasCheckpointEvents) {
     const checkpointNodeId = getCanalCheckpointNodeId(caseData, target.canalName);
-    if (checkpointNodeId && checkpointNodeId !== "preop" && checkpointNodeId !== target.nextNodeId && protocolNodes[checkpointNodeId]) {
+    if (
+      checkpointNodeId &&
+      checkpointNodeId !== "preop" &&
+      checkpointNodeId !== "endodontic-pathway-complete" &&
+      checkpointNodeId !== target.nextNodeId &&
+      protocolNodes[checkpointNodeId]
+    ) {
       const stepLabel = protocolNodes[checkpointNodeId].title.toLowerCase();
       return {
         ...target,

@@ -962,6 +962,9 @@ test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04", events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "remove-smear-layer");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.paused", canal: "MB", details: { nodeId: "gauge-final-shape" } }] }).nextNodeId, "gauge-final-shape");
   assert.equal(getCanalStatus({ ...blankCanal("MB"), events: [{ id: "evt_cone", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "MB" }, { id: "evt_pause", timestamp: "t", type: "canal.paused", canal: "MB" }] }), "paused");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt_ref", timestamp: "t", type: "treatment.referralRecommended", canal: "MB" }] }).nextNodeId, "referral-next-step");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt_ref", timestamp: "t", type: "treatment.referralRecommended", canal: "MB" }, { id: "evt_med", timestamp: "t", type: "medication.calciumHydroxidePlaced", canal: "MB" }] }).nextNodeId, "temporary-closure");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt_ref", timestamp: "t", type: "treatment.referralRecommended", canal: "MB" }, { id: "evt_done", timestamp: "t", type: "treatment.referralOnlyCompleted", canal: "MB" }] }).disabled, true);
   const referred = { ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.referred", canal: "MB" }] };
   assert.equal(getNextRecommendedNodeForCanal(referred).disabled, true);
 });
@@ -995,6 +998,7 @@ test("app-tracked paused and medicated canals expose manual resume nodes after i
   assert.equal(getManualResumeNodeForCanal(pausedCanal), "gauge-final-shape");
   assert.equal(getCanalStatus(medicatedCanal), "medicated");
   assert.equal(getManualResumeNodeForCanal(medicatedCanal), "remove-smear-layer");
+  assert.equal(getManualResumeNodeForCanal({ ...blankCanal("DB"), events: [{ id: "evt_pause_done", timestamp: "t", type: "canal.paused", canal: "DB", details: { nodeId: "endodontic-pathway-complete" } }] }), null);
 });
 
 test("phase-aware canal targets are canal-specific at early handoff nodes", () => {
@@ -1052,6 +1056,47 @@ test("phase-aware canal targets only render at intentional handoff nodes and pre
   assert.equal(byCanal.ML.label, "Proceed with ML to obturation gauging");
   assert.equal(byCanal.DB.nextNodeId, "ready-for-sealer-cone-seating");
   assert.equal(byCanal.DB.label, "Proceed with DB to sealer / cone seating");
+});
+
+test("phase-aware targets can return to referred canal before temporary closure is complete", () => {
+  const referralEvent = { id: "evt_ref", timestamp: "t", type: "treatment.referralRecommended", canal: "L" };
+  const medicationEvent = { id: "evt_med", timestamp: "t", type: "medication.calciumHydroxidePlaced", canal: "L" };
+  const pausedEvent = { id: "evt_pause", timestamp: "t", type: "canal.paused", canal: "B" };
+  const caseData = baseCase({
+    currentCanal: "B",
+    canals: [
+      { ...blankCanal("L"), events: [referralEvent, medicationEvent] },
+      { ...blankCanal("B"), events: [pausedEvent] },
+    ],
+    globalEvents: [referralEvent, medicationEvent, pausedEvent],
+  });
+
+  const targets = getPhaseAwareCanalTargets(caseData, "endodontic-pathway-complete", "B");
+  const lTarget = targets.find((target) => target.canalName === "L");
+
+  assert.equal(lTarget?.disabled, undefined);
+  assert.equal(lTarget?.nextNodeId, "temporary-closure");
+  assert.equal(lTarget?.label, "Continue L at temporary closure");
+});
+
+test("phase-aware targets do not offer pathway-complete loops for paused canals", () => {
+  const referredEvent = { id: "evt_ref", timestamp: "t", type: "canal.referred", canal: "L" };
+  const pausedEvent = { id: "evt_pause", timestamp: "t", type: "canal.paused", canal: "B", details: { nodeId: "endodontic-pathway-complete" } };
+  const caseData = baseCase({
+    currentCanal: "L",
+    canals: [
+      { ...blankCanal("L"), events: [referredEvent] },
+      { ...blankCanal("B"), events: [pausedEvent] },
+    ],
+    globalEvents: [referredEvent, pausedEvent],
+  });
+
+  const targets = getPhaseAwareCanalTargets(caseData, "endodontic-pathway-complete", "L");
+  const bTarget = targets.find((target) => target.canalName === "B");
+
+  assert.equal(bTarget?.disabled, true);
+  assert.equal(bTarget?.nextNodeId, null);
+  assert.equal(bTarget?.label, "B paused; no continuation action");
 });
 
 test("switching canal event fragment records canal change and measurements remain canal-local", () => {
