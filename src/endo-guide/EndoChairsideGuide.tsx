@@ -511,10 +511,6 @@ export default function EndoChairsideGuide() {
     return createNewCanalAtEstimate(data);
   }
 
-  function startNextCanal(data = caseData) {
-    return startAnotherCanal(data);
-  }
-
   function applyDecision(option: DecisionOption) {
     const { eventId, timestamp } = createRuntimeEventArgs();
     const result = applyDecisionEngine({
@@ -643,7 +639,6 @@ export default function EndoChairsideGuide() {
             <CanalControls
               activeCanal={activeCanal}
               onManualEvent={addManualCanalEvent}
-              onStartNextCanal={() => startNextCanal()}
               onResetManualStatus={resetActiveCanalManualStatus}
               className="order-2 xl:col-start-2 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
             />
