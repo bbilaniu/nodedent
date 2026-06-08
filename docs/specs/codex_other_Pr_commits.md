@@ -24,21 +24,61 @@ Protocol data -> decision engine -> UI components -> note/export builders
 
 Do not put new clinical branch logic directly inside React components. When adding a protocol step, update the protocol node, validation/guards, note fragments, status derivation, export/import behavior, and tests together.
 
+## Current Implementation Status
+
+This roadmap has already been partially executed on `codex/verify-endo-guide-refactor`.
+
+Completed commits that should be treated as baseline:
+
+```text
+28f5cff test(endo-guide): verify refactored decision engine and note output
+1d340d6 feat(endo-guide): add post-shaping cone fit handoff
+2ffc289 test(endo-guide): verify protocol graph integrity
+66e9d31 fix(endo-guide): validate sealer handoff requirements
+534f777 test(endo-guide): require fragments for protocol events
+```
+
+Implemented and verified:
+
+```text
+- Refactored guide architecture under src/endo-guide/.
+- Engine/notes modules are separated from React/browser dependencies.
+- JSON export/import preserves canals, measurements, radiograph statuses, events, closure, difficulty, and next-visit plan.
+- Protocol graph integrity test ensures every option nextNodeId resolves.
+- Handoff-node allowlist verifies intentional handoff nodes.
+- Every protocol noteEvent now has an eventFragment.
+- Post-shaping path reaches the sealer/cone seating handoff:
+  shaping -> EDTA -> final NaOCl -> obturation gauge -> master cone -> cone-fit PA -> ready-for-sealer-cone-seating.
+- ready-for-sealer-cone-seating validates cone fit PA status, master cone, and shaping length.
+- Cone short/long troubleshooting loops are verified at the protocol-routing level.
+- Cone-fit-ready canals resume at ready-for-sealer-cone-seating.
+```
+
+Known remaining gaps before later roadmap PRs:
+
+```text
+- PR 2 still needs deeper branch tests for obturation gauge alternates and deferred wet/medication routes.
+- PR 3 nodes and fragments exist, but sealer, cone seating, downpack, and backfill need workflow-level tests.
+- Closure, multi-visit resume, clinical fixture scenarios, note ergonomics, and usability polish remain future work.
+```
+
 ## Recommended PR Sequence
 
 ```text
-1. Verify current refactor baseline
-2. Harden disinfection, obturation gauging, and cone-fit workflow
-3. Harden sealer, cone seating, downpack, and backfill workflow
-4. Harden closure, post-op, and case-completion workflow
-5. Add multi-visit pause/resume workflow
-6. Add clinical scenario regression fixtures
-7. Improve note templates and export ergonomics
-8. Polish chairside usability
-9. Only then consider framework generalization
+1. COMPLETE - Verify current refactor baseline
+2. MOSTLY COMPLETE - Harden disinfection, obturation gauging, and cone-fit happy path
+3. NEXT - Finish PR 2 alternate-branch verification
+4. NEXT - Harden sealer and cone seating workflow
+5. NEXT - Harden downpack, backfill, and canal obturation completion
+6. Harden closure, post-op, and case-completion workflow
+7. Add multi-visit pause/resume workflow
+8. Add clinical scenario regression fixtures
+9. Improve note templates and export ergonomics
+10. Polish chairside usability
+11. Only then consider framework generalization
 ```
 
-## PR 1 - Verify Current Refactor Baseline
+## PR 1 - Verify Current Refactor Baseline - COMPLETE
 
 ```git
 test(endo-guide): verify refactored guide baseline
@@ -65,7 +105,13 @@ git diff --check
 
 No clinical expansion should happen in this PR unless a failing test exposes an actual baseline bug.
 
-## PR 2 - Harden Disinfection, Obturation Gauging, And Cone Fit
+Status:
+
+```text
+Complete. Baseline verification exists in 28f5cff and later protocol hardening commits.
+```
+
+## PR 2 - Harden Disinfection, Obturation Gauging, And Cone Fit - MOSTLY COMPLETE
 
 ```git
 feat(endo-guide): harden disinfection and cone-fit workflow
@@ -96,6 +142,25 @@ Scope:
 - Ensure canal continuation maps a cone-fit-ready canal to the sealer/cone seating handoff.
 ```
 
+Completed:
+
+```text
+- Shaped-canal post-shaping path is implemented and tested through EDTA, final NaOCl, obturation gauging, master cone, cone-fit PA, and ready-for-sealer-cone-seating.
+- ready-for-sealer-cone-seating node exists and is a handoff node.
+- ready-for-sealer-cone-seating validates cone fit PA status, master cone, and shaping length.
+- Note fragments cover all protocol noteEvent types, including disinfection, gauge, master cone, and cone-fit outcomes.
+- Cone-fit-ready canal continuation maps to ready-for-sealer-cone-seating.
+- Protocol graph integrity and note-fragment coverage tests are in place.
+```
+
+Remaining PR 2 gaps:
+
+```text
+- Add deeper workflow tests for size 30 advances beyond, size 30 short, size 25 reaches, size 25 advances beyond, size 25 short, and larger-gauge loop.
+- Add deferred wet / cannot-complete-today tests for final NaOCl and smear-layer paths routing through medication/temporary closure.
+- Confirm compact and full notes include the key PR 2 facts in realistic cases, not only fragment-level coverage.
+```
+
 Acceptance criteria:
 
 ```text
@@ -106,7 +171,92 @@ Acceptance criteria:
 - Tests cover the happy path and short/long troubleshooting loops.
 ```
 
-## PR 3 - Harden Sealer, Cone Seating, Downpack, And Backfill
+## PR 2B - Finish Obturation Gauging And Deferred-Route Verification
+
+```git
+test(endo-guide): verify obturation gauge alternate branches
+```
+
+Scope:
+
+```text
+- Exercise size 30 advances beyond to larger-gauge loop.
+- Exercise size 30 short to size 25.
+- Exercise size 25 reaches and records gauge.
+- Exercise size 25 advances beyond to larger-gauge loop.
+- Exercise size 25 short returning to patency/shaping.
+- Exercise final NaOCl cannot-complete-today and smear-layer deferral to medication/temporary closure.
+- Verify compact/full notes for a realistic PR 2 case include EDTA, NaOCl, gauge, master cone, and cone-fit PA.
+```
+
+Acceptance criteria:
+
+```text
+- All PR 2 alternate branches route to existing, clinically meaningful nodes.
+- Deferred wet/disinfection paths generate medication/temporary-closure events and notes.
+- No clinical routing is changed unless a test exposes a clear bug.
+```
+
+## PR 3A - Harden Sealer And Cone Seating Workflow
+
+```git
+test(endo-guide): verify sealer and cone seating workflow
+```
+
+Scope:
+
+```text
+- Start from ready-for-sealer-cone-seating.
+- Verify dry/slightly damp canal proceeds to patency-before-sealer.
+- Verify wet paper point loops to drying.
+- Verify persistent wet canal routes to calcium hydroxide and temporary closure.
+- Verify patency check immediately before sealer.
+- Verify bioceramic sealer placement with passive NaviTip withdrawal.
+- Verify NaviTip unsafe route.
+- Verify paper point through sealer and sealer re-application.
+- Verify seating the pre-fit GP cone.
+- Verify GP cone short after sealer routes to patency-before-sealer.
+- Verify GP cone long after sealer routes safely back to obturation gauging.
+```
+
+Acceptance criteria:
+
+```text
+- A cone-fit-ready canal can move from handoff through sealer placement and GP cone seating.
+- Troubleshooting branches return to clinically meaningful nodes.
+- Required fields for drying, patency, sealer, and cone seating are enforced where needed.
+- Full note documents drying, sealer placement, paper point distribution, sealer re-application, and GP cone seating.
+```
+
+## PR 3B - Harden Downpack, Backfill, And Canal Obturation Completion
+
+```git
+test(endo-guide): verify downpack and backfill completion workflow
+```
+
+Scope:
+
+```text
+- Verify no-gap branch proceeds to sear GP.
+- Verify round/ovoid gap branches route through modified downpack or accessory cones.
+- Verify modified downpack success, repeat, and cone-moved routes.
+- Verify accessory cone success and difficulty routes.
+- Verify searing and vertical compaction.
+- Verify reapply-sealer-on-GP before backfill.
+- Verify backfill success, difficulty, apical GP movement, excess GP in chamber, and plugger-hole branches.
+- Verify canal status becomes complete only after active canal obturation workflow is complete.
+```
+
+Acceptance criteria:
+
+```text
+- A seated GP cone can proceed through downpack/backfill to canal-obturation-complete.
+- Downpack/backfill troubleshooting branches do not dead-end.
+- Full note documents downpack, backfill, and canal obturation completion.
+- Status derivation distinguishes cone-fit-ready, sealer-started, and completed canals as accurately as current status vocabulary allows.
+```
+
+## Original PR 3 - Harden Sealer, Cone Seating, Downpack, And Backfill - SPLIT INTO PR 3A/3B
 
 ```git
 feat(endo-guide): harden sealer and obturation completion workflow
