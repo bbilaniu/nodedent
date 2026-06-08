@@ -817,6 +817,32 @@ test("cone fit troubleshooting branches follow protocol loops", () => {
   assert.equal(conePa[2].nextNodeId, "cone-long");
 });
 
+test("cone fit radiograph options must match the recorded PA status", () => {
+  const [acceptableOption, shortOption, longOption] = protocolNodes["cone-fit-radiograph"].options;
+  const acceptableCase = baseCase({ canals: [{ ...blankCanal("MB"), coneFitRadiograph: "acceptable" }] });
+  const shortCase = baseCase({ canals: [{ ...blankCanal("MB"), coneFitRadiograph: "short" }] });
+  const longCase = baseCase({ canals: [{ ...blankCanal("MB"), coneFitRadiograph: "long" }] });
+  const notTakenCase = baseCase({ canals: [{ ...blankCanal("MB"), coneFitRadiograph: "not taken" }] });
+
+  assert.deepEqual(getMissingRequirements("cone-fit-radiograph", acceptableOption, acceptableCase, acceptableCase.canals[0]), []);
+  assert.deepEqual(getMissingRequirements("cone-fit-radiograph", shortOption, shortCase, shortCase.canals[0]), []);
+  assert.deepEqual(getMissingRequirements("cone-fit-radiograph", longOption, longCase, longCase.canals[0]), []);
+
+  assert.ok(getMissingRequirements("cone-fit-radiograph", acceptableOption, shortCase, shortCase.canals[0]).includes("Cone fit radiograph status must be acceptable for this option"));
+  assert.ok(getMissingRequirements("cone-fit-radiograph", shortOption, acceptableCase, acceptableCase.canals[0]).includes("Cone fit radiograph status must be short for this option"));
+  assert.ok(getMissingRequirements("cone-fit-radiograph", longOption, acceptableCase, acceptableCase.canals[0]).includes("Cone fit radiograph status must be long for this option"));
+  assert.ok(getMissingRequirements("cone-fit-radiograph", acceptableOption, notTakenCase, notTakenCase.canals[0]).includes("Cone fit radiograph status must be acceptable for this option"));
+
+  const mismatch = applyDecision({
+    currentNodeId: "cone-fit-radiograph",
+    selectedOptionLabel: acceptableOption.label,
+    caseData: shortCase,
+    activeCanalName: "MB",
+  });
+  assert.equal(mismatch.nextNodeId, "cone-fit-radiograph");
+  assert.deepEqual(mismatch.errors, ["Cone fit radiograph status must be acceptable for this option"]);
+});
+
 test("post-shaping event fragments narrate protocol events", () => {
   const caseData = baseCase({
     canals: [{ ...blankCanal("MB"), shapingLength: "19", obturationGauge: "30", masterCone: "30/.04" }],

@@ -133,7 +133,12 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
     if (isBlank(activeCanal?.referencePoint)) addMissing("Reference point");
   }
-  if (nodeId === "cone-fit-radiograph" && isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+  if (nodeId === "cone-fit-radiograph") {
+    const coneFitStatus = String(activeCanal?.coneFitRadiograph || "").trim().toLowerCase();
+    if (isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
+    const expectedStatus = label.includes("acceptable") ? "acceptable" : label.includes("short") ? "short" : label.includes("long") ? "long" : "";
+    if (expectedStatus && coneFitStatus && coneFitStatus !== expectedStatus) addMissing(`Cone fit radiograph status must be ${expectedStatus} for this option`);
+  }
   if (nodeId === "ready-for-sealer-cone-seating") {
     if (isBlank(activeCanal?.coneFitRadiograph)) addMissing("Cone fit radiograph status");
     if (isBlank(activeCanal?.masterCone)) addMissing("Master cone");
