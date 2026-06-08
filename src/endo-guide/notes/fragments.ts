@@ -123,7 +123,7 @@ export function eventFragment(event: ClinicalEvent) {
     "workflow.startedNextCanal": "Workflow moved to next canal.",
     "workflow.nextCanalSelected": "Workflow continued to another canal.",
     "workflow.nextCanalBeforeClosure": "Workflow continued to another canal before final chamber cleanup/closure.",
-    "workflow.switchedCanal": `Workflow switched from ${event.details?.previousActiveCanal || "previous canal"} to ${event.details?.newActiveCanal || event.canal || "selected canal"}; ${event.details?.reason || "continued selected canal"}.`,
+    "workflow.switchedCanal": `Workflow switched from ${event.details?.previousCanal || event.details?.previousActiveCanal || "previous canal"} to ${event.details?.nextCanal || event.details?.newActiveCanal || event.canal || "selected canal"}; ${event.details?.phaseLabel ? `continued at ${event.details.phaseLabel}` : event.details?.reason || "continued selected canal"}.`,
     "workflow.allCanalsReadyForClosure": "All canals ready for chamber cleanup and closure.",
     "treatment.referralRecommended": `${canal}Referral or specialist continuation recommended.`,
     "workflow.returnedToStart": "Workflow returned to start.",

@@ -11,7 +11,8 @@ import { buildFullNote } from "../notes/buildFullNote";
 import { buildJsonExport } from "../notes/buildJsonExport";
 import { buildPatientSummary } from "../notes/buildPatientSummary";
 import { eventFragment } from "../notes/fragments";
-import { getNextRecommendedNodeForCanal } from "../protocol/continuation";
+import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
+import { getNextRecommendedNodeForCanal, getPhaseAwareCanalTargets } from "../protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
@@ -153,6 +154,12 @@ test("protocol option targets resolve to existing nodes", () => {
 
 test("handoff nodes are intentional and resolvable", () => {
   const expectedHandoffs = [
+    "identify-canals",
+    "estimate-wl",
+    "advance-10c",
+    "patency-10c",
+    "gauge-final-shape",
+    "remove-smear-layer",
     "ready-for-obturation",
     "ready-for-sealer-cone-seating",
     "canal-obturation-complete",
@@ -723,11 +730,68 @@ test("canal continuation maps key statuses", () => {
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "scouting.estimatedWLSet", canal: "MB" }] }).nextNodeId, "open-orifice");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), eal0: "20" }).nextNodeId, "patency-10c");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "glidePath.created", canal: "MB" }] }).nextNodeId, "gauge-final-shape");
-  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "ready-for-obturation");
+  assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), finalShape: "30/.04" }).nextNodeId, "remove-smear-layer");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "MB" }] }).nextNodeId, "ready-for-sealer-cone-seating");
   assert.equal(getNextRecommendedNodeForCanal({ ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.medicated", canal: "MB" }] }).nextNodeId, "endodontic-pathway-complete");
   const referred = { ...blankCanal("MB"), events: [{ id: "evt", timestamp: "t", type: "canal.referred", canal: "MB" }] };
   assert.equal(getNextRecommendedNodeForCanal(referred).disabled, true);
+});
+
+test("phase-aware canal targets are canal-specific at early handoff nodes", () => {
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), estimatedWorkingLength: "20" },
+      blankCanal("ML"),
+      { ...blankCanal("DB"), estimatedWorkingLength: "19" },
+      { ...blankCanal("DL"), eal0: "21" },
+      { ...blankCanal("P"), events: [{ id: "evt_gp", timestamp: "t", type: "glidePath.created", canal: "P" }] },
+      { ...blankCanal("MB2"), finalShape: "30/.04" },
+      { ...blankCanal("D"), events: [{ id: "evt_ref", timestamp: "t", type: "canal.referred", canal: "D" }] },
+    ],
+  });
+
+  const targets = getPhaseAwareCanalTargets(caseData, "advance-10c", "MB");
+  const byCanal = Object.fromEntries(targets.map((target) => [target.canalName, target]));
+
+  assert.equal(byCanal.ML.label, "Start ML at estimated WL / scouting");
+  assert.equal(byCanal.ML.nextNodeId, "estimate-wl");
+  assert.equal(byCanal.ML.phaseLabel, "estimated WL / scouting");
+  assert.equal(byCanal.DB.label, "Start DB at scouting");
+  assert.equal(byCanal.DB.nextNodeId, "estimate-wl");
+  assert.equal(byCanal.DL.label, "Continue DL at patency / glide path");
+  assert.equal(byCanal.DL.nextNodeId, "patency-10c");
+  assert.equal(byCanal.P.label, "Continue P at final shaping");
+  assert.equal(byCanal.P.nextNodeId, "gauge-final-shape");
+  assert.equal(byCanal.MB2.label, "Proceed with MB2 to final cleaning / obturation");
+  assert.equal(byCanal.MB2.nextNodeId, "remove-smear-layer");
+  assert.equal(byCanal.D.disabled, true);
+});
+
+test("phase-aware canal targets only render at intentional handoff nodes and preserve late handoff behavior", () => {
+  const caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), finalShape: "30/.04" },
+      {
+        ...blankCanal("ML"),
+        events: [{ id: "evt_disinfected", timestamp: "t", type: "disinfection.finalNaOClCompleted", canal: "ML" }],
+      },
+      {
+        ...blankCanal("DB"),
+        events: [{ id: "evt_cone", timestamp: "t", type: "coneFit.radiographAcceptable", canal: "DB" }],
+      },
+    ],
+  });
+
+  assert.deepEqual(getPhaseAwareCanalTargets(caseData, "preop", "MB"), []);
+  const targets = getPhaseAwareCanalTargets(caseData, "ready-for-obturation", "MB");
+  const byCanal = Object.fromEntries(targets.map((target) => [target.canalName, target]));
+
+  assert.equal(byCanal.ML.nextNodeId, "ready-for-obturation");
+  assert.equal(byCanal.ML.label, "Proceed with ML to obturation gauging");
+  assert.equal(byCanal.DB.nextNodeId, "ready-for-sealer-cone-seating");
+  assert.equal(byCanal.DB.label, "Proceed with DB to sealer / cone seating");
 });
 
 test("switching canal event fragment records canal change and measurements remain canal-local", () => {
@@ -749,6 +813,26 @@ test("switching canal event fragment records canal change and measurements remai
   assert.match(eventFragment(event), /Workflow switched from ML to MB/);
   assert.equal(event.type, "workflow.switchedCanal");
   assert.equal(caseData.canals.find((canal) => canal.name === "ML")?.estimatedWorkingLength, "21");
+});
+
+test("phase-aware switch event fragment and resume inference use canonical switch details", () => {
+  const event = {
+    id: "evt_switch_phase",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "workflow.switchedCanal",
+    canal: "DL",
+    details: {
+      previousCanal: "MB",
+      nextCanal: "DL",
+      previousNodeId: "advance-10c",
+      nextNodeId: "patency-10c",
+      reason: "continued DL at patency / glide path",
+      phaseLabel: "patency / glide path",
+    },
+  };
+
+  assert.match(eventFragment(event), /Workflow switched from MB to DL; continued at patency \/ glide path\./);
+  assert.equal(inferCurrentNodeIdFromEvents({ globalEvents: [event] }), "patency-10c");
 });
 
 test("compact and full notes include measurements and event fragments", () => {

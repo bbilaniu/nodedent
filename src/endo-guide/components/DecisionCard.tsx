@@ -84,7 +84,7 @@ export function DecisionCard({
       </div>
       {isHandoffNode ? (
         <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <h4 className="text-sm font-bold text-blue-950">Continue another canal</h4>
+          <h4 className="text-sm font-bold text-blue-950">Work on another canal</h4>
           <div className="mt-3 grid gap-2">
             {continuationTargets.length ? continuationTargets.map((target) => (
               <button

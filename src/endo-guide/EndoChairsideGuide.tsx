@@ -19,7 +19,7 @@ import { buildCompactNote } from "./notes/buildCompactNote";
 import { buildEventLogExport, buildJsonExport, buildPrintableSummary } from "./notes/buildJsonExport";
 import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
-import { getCanalContinuationTargets, getNextRecommendedNodeForCanal } from "./protocol/continuation";
+import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 
@@ -93,8 +93,8 @@ export default function EndoChairsideGuide() {
   const progressPhase = selectedProgressPhase || currentNode.phase;
   const isHandoffNode = handoffNodeIds.has(currentNode.id);
   const continuationTargets = useMemo(
-    () => getCanalContinuationTargets(caseData, activeCanal?.name),
-    [caseData, activeCanal?.name]
+    () => getPhaseAwareCanalTargets(caseData, currentNode.id, activeCanal?.name),
+    [caseData, currentNode.id, activeCanal?.name]
   );
 
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
@@ -388,9 +388,14 @@ export default function EndoChairsideGuide() {
       ...event.details,
       previousActiveCanal: caseData.currentCanal,
       newActiveCanal: target.canalName,
+      previousCanal: caseData.currentCanal,
+      nextCanal: target.canalName,
       previousNode: currentNode.id,
       nextNode: target.nextNodeId,
+      previousNodeId: currentNode.id,
+      nextNodeId: target.nextNodeId,
       reason: target.reason || target.label,
+      phaseLabel: target.phaseLabel,
     };
 
     setCaseData((prev) => ({
@@ -631,4 +636,4 @@ export default function EndoChairsideGuide() {
   );
 }
 
-export { getNextRecommendedNodeForCanal };
+export { getNextRecommendedNodeForCanal } from "./protocol/continuation";

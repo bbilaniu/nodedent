@@ -122,6 +122,7 @@ export type CanalContinuationTarget = {
   canalName: string;
   status: CanalStatus;
   label: string;
+  phaseLabel?: string;
   nextNodeId: string | null;
   disabled?: boolean;
   reason: string;

@@ -726,6 +726,12 @@ export const protocolNodes: Record<string, ProtocolNode> = {
 };
 
 export const handoffNodeIds = new Set([
+  "identify-canals",
+  "estimate-wl",
+  "advance-10c",
+  "patency-10c",
+  "gauge-final-shape",
+  "remove-smear-layer",
   "ready-for-obturation",
   "ready-for-sealer-cone-seating",
   "canal-obturation-complete",
