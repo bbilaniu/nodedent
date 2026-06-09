@@ -41,7 +41,23 @@ It should avoid being too endodontic-specific.
 
 Use a clinical, modern palette consistent with the current app UI.
 
-The current reference logo artwork uses these exact source colors:
+The primary logo lockup in `public/nodedent_connected_tooth_logo_lockup.png` presents these brand palette tokens:
+
+| Use | Hex | RGB | HSL | CMYK |
+| --- | --- | --- | --- | --- |
+| Deep Navy / primary | `#0F1E3A` | `rgb(15, 30, 58)` | `hsl(219, 59%, 14%)` | `74%, 48%, 0%, 77%` |
+| Mint Teal / accent | `#2BC4A6` | `rgb(43, 196, 166)` | `hsl(168, 64%, 47%)` | `78%, 0%, 15%, 23%` |
+| Slate Gray / supporting | `#64748B` | `rgb(100, 116, 139)` | `hsl(215, 16%, 47%)` | `28%, 17%, 0%, 45%` |
+| Light Slate / background | `#F1F5F9` | `rgb(241, 245, 249)` | `hsl(210, 40%, 96%)` | `3%, 2%, 0%, 2%` |
+
+Optional extension colors can be introduced if the product needs additional UI states, supporting illustrations, or secondary brand accents:
+
+| Use | Hex | RGB | HSL | CMYK |
+| --- | --- | --- | --- | --- |
+| Light Blue gradient start / blue-300 | `#93C5FD` | `rgb(147, 197, 253)` | `hsl(212, 96%, 78%)` | `42%, 22%, 0%, 1%` |
+| Light Blue gradient end / blue-400 | `#60A5FA` | `rgb(96, 165, 250)` | `hsl(213, 94%, 68%)` | `62%, 34%, 0%, 2%` |
+
+The SVG reference artwork also uses these exact construction colors for gradients, highlights, and inverted variants:
 
 | Use | Hex | RGB | HSL | CMYK |
 | --- | --- | --- | --- | --- |
@@ -50,11 +66,14 @@ The current reference logo artwork uses these exact source colors:
 | Mint gradient start | `#2BC4A6` | `rgb(43, 196, 166)` | `hsl(168, 64%, 47%)` | `78%, 0%, 15%, 23%` |
 | Mint gradient end | `#38D6BB` | `rgb(56, 214, 187)` | `hsl(170, 66%, 53%)` | `74%, 0%, 13%, 16%` |
 | White background / node highlight | `#FFFFFF` | `rgb(255, 255, 255)` | `hsl(0, 0%, 100%)` | `0%, 0%, 0%, 0%` |
+| Inverted light node end | `#E2E8F0` | `rgb(226, 232, 240)` | `hsl(214, 32%, 91%)` | `6%, 3%, 0%, 6%` |
 
 Notes:
 
-- Navy gradient: `linear-gradient(#061A43, #0F1E3A)`
-- Mint gradient: `linear-gradient(#2BC4A6, #38D6BB)`
+- Use `#0F1E3A`, `#2BC4A6`, `#64748B`, and `#F1F5F9` as the core brand tokens when communicating the palette in design docs.
+- Use the optional light-blue gradient, `linear-gradient(#93C5FD, #60A5FA)`, only when an additional color family becomes necessary.
+- Navy SVG gradient: `linear-gradient(#061A43, #0F1E3A)`
+- Mint SVG gradient: `linear-gradient(#2BC4A6, #38D6BB)`
 - Node highlight: white radial highlight using `#FFFFFF` at 22%, 3%, and 0% opacity
 - Soft shadow: `#0F1E3A` at 12% opacity
 - Line shadow: `#0F1E3A` at 10% opacity
@@ -105,7 +124,7 @@ Avoid:
 
 A minimal tooth or dental arch outline built from connected nodes.
 
-The icon could use 5–7 small circular nodes connected by thin lines, subtly forming a molar, premolar, or dental arch silhouette.
+The reference icon uses eight small circular nodes connected by thin lines, subtly forming a molar, premolar, or dental arch silhouette. Simplified small-size variants can reduce the node count if needed for legibility.
 
 ## What it communicates
 
@@ -312,6 +331,17 @@ Individual guides can have their own page titles or modules, but the visual iden
 - same mint/teal progress accent
 - same node/decision visual motif
 
+## Typography
+
+Use **Inter** for the primary wordmark, tagline, and supporting brand-system labels.
+
+The type direction should feel:
+
+- modern
+- clean
+- professional
+- highly readable
+
 ---
 
 # Practical Design Brief
@@ -339,9 +369,13 @@ Minimal, rounded, scalable, professional, suitable for favicon and app header.
 Preferred colors:
 
 ```text
-Deep navy primary: #061A43 to #0F1E3A
-Mint / teal accent: #2BC4A6 to #38D6BB
-White background / highlight: #FFFFFF
+Deep navy primary: #0F1E3A
+Mint / teal accent: #2BC4A6
+Slate gray supporting text: #64748B
+Light slate background: #F1F5F9
+Optional SVG gradient stops: #061A43 to #0F1E3A, #2BC4A6 to #38D6BB
+Optional light-blue extension gradient: #93C5FD to #60A5FA
+White highlight / flat icon background: #FFFFFF
 ```
 
 Avoid:
