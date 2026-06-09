@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">NodeDent connected tooth icon</title>
+  <desc id="desc">A minimal tooth-shaped mark formed by connected mint and navy decision nodes.</desc>
+
+  <defs>
+    <linearGradient id="mintGradient" x1="56" y1="54" x2="440" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#27C7AC"/>
+      <stop offset="1" stop-color="#38D6BB"/>
+    </linearGradient>
+
+    <linearGradient id="navyGradient" x1="72" y1="54" x2="428" y2="456" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#061A43"/>
+      <stop offset="1" stop-color="#0F1E3A"/>
+    </linearGradient>
+
+    <radialGradient id="nodeHighlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(92 72) rotate(45) scale(60)">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0F1E3A" flood-opacity="0.12"/>
+    </filter>
+
+    <filter id="lineShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0F1E3A" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <!-- Optional white background to match the reference PNG. Remove this rect for transparent export. -->
+  <rect width="512" height="512" fill="#FFFFFF"/>
+
+  <g stroke-linecap="round" stroke-linejoin="round" filter="url(#lineShadow)">
+    <!-- Upper connected path -->
+    <path d="M105 73 L228 113" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M284 113 L407 73" stroke="#0F1E3A" stroke-width="11"/>
+
+    <!-- Mint side curves -->
+    <path d="M97 106 C80 146 77 198 90 235" stroke="url(#mintGradient)" stroke-width="12"/>
+    <path d="M415 106 C432 146 435 198 422 235" stroke="url(#mintGradient)" stroke-width="12"/>
+
+    <!-- Lower navy side paths -->
+    <path d="M91 276 C110 336 136 389 169 429" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M421 276 C402 336 376 389 343 429" stroke="#0F1E3A" stroke-width="11"/>
+
+    <!-- Inner fork -->
+    <path d="M256 337 L171 431" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M256 337 L341 431" stroke="#0F1E3A" stroke-width="11"/>
+  </g>
+
+  <!-- Nodes -->
+  <g filter="url(#softShadow)">
+    <circle cx="105" cy="73" r="32" fill="url(#mintGradient)"/>
+    <circle cx="228" cy="113" r="30" fill="url(#navyGradient)"/>
+    <circle cx="407" cy="73" r="32" fill="url(#navyGradient)"/>
+
+    <circle cx="90" cy="252" r="32" fill="url(#mintGradient)"/>
+    <circle cx="422" cy="252" r="32" fill="url(#mintGradient)"/>
+
+    <circle cx="256" cy="337" r="30" fill="url(#navyGradient)"/>
+    <circle cx="171" cy="431" r="23" fill="url(#navyGradient)"/>
+    <circle cx="341" cy="431" r="23" fill="url(#navyGradient)"/>
+
+    <!-- Subtle highlights -->
+    <circle cx="105" cy="73" r="32" fill="url(#nodeHighlight)"/>
+    <circle cx="90" cy="252" r="32" fill="url(#nodeHighlight)"/>
+    <circle cx="422" cy="252" r="32" fill="url(#nodeHighlight)"/>
+  </g>
+</svg>
