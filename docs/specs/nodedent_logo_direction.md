@@ -41,6 +41,25 @@ It should avoid being too endodontic-specific.
 
 Use a clinical, modern palette consistent with the current app UI.
 
+The current reference logo artwork uses these exact source colors:
+
+| Use | Hex | RGB | HSL | CMYK |
+| --- | --- | --- | --- | --- |
+| Navy gradient start | `#061A43` | `rgb(6, 26, 67)` | `hsl(220, 84%, 14%)` | `91%, 61%, 0%, 74%` |
+| Navy gradient end / line color / shadow color | `#0F1E3A` | `rgb(15, 30, 58)` | `hsl(219, 59%, 14%)` | `74%, 48%, 0%, 77%` |
+| Mint gradient start | `#2BC4A6` | `rgb(43, 196, 166)` | `hsl(168, 64%, 47%)` | `78%, 0%, 15%, 23%` |
+| Mint gradient end | `#38D6BB` | `rgb(56, 214, 187)` | `hsl(170, 66%, 53%)` | `74%, 0%, 13%, 16%` |
+| White background / node highlight | `#FFFFFF` | `rgb(255, 255, 255)` | `hsl(0, 0%, 100%)` | `0%, 0%, 0%, 0%` |
+
+Notes:
+
+- Navy gradient: `linear-gradient(#061A43, #0F1E3A)`
+- Mint gradient: `linear-gradient(#2BC4A6, #38D6BB)`
+- Node highlight: white radial highlight using `#FFFFFF` at 22%, 3%, and 0% opacity
+- Soft shadow: `#0F1E3A` at 12% opacity
+- Line shadow: `#0F1E3A` at 10% opacity
+- CMYK values are approximate conversions for print discussions; use the Hex or RGB values as the digital source of truth.
+
 ### Primary
 
 - Deep navy / slate
@@ -320,9 +339,9 @@ Minimal, rounded, scalable, professional, suitable for favicon and app header.
 Preferred colors:
 
 ```text
-Deep navy / slate primary
-Mint / teal / cyan accent
-White or light slate background
+Deep navy primary: #061A43 to #0F1E3A
+Mint / teal accent: #2BC4A6 to #38D6BB
+White background / highlight: #FFFFFF
 ```
 
 Avoid:

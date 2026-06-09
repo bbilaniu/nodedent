@@ -5,7 +5,7 @@
 
   <defs>
     <linearGradient id="mintGradient" x1="56" y1="54" x2="440" y2="472" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#27C7AC"/>
+      <stop offset="0" stop-color="#2BC4A6"/>
       <stop offset="1" stop-color="#38D6BB"/>
     </linearGradient>
 
@@ -29,18 +29,18 @@
     </filter>
   </defs>
 
+  <!-- Lines are drawn center-to-center and nodes are drawn on top, ensuring clean visual connections. -->
   <g stroke-linecap="round" stroke-linejoin="round" filter="url(#lineShadow)">
     <!-- Upper connected path -->
-    <path d="M105 73 L228 113" stroke="#0F1E3A" stroke-width="11"/>
-    <path d="M284 113 L407 73" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M105 73 L256 113 L407 73" stroke="#0F1E3A" stroke-width="11"/>
 
     <!-- Mint side curves -->
-    <path d="M97 106 C80 146 77 198 90 235" stroke="url(#mintGradient)" stroke-width="12"/>
-    <path d="M415 106 C432 146 435 198 422 235" stroke="url(#mintGradient)" stroke-width="12"/>
+    <path d="M97 106 C80 146 77 198 90 252" stroke="url(#mintGradient)" stroke-width="12"/>
+    <path d="M415 106 C432 146 435 198 422 252" stroke="url(#mintGradient)" stroke-width="12"/>
 
     <!-- Lower navy side paths -->
-    <path d="M91 276 C110 336 136 389 169 429" stroke="#0F1E3A" stroke-width="11"/>
-    <path d="M421 276 C402 336 376 389 343 429" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M90 252 C110 326 136 389 171 431" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M422 252 C402 326 376 389 341 431" stroke="#0F1E3A" stroke-width="11"/>
 
     <!-- Inner fork -->
     <path d="M256 337 L171 431" stroke="#0F1E3A" stroke-width="11"/>
@@ -50,7 +50,7 @@
   <!-- Nodes -->
   <g filter="url(#softShadow)">
     <circle cx="105" cy="73" r="32" fill="url(#mintGradient)"/>
-    <circle cx="228" cy="113" r="30" fill="url(#navyGradient)"/>
+    <circle cx="256" cy="113" r="30" fill="url(#navyGradient)"/>
     <circle cx="407" cy="73" r="32" fill="url(#navyGradient)"/>
 
     <circle cx="90" cy="252" r="32" fill="url(#mintGradient)"/>

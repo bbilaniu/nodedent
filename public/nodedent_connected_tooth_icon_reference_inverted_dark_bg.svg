@@ -10,8 +10,8 @@
     </linearGradient>
 
     <linearGradient id="navyGradient" x1="72" y1="54" x2="428" y2="456" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#061A43"/>
-      <stop offset="1" stop-color="#0F1E3A"/>
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E2E8F0"/>
     </linearGradient>
 
     <radialGradient id="nodeHighlight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(92 72) rotate(45) scale(60)">
@@ -21,32 +21,32 @@
     </radialGradient>
 
     <filter id="softShadow" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0F1E3A" flood-opacity="0.12"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.20"/>
     </filter>
 
     <filter id="lineShadow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0F1E3A" flood-opacity="0.10"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.16"/>
     </filter>
   </defs>
 
-  <rect width="512" height="512" fill="#FFFFFF"/>
+  <rect width="512" height="512" fill="#0F1E3A"/>
 
   <!-- Lines are drawn center-to-center and nodes are drawn on top, ensuring clean visual connections. -->
   <g stroke-linecap="round" stroke-linejoin="round" filter="url(#lineShadow)">
     <!-- Upper connected path -->
-    <path d="M105 73 L256 113 L407 73" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M105 73 L256 113 L407 73" stroke="#FFFFFF" stroke-width="11"/>
 
     <!-- Mint side curves -->
     <path d="M97 106 C80 146 77 198 90 252" stroke="url(#mintGradient)" stroke-width="12"/>
     <path d="M415 106 C432 146 435 198 422 252" stroke="url(#mintGradient)" stroke-width="12"/>
 
     <!-- Lower navy side paths -->
-    <path d="M90 252 C110 326 136 389 171 431" stroke="#0F1E3A" stroke-width="11"/>
-    <path d="M422 252 C402 326 376 389 341 431" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M90 252 C110 326 136 389 171 431" stroke="#FFFFFF" stroke-width="11"/>
+    <path d="M422 252 C402 326 376 389 341 431" stroke="#FFFFFF" stroke-width="11"/>
 
     <!-- Inner fork -->
-    <path d="M256 337 L171 431" stroke="#0F1E3A" stroke-width="11"/>
-    <path d="M256 337 L341 431" stroke="#0F1E3A" stroke-width="11"/>
+    <path d="M256 337 L171 431" stroke="#FFFFFF" stroke-width="11"/>
+    <path d="M256 337 L341 431" stroke="#FFFFFF" stroke-width="11"/>
   </g>
 
   <!-- Nodes -->
