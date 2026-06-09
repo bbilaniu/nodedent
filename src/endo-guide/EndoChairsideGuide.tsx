@@ -682,6 +682,8 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
+              onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
+              onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
               onUpdateCase={updateCase}
               onUpdateDiagnosis={updateDiagnosis}
               onUpdatePreOp={updatePreOp}

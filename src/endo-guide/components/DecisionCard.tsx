@@ -25,6 +25,8 @@ export function DecisionCard({
   onApplyDecision,
   onContinueCanal,
   onCreateNewCanal,
+  onOpenSavedWorkflow,
+  onOpenPriorVisit,
   onUpdateCase,
   onUpdateDiagnosis,
   onUpdatePreOp,
@@ -41,6 +43,8 @@ export function DecisionCard({
   onApplyDecision: (option: DecisionOption) => void;
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
+  onOpenSavedWorkflow: () => void;
+  onOpenPriorVisit: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
@@ -64,6 +68,22 @@ export function DecisionCard({
       <p className="rounded-2xl bg-slate-50 p-4 text-base leading-7 text-slate-800">{currentNode.chairsideInstruction}</p>
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={onOpenSavedWorkflow}
+              className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-100"
+            >
+              Resume saved workflow
+            </button>
+            <button
+              type="button"
+              onClick={onOpenPriorVisit}
+              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
+            >
+              Set up prior visit
+            </button>
+          </div>
           <h4 className="text-sm font-bold text-slate-900">Case setup</h4>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
