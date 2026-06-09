@@ -3,9 +3,12 @@ import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { appendSection, groupEventsByPrefix } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
+import { getPriorVisitLines } from "./priorVisit";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
+  const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed;
+  const bwReviewed = caseData.preOp?.bwReviewed;
   lines.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}`);
   if (caseData.patientNumber) lines.push(`Patient #: ${caseData.patientNumber}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
@@ -17,10 +20,12 @@ export function buildFullNote(caseData: EndoCase) {
     caseData.nextVisitPlan ? `Next visit / plan: ${caseData.nextVisitPlan}` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Pre-op:", [
-    `Radiographs reviewed: ${caseData.preOp?.radiographsReviewed ? "yes" : "not recorded"}`,
+    `PA reviewed: ${paReviewed ? "yes" : "not recorded"}`,
+    `BW reviewed: ${bwReviewed ? "yes" : "not recorded"}`,
     `CBCT reviewed: ${caseData.preOp?.cbctReviewed ? "yes" : "no/not recorded"}`,
     caseData.preOp?.estimatedChamberDepth ? `Estimated chamber depth: ${caseData.preOp.estimatedChamberDepth} mm` : null,
   ].filter(Boolean) as string[]);
+  appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));
   appendSection(lines, "Access / canals:", groupEventsByPrefix(caseData, ["access."]));
   const canalLines: string[] = [];
   caseData.canals.forEach((canal) => {

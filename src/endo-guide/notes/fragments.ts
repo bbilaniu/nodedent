@@ -5,6 +5,7 @@ export function eventFragment(event: ClinicalEvent) {
   const snap = event.details?.canalSnapshot || {};
   const fragments: Record<string, string> = {
     "preop.reviewCompleted": "Pre-op review completed; chamber depth and estimated WL recorded where available.",
+    "case.continuedFromPriorVisit": "Case continued from prior visit / outside system; prior treatment facts recorded as history.",
     "access.chamberReached": "Pulp chamber reached during access.",
     "access.markedDepthNoChamber": "Marked access depth reached without chamber entry; stopped for radiographic/clinical reassessment.",
     "access.radiographRedirected": "Radiograph taken and access direction reassessed/redirected.",
@@ -124,8 +125,10 @@ export function eventFragment(event: ClinicalEvent) {
     "workflow.nextCanalSelected": "Workflow continued to another canal.",
     "workflow.nextCanalBeforeClosure": "Workflow continued to another canal before final chamber cleanup/closure.",
     "workflow.switchedCanal": `Workflow switched from ${event.details?.previousCanal || event.details?.previousActiveCanal || "previous canal"} to ${event.details?.nextCanal || event.details?.newActiveCanal || event.canal || "selected canal"}; ${event.details?.phaseLabel ? `continued at ${event.details.phaseLabel}` : event.details?.reason || "continued selected canal"}.`,
+    "workflow.resumedFromPriorVisit": `Workflow resumed ${event.canal || "selected canal"} from prior visit history at ${event.details?.phaseLabel || event.details?.nextNodeId || "confirmed resume point"}.`,
     "workflow.allCanalsReadyForClosure": "All canals ready for chamber cleanup and closure.",
     "treatment.referralRecommended": `${canal}Referral or specialist continuation recommended.`,
+    "treatment.referralOnlyCompleted": `${canal}Referral note completed without medication/temporization at this visit.`,
     "workflow.returnedToStart": "Workflow returned to start.",
   };
   return fragments[event.type] || `${canal}${event.type}.`;

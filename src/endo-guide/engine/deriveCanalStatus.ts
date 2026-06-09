@@ -46,16 +46,22 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
     hasEvent(canal, "downpack.gpStableAfterCompaction")
   ) return "complete";
   if (hasEvent(canal, "canal.completed")) return "complete";
+  if (hasEvent(canal, "canal.paused")) return "paused";
+  if (hasEvent(canal, "canal.medicated") || hasEvent(canal, "medication.calciumHydroxidePlaced")) return "medicated";
   if (hasEvent(canal, "sealer.reapplied") || hasEvent(canal, "sealer.applied")) return "disinfected";
   if (hasEvent(canal, "coneFit.radiographAcceptable")) return "disinfected";
   if (hasEvent(canal, "disinfection.readyForObturation") || hasEvent(canal, "disinfection.finalNaOClCompleted")) return "disinfected";
-  if (hasEvent(canal, "canal.paused")) return "paused";
-  if (hasEvent(canal, "canal.medicated") || hasEvent(canal, "medication.calciumHydroxidePlaced")) return "medicated";
   if (hasEvent(canal, "closure.finalRestoration") || hasEvent(canal, "closure.orificeBarrierTemporary") || hasEvent(canal, "closure.temporary")) return "complete";
   if (hasEvent(canal, "shaping.completed") || !isBlank(canal.finalShape)) return "shaped";
   if (hasEvent(canal, "glidePath.created")) return "glidePath";
   if (hasEvent(canal, "workingLength.established") || !isBlank(canal.eal0)) return "wlEstablished";
   if (hasEvent(canal, "scouting.estimatedWLSet")) return "scouted";
   if (!isBlank(canal.estimatedWorkingLength)) return "estimated";
+  if (canal.priorVisitStatus === "partiallyObturated" || canal.priorVisitStatus === "coneFitVerified") return "disinfected";
+  if (canal.priorVisitStatus === "medicatedTemporized") return "medicated";
+  if (canal.priorVisitStatus === "shaped") return "shaped";
+  if (canal.priorVisitStatus === "glidePath") return "glidePath";
+  if (canal.priorVisitStatus === "wlEstablished") return "wlEstablished";
+  if (canal.priorVisitStatus === "locatedScouted") return "scouted";
   return "notStarted";
 }

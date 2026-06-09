@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { EndoCase } from "../types";
+import type { DifficultyFlag, EndoCase } from "../types";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
@@ -14,6 +14,8 @@ export function CanalSelector({
   onAddCanal,
   onRenameActiveCanal,
   onDeleteActiveCanal,
+  onManualEvent,
+  onResetManualStatus,
   className = "",
 }: {
   caseData: EndoCase;
@@ -25,12 +27,16 @@ export function CanalSelector({
   onAddCanal: () => void;
   onRenameActiveCanal: () => void;
   onDeleteActiveCanal: () => void;
+  onManualEvent: (type: string, label: string, nextNodeId?: string | null, difficultyFlag?: DifficultyFlag | null) => void;
+  onResetManualStatus: () => void;
   className?: string;
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const activeCanalName = caseData.currentCanal || caseData.canals[0]?.name || "active canal";
+  const activeCanal = caseData.canals.find((canal) => canal.name === activeCanalName) || caseData.canals[0];
+  const activeStatus = getCanalStatus(activeCanal);
 
   useEffect(() => {
     setIsDeleteConfirmOpen(false);
@@ -140,6 +146,19 @@ export function CanalSelector({
             </div>
           </div>
         ) : null}
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span className="text-sm font-semibold text-slate-900">Active canal status</span>
+            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
+          </div>
+          <div className="grid gap-2 text-sm">
+            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 font-semibold text-green-900 hover:bg-green-100">Mark {activeCanalName} complete</button>
+            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100">Pause {activeCanalName}</button>
+            <button onClick={() => onManualEvent("canal.medicated", `Medicate ${activeCanalName}`, "temporary-closure", "high")} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-900 hover:bg-amber-100">Medicate {activeCanalName}</button>
+            <button onClick={() => onManualEvent("canal.referred", `Refer ${activeCanalName}`, "refer-pathway", "refer")} className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-800 hover:bg-red-100">Refer {activeCanalName}</button>
+            <button onClick={onResetManualStatus} className="rounded-xl border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-800 hover:bg-slate-50">Return {activeCanalName} to automatic status</button>
+          </div>
+        </div>
       </div>
     </SectionCard>
   );

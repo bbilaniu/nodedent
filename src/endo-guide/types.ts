@@ -15,6 +15,18 @@ export type CanalStatus =
 
 export type RadiographStatus = "" | "acceptable" | "short" | "long" | "not taken";
 
+export type PriorCanalStatus =
+  | ""
+  | "unknown"
+  | "accessOnly"
+  | "locatedScouted"
+  | "wlEstablished"
+  | "glidePath"
+  | "shaped"
+  | "medicatedTemporized"
+  | "coneFitVerified"
+  | "partiallyObturated";
+
 export type ClinicalEvent = {
   id: string;
   timestamp: string;
@@ -30,6 +42,8 @@ export type ClosureRecord = {
 
 export type CanalRecord = {
   name: string;
+  priorVisitStatus?: PriorCanalStatus;
+  priorVisitNote?: string;
   estimatedWorkingLength?: string;
   fileTerminalLength?: string;
   availableTreatmentSpace?: string;
@@ -47,6 +61,16 @@ export type CanalRecord = {
   status?: string;
 };
 
+export type PriorVisitRecord = {
+  continuedFromPriorVisit?: boolean;
+  priorVisitDate?: string;
+  accessPreviouslyOpened?: boolean;
+  temporaryRestorationPresent?: boolean;
+  medicationPresent?: "" | "yes" | "no" | "unknown";
+  priorRadiographsAvailable?: boolean;
+  sourceNote?: string;
+};
+
 export type DiagnosisRecord = {
   pulpal?: string;
   apical?: string;
@@ -54,6 +78,8 @@ export type DiagnosisRecord = {
 
 export type PreOpRecord = {
   radiographsReviewed?: boolean;
+  paReviewed?: boolean;
+  bwReviewed?: boolean;
   cbctReviewed?: boolean;
   estimatedChamberDepth?: string;
 };
@@ -65,6 +91,7 @@ export type EndoCase = {
   procedureType: string;
   caseStatus?: string;
   nextVisitPlan?: string;
+  priorVisit?: PriorVisitRecord;
   diagnosis?: DiagnosisRecord;
   difficulty: DifficultyFlag;
   preOp: PreOpRecord;

@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
-import { CanalControls } from "./components/CanalControls";
 import { CanalSelector } from "./components/CanalSelector";
-import { CaseManagementModal } from "./components/CaseManagementModal";
+import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
@@ -21,6 +20,7 @@ import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
+import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 
 type HistoryEntry = {
@@ -59,7 +59,9 @@ export default function EndoChairsideGuide() {
   const [caseData, setCaseData] = useState<EndoCase>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
-      return saved ? { ...initialCase, ...JSON.parse(saved) } : initialCase;
+      if (!saved) return initialCase;
+      const parsed = JSON.parse(saved);
+      return normalizeImportedEndoCase(parsed, parsed.autosavedAt || new Date().toISOString());
     } catch {
       return initialCase;
     }
@@ -81,6 +83,9 @@ export default function EndoChairsideGuide() {
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
+  const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
+  const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>(getSavedCaseIndex);
@@ -89,6 +94,15 @@ export default function EndoChairsideGuide() {
   const activeCanal = useMemo(
     () => caseData.canals.find((canal) => canal.name === caseData.currentCanal) || caseData.canals[0],
     [caseData.canals, caseData.currentCanal]
+  );
+  const activeCanalStatus = getCanalStatus(activeCanal);
+  const canResumeActiveCanalFromPriorVisit = Boolean(
+    caseData.priorVisit?.continuedFromPriorVisit ||
+    caseData.globalEvents.some((event) => event.type === "case.continuedFromPriorVisit") ||
+    activeCanal?.priorVisitStatus ||
+    activeCanal?.priorVisitNote ||
+    activeCanalStatus === "paused" ||
+    activeCanalStatus === "medicated"
   );
   const progressPhase = selectedProgressPhase || currentNode.phase;
   const isHandoffNode = handoffNodeIds.has(currentNode.id);
@@ -131,7 +145,7 @@ export default function EndoChairsideGuide() {
     setValidationMessage(null);
   }
 
-  function updatePreOp(field: string, value: string) {
+  function updatePreOp(field: string, value: string | boolean) {
     setCaseData((prev) => ({ ...prev, preOp: { ...prev.preOp, [field]: value } }));
     setValidationMessage(null);
   }
@@ -177,16 +191,97 @@ export default function EndoChairsideGuide() {
     setCurrentNodeId("preop");
     setHistory([]);
     setValidationMessage(null);
+    setCopied(false);
+    setIsNewCaseConfirmOpen(false);
+    setIsCasePanelOpen(false);
+    setIsSavedCasesOpen(false);
+    setIsPriorVisitOpen(false);
+  }
+
+  function continueFromPriorVisit() {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const event = makeRuntimeEvent({
+      type: "case.continuedFromPriorVisit",
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: currentNode.id,
+      label: "Continue from prior visit",
+      activeCanal,
+    });
+
+    setCaseData((prev) => ({
+      ...prev,
+      caseStatus: prev.caseStatus || "Resume next visit",
+      priorVisit: {
+        ...(prev.priorVisit || {}),
+        continuedFromPriorVisit: true,
+      },
+      globalEvents: prev.globalEvents.some((item) => item.type === "case.continuedFromPriorVisit")
+        ? prev.globalEvents
+        : [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
+  }
+
+  function resumeActiveCanalFromPriorVisit() {
+    if (!activeCanal) return;
+    if (!canResumeActiveCanalFromPriorVisit) {
+      setValidationMessage({ optionLabel: "Resume active canal", missing: ["Set up prior visit history or prior status for the active canal first"] });
+      return;
+    }
+    const nextNodeId = getPriorVisitResumeNodeForCanal(activeCanal) || getManualResumeNodeForCanal(activeCanal) || getConservativeResumeNodeForCanal(activeCanal);
+    if (!protocolNodes[nextNodeId]) {
+      setValidationMessage({ optionLabel: "Resume active canal", missing: [`No resume node exists for ${nextNodeId}`] });
+      return;
+    }
+
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const event = makeRuntimeEvent({
+      type: "workflow.resumedFromPriorVisit",
+      tooth: caseData.tooth,
+      canal: activeCanal.name,
+      nodeId: currentNode.id,
+      label: `Resume ${activeCanal.name} from prior visit`,
+      activeCanal,
+    });
+    event.details = {
+      ...event.details,
+      nextNodeId,
+      nextNode: nextNodeId,
+      phaseLabel: protocolNodes[nextNodeId]?.title,
+      reason: `resumed ${activeCanal.name} from prior visit history`,
+    };
+
+    setCaseData((prev) => ({
+      ...prev,
+      currentCanal: activeCanal.name,
+      priorVisit: {
+        ...(prev.priorVisit || {}),
+        continuedFromPriorVisit: true,
+      },
+      canals: prev.canals.map((canal) =>
+        canal.name === activeCanal.name
+          ? { ...canal, events: [...(canal.events || []), event] }
+          : canal
+      ),
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCurrentNodeId(nextNodeId);
+    setCopied(false);
+    setValidationMessage(null);
   }
 
   function loadSavedCase(caseId: string) {
     try {
       const saved = JSON.parse(window.localStorage.getItem(`${CASE_RECORD_PREFIX}${caseId}`) || "null");
       if (!saved) return;
-      setCaseData({ ...initialCase, ...saved });
-      setCurrentNodeId(getSavedCurrentNodeId(saved));
+      const normalized = normalizeImportedEndoCase(saved, saved.autosavedAt || new Date().toISOString());
+      setCaseData(normalized);
+      setCurrentNodeId(getSavedCurrentNodeId(normalized));
       setHistory([]);
       setValidationMessage(null);
+      setIsSavedCasesOpen(false);
     } catch {
       setValidationMessage({ optionLabel: "Load saved case", missing: ["Could not load saved case from local storage"] });
     }
@@ -238,6 +333,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
       setShowImportBox(false);
+      setIsSavedCasesOpen(false);
       setImportText("");
       setValidationMessage(null);
     } catch {
@@ -424,10 +520,6 @@ export default function EndoChairsideGuide() {
     return createNewCanalAtEstimate(data);
   }
 
-  function startNextCanal(data = caseData) {
-    return startAnotherCanal(data);
-  }
-
   function applyDecision(option: DecisionOption) {
     const { eventId, timestamp } = createRuntimeEventArgs();
     const result = applyDecisionEngine({
@@ -522,7 +614,28 @@ export default function EndoChairsideGuide() {
                 onClick={() => setIsCasePanelOpen(true)}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-slate-800"
               >
-                Case management
+                Case panel
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSavedCasesOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold leading-none text-blue-900 transition hover:bg-blue-100"
+              >
+                Resume saved workflow
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPriorVisitOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold leading-none text-amber-950 transition hover:bg-amber-100"
+              >
+                Prior visit
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsNewCaseConfirmOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold leading-none text-slate-800 transition hover:bg-slate-100"
+              >
+                New case
               </button>
             </div>
           </div>
@@ -538,8 +651,8 @@ export default function EndoChairsideGuide() {
           }}
         />
 
-        <main className="grid items-start gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
-          <aside className="contents 2xl:block 2xl:min-w-0 2xl:space-y-4">
+        <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
+          <aside className="contents">
             <CanalSelector
               caseData={caseData}
               newCanalName={newCanalName}
@@ -550,19 +663,13 @@ export default function EndoChairsideGuide() {
               onAddCanal={addCanal}
               onRenameActiveCanal={renameActiveCanal}
               onDeleteActiveCanal={deleteActiveCanal}
-              className="order-1 xl:col-start-1 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
-            />
-
-            <CanalControls
-              activeCanal={activeCanal}
               onManualEvent={addManualCanalEvent}
-              onStartNextCanal={() => startNextCanal()}
               onResetManualStatus={resetActiveCanalManualStatus}
-              className="order-2 xl:col-start-2 xl:row-start-1 2xl:col-auto 2xl:row-auto 2xl:order-none"
+              className="order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1"
             />
           </aside>
 
-          <section className="contents 2xl:block 2xl:min-w-0 2xl:space-y-4">
+          <section className="contents">
             <DecisionCard
               currentNode={currentNode}
               caseData={caseData}
@@ -575,6 +682,12 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
+              onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
+              onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
+              onUpdateCase={updateCase}
+              onUpdateDiagnosis={updateDiagnosis}
+              onUpdatePreOp={updatePreOp}
+              onUpdateActiveCanal={updateActiveCanal}
             />
           </section>
 
@@ -587,7 +700,7 @@ export default function EndoChairsideGuide() {
             onApplyEalDerivedLengths={applyEalDerivedLengths}
           />
 
-          <aside className="order-6 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-1 xl:col-start-3 xl:row-span-2 xl:row-start-1 xl:block xl:space-y-4 2xl:col-auto 2xl:row-auto 2xl:order-none">
+          <aside className="order-4 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-3 xl:col-start-1 xl:row-start-2 2xl:col-span-1 2xl:col-start-4 2xl:row-start-1 2xl:block 2xl:space-y-4">
             <NotePreview
               noteMode={noteMode}
               displayedNote={displayedNote}
@@ -602,15 +715,21 @@ export default function EndoChairsideGuide() {
         {isCasePanelOpen ? (
           <CaseManagementModal
             caseData={caseData}
-            savedCases={savedCases}
-            importText={importText}
-            showImportBox={showImportBox}
+            currentNodeId={currentNodeId}
             onClose={() => setIsCasePanelOpen(false)}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
-            onStartNewCase={startNewCase}
             onDownloadCaseJson={downloadCaseJson}
+          />
+        ) : null}
+
+        {isSavedCasesOpen ? (
+          <SavedCasesModal
+            savedCases={savedCases}
+            importText={importText}
+            showImportBox={showImportBox}
+            onClose={() => setIsSavedCasesOpen(false)}
             onToggleImportBox={() => setShowImportBox((value) => !value)}
             onImportTextChange={setImportText}
             onImportCaseJson={importCaseJson}
@@ -619,6 +738,43 @@ export default function EndoChairsideGuide() {
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
           />
+        ) : null}
+
+        {isPriorVisitOpen ? (
+          <PriorVisitModal
+            caseData={caseData}
+            onClose={() => setIsPriorVisitOpen(false)}
+            onUpdateCase={updateCase}
+            onContinueFromPriorVisit={continueFromPriorVisit}
+            onResumeActiveCanalFromPriorVisit={resumeActiveCanalFromPriorVisit}
+            canResumeActiveCanalFromPriorVisit={canResumeActiveCanalFromPriorVisit}
+          />
+        ) : null}
+
+        {isNewCaseConfirmOpen ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
+            <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">New case</p>
+              <h2 className="mt-1 text-xl font-bold text-slate-950">Start a blank case?</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setIsNewCaseConfirmOpen(false)}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={startNewCase}
+                  className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Start new case
+                </button>
+              </div>
+            </section>
+          </div>
         ) : null}
 
         {isProgressDetailOpen ? (
