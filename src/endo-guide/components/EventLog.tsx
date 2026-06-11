@@ -9,17 +9,17 @@ export function EventLog({ events }: { events: ClinicalEvent[] }) {
       {events.length ? (
         <div className="max-h-56 space-y-2 overflow-auto pr-1">
           {[...events].reverse().slice(0, 8).map((event) => (
-            <div key={event.id} className="rounded-xl bg-slate-50 p-3 text-sm">
+            <div key={event.id} className="rounded-xl bg-brand-light-slate p-3 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong className="text-slate-800">{event.type}</strong>
-                <span className="text-xs text-slate-500">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                <strong className="text-brand-navy">{event.type}</strong>
+                <span className="text-xs text-brand-slate">{new Date(event.timestamp).toLocaleTimeString()}</span>
               </div>
-              <p className="mt-1 text-xs text-slate-600">{eventFragment(event)}</p>
+              <p className="mt-1 text-xs text-brand-slate">{eventFragment(event)}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-sm text-slate-500">No events yet. Select a decision to start the note trail.</p>
+        <p className="text-sm text-brand-slate">No events yet. Select a decision to start the note trail.</p>
       )}
     </SectionCard>
   );

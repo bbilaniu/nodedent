@@ -594,32 +594,32 @@ export default function EndoChairsideGuide() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 text-slate-900">
+    <div className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
       <div className="mx-auto max-w-[96rem] space-y-4">
-        <header className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <header className="rounded-3xl border border-brand-light-node bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Chairside guide · clinical workflow</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950">Endodontic Chairside Decision Guide</h1>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">State-machine chairside workflow with event-based notes and local case persistence.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate">Chairside guide · clinical workflow</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-navy">Endodontic Chairside Decision Guide</h1>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">State-machine chairside workflow with event-based notes and local case persistence.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold leading-none text-slate-700">Patient: {caseData.patientNumber || "—"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold leading-none text-slate-700">Tooth: {caseData.tooth || "—"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold leading-none text-slate-700">{caseData.procedureType || "RCT"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold leading-none text-slate-700">{getCaseStatus(caseData)}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold leading-none text-slate-700">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Tooth: {caseData.tooth || "—"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{caseData.procedureType || "RCT"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
               <button
                 type="button"
                 onClick={() => setIsCasePanelOpen(true)}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-slate-800"
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-brand-navy-deep"
               >
                 Case panel
               </button>
               <button
                 type="button"
                 onClick={() => setIsSavedCasesOpen(true)}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold leading-none text-blue-900 transition hover:bg-blue-100"
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-blue-light bg-brand-blue-light/20 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-blue-light/30"
               >
                 Resume saved workflow
               </button>
@@ -633,7 +633,7 @@ export default function EndoChairsideGuide() {
               <button
                 type="button"
                 onClick={() => setIsNewCaseConfirmOpen(true)}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold leading-none text-slate-800 transition hover:bg-slate-100"
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
               >
                 New case
               </button>
@@ -752,23 +752,23 @@ export default function EndoChairsideGuide() {
         ) : null}
 
         {isNewCaseConfirmOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
-            <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">New case</p>
-              <h2 className="mt-1 text-xl font-bold text-slate-950">Start a blank case?</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy-deep/30 p-4">
+            <section className="w-full max-w-md rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
+              <h2 className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
+              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setIsNewCaseConfirmOpen(false)}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={startNewCase}
-                  className="rounded-xl border border-slate-900 bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep"
                 >
                   Start new case
                 </button>

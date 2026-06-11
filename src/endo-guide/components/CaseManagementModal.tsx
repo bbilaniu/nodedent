@@ -41,27 +41,27 @@ export function CaseManagementModal({
   const currentNodeTitle = protocolNodes[currentNodeId]?.title || currentNodeId || "Not recorded";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
-      <section className="mt-6 w-full max-w-4xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
+      <section className="mt-6 w-full max-w-4xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Case panel</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">Current case</h2>
-            <p className="mt-1 text-sm text-slate-600">Review case state and edit current visit context.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Case panel</p>
+            <h2 className="mt-1 text-2xl font-bold text-brand-navy">Current case</h2>
+            <p className="mt-1 text-sm text-brand-slate">Review case state and edit current visit context.</p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+          <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
             Close
           </button>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900">Case audit</h3>
-              <p className="mt-1 text-sm text-slate-600">
+              <h3 className="text-sm font-semibold text-brand-navy">Case audit</h3>
+              <p className="mt-1 text-sm text-brand-slate">
                 Visit: <strong>{getCaseStatus(caseData)}</strong> · Current step: <strong>{currentNodeTitle}</strong> · Closure: <strong>{closureLabel}</strong>
               </p>
-              {caseData.nextVisitPlan ? <p className="mt-1 text-sm text-slate-600">Next visit: <strong>{caseData.nextVisitPlan}</strong></p> : null}
+              {caseData.nextVisitPlan ? <p className="mt-1 text-sm text-brand-slate">Next visit: <strong>{caseData.nextVisitPlan}</strong></p> : null}
             </div>
             <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[24rem]">
               {(caseData.canals || []).map((canal) => {
@@ -73,12 +73,12 @@ export function CaseManagementModal({
                   canal.priorVisitStatus ? `prior ${priorCanalStatusLabels[canal.priorVisitStatus]}` : null,
                 ].filter(Boolean);
                 return (
-                  <div key={canal.name} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                  <div key={canal.name} className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
                     <div className="flex items-center justify-between gap-2">
-                      <strong className="text-sm text-slate-900">{canal.name}</strong>
+                      <strong className="text-sm text-brand-navy">{canal.name}</strong>
                       <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[status]}`}>{statusLabels[status]}</span>
                     </div>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{facts.length ? facts.join(" · ") : "No measurements yet"}</p>
+                    <p className="mt-1 text-xs leading-5 text-brand-slate">{facts.length ? facts.join(" · ") : "No measurements yet"}</p>
                   </div>
                 );
               })}
@@ -87,31 +87,31 @@ export function CaseManagementModal({
         </div>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Patient / visit</h3>
+          <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+            <h3 className="mb-3 text-sm font-semibold text-brand-navy">Patient / visit</h3>
             <div className="grid gap-3">
               <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
               <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
               <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
               <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
-              <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">Use suggested status</button>
+              <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-slate">Use suggested status</button>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <h3 className="mb-3 text-sm font-semibold text-slate-900">Diagnosis / plan</h3>
+          <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+            <h3 className="mb-3 text-sm font-semibold text-brand-navy">Diagnosis / plan</h3>
             <div className="grid gap-3">
               <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
               <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
               <label className="block">
-                <span className="mb-1 block text-xs font-medium text-slate-600">Next visit / plan</span>
-                <textarea value={caseData.nextVisitPlan || ""} onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })} placeholder="e.g., continue obturation, crown recommended, refer" className="h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Next visit / plan</span>
+                <textarea value={caseData.nextVisitPlan || ""} onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })} placeholder="e.g., continue obturation, crown recommended, refer" className="h-28 w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20" />
               </label>
             </div>
           </div>
         </div>
         <div className="mt-4">
-          <button onClick={onDownloadCaseJson} className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100">Download current case JSON</button>
+          <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download current case JSON</button>
         </div>
       </section>
     </div>
@@ -144,47 +144,47 @@ export function SavedCasesModal({
   onDeleteSavedCase: (caseId: string) => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
-      <section className="mt-6 w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
+      <section className="mt-6 w-full max-w-3xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-700">Saved cases</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">Resume saved workflow</h2>
-            <p className="mt-1 text-sm text-slate-600">Open an app-tracked autosave or import a system-recorded case JSON.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-blue">Saved cases</p>
+            <h2 className="mt-1 text-2xl font-bold text-brand-navy">Resume saved workflow</h2>
+            <p className="mt-1 text-sm text-brand-slate">Open an app-tracked autosave or import a system-recorded case JSON.</p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Close</button>
+          <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">Close</button>
         </div>
 
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-blue-950">Import / library actions</h3>
+        <div className="rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-brand-navy">Import / library actions</h3>
           <div className="grid gap-3 md:grid-cols-2">
-            <button onClick={onToggleImportBox} className="rounded-xl border border-blue-200 bg-white px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100">Import case JSON</button>
+            <button onClick={onToggleImportBox} className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Import case JSON</button>
             <div className="flex gap-2">
               <button onClick={onClearSavedCurrentCase} className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100">Clear current</button>
               <button onClick={onResetAllSavedCases} className="flex-1 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">Reset all</button>
             </div>
           </div>
           {showImportBox ? (
-            <div className="mt-3 rounded-xl border border-blue-100 bg-white p-2">
-              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste exported case JSON here" className="h-28 w-full rounded-lg border border-blue-100 bg-white p-2 font-mono text-xs outline-none focus:border-blue-300" />
-              <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-blue-900 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800">Resume imported workflow</button>
+            <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
+              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste exported case JSON here" className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue" />
+              <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-blue-light">Resume imported workflow</button>
             </div>
           ) : null}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Recent autosaves</p>
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Recent autosaves</p>
           <div className="grid gap-2 md:grid-cols-2">
             {savedCases.length ? savedCases.map((item) => (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-2">
-                <button onClick={() => onLoadSavedCase(item.id)} className="w-full rounded-lg p-2 text-left text-xs text-slate-700 hover:bg-slate-100">
+              <div key={item.id} className="rounded-xl border border-brand-light-node bg-white p-2">
+                <button onClick={() => onLoadSavedCase(item.id)} className="w-full rounded-lg p-2 text-left text-xs text-brand-slate hover:bg-brand-light-slate">
                   <strong>{item.patientNumber}</strong> · tooth {item.tooth} · {item.procedureType}
-                  <span className="mt-1 block text-slate-500">{new Date(item.autosavedAt).toLocaleString()} · {item.canalCount || 0} canal(s) · {item.eventCount || 0} event(s)</span>
-                  <span className="mt-2 inline-flex rounded-lg bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-900">Resume saved workflow</span>
+                  <span className="mt-1 block text-brand-slate">{new Date(item.autosavedAt).toLocaleString()} · {item.canalCount || 0} canal(s) · {item.eventCount || 0} event(s)</span>
+                  <span className="mt-2 inline-flex rounded-lg bg-brand-blue-light/20 px-2 py-1 text-[11px] font-bold text-brand-navy">Resume saved workflow</span>
                 </button>
                 <button onClick={() => onDeleteSavedCase(item.id)} className="mt-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">Delete saved case</button>
               </div>
-            )) : <p className="text-sm text-slate-500">No autosaves yet.</p>}
+            )) : <p className="text-sm text-brand-slate">No autosaves yet.</p>}
           </div>
         </div>
       </section>
@@ -262,17 +262,17 @@ export function PriorVisitModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
       <section className="mt-6 w-full max-w-4xl rounded-3xl border border-amber-200 bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Prior visit</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">Fast-forward from previous treatment</h2>
-            <p className="mt-1 text-sm text-slate-600">{priorSummaryParts.length ? priorSummaryParts.join(" · ") : "No prior visit history staged."}</p>
+            <h2 className="mt-1 text-2xl font-bold text-brand-navy">Fast-forward from previous treatment</h2>
+            <p className="mt-1 text-sm text-brand-slate">{priorSummaryParts.length ? priorSummaryParts.join(" · ") : "No prior visit history staged."}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button onClick={onContinueFromPriorVisit} className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100">Mark as continued from a prior visit</button>
-            <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100">Close</button>
+            <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs font-bold text-brand-slate hover:bg-brand-light-node">Close</button>
           </div>
         </div>
 
@@ -292,32 +292,32 @@ export function PriorVisitModal({
             Prior radiographs / notes available
           </label>
           <label className="block md:col-span-2">
-            <span className="mb-1 block text-xs font-medium text-slate-600">Prior history note / source</span>
-            <textarea value={caseData.priorVisit?.sourceNote || ""} onChange={(event) => updatePriorVisit({ sourceNote: event.target.value, continuedFromPriorVisit: true })} placeholder="e.g., prior access, CaOH placed, temp restoration, outside notes reviewed" className="h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
+            <span className="mb-1 block text-xs font-medium text-brand-slate">Prior history note / source</span>
+            <textarea value={caseData.priorVisit?.sourceNote || ""} onChange={(event) => updatePriorVisit({ sourceNote: event.target.value, continuedFromPriorVisit: true })} placeholder="e.g., prior access, CaOH placed, temp restoration, outside notes reviewed" className="h-20 w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20" />
           </label>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-900">Prior canals</h3>
-              <p className="mt-1 text-sm text-slate-600">Use the real canal names from the previous visit, then stage each canal independently.</p>
+              <h3 className="text-sm font-semibold text-brand-navy">Prior canals</h3>
+              <p className="mt-1 text-sm text-brand-slate">Use the real canal names from the previous visit, then stage each canal independently.</p>
             </div>
             <div className="flex gap-2">
-              <input value={newPriorCanalName} onChange={(event) => setNewPriorCanalName(event.target.value)} placeholder="MB, ML, DB..." className="min-h-9 w-36 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
-              <button onClick={addPriorCanal} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100">Add canal</button>
+              <input value={newPriorCanalName} onChange={(event) => setNewPriorCanalName(event.target.value)} placeholder="MB, ML, DB..." className="min-h-9 w-36 rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20" />
+              <button onClick={addPriorCanal} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-bold text-brand-navy hover:bg-brand-light-slate">Add canal</button>
             </div>
           </div>
           <div className="mt-3 grid gap-2">
             {caseData.canals.map((canal) => (
-              <div key={canal.name} className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3 md:grid-cols-[120px_minmax(160px,220px)_minmax(0,1fr)_auto] md:items-end">
+              <div key={canal.name} className="grid gap-2 rounded-xl border border-brand-light-node bg-white p-3 md:grid-cols-[120px_minmax(160px,220px)_minmax(0,1fr)_auto] md:items-end">
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Canal name</span>
-                  <input defaultValue={canal.name} onBlur={(event) => renameCanal(canal.name, event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100" />
+                  <span className="mb-1 block text-xs font-medium text-brand-slate">Canal name</span>
+                  <input defaultValue={canal.name} onBlur={(event) => renameCanal(canal.name, event.target.value)} className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-bold text-brand-navy outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20" />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-slate-600">Prior canal status</span>
-                  <select value={canal.priorVisitStatus || ""} onChange={(event) => updateCanal(canal.name, { priorVisitStatus: event.target.value as PriorCanalStatus })} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100">
+                  <span className="mb-1 block text-xs font-medium text-brand-slate">Prior canal status</span>
+                  <select value={canal.priorVisitStatus || ""} onChange={(event) => updateCanal(canal.name, { priorVisitStatus: event.target.value as PriorCanalStatus })} className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20">
                     {priorCanalStatusOptions.map(([value, label]) => <option key={value || "not-set"} value={value}>{label}</option>)}
                   </select>
                 </label>
@@ -340,7 +340,7 @@ export function PriorVisitModal({
             onClick={onResumeActiveCanalFromPriorVisit}
             disabled={!canResumeActiveCanalFromPriorVisit}
             title={canResumeActiveCanalFromPriorVisit ? "Resume the active canal from prior-visit setup" : "Set up prior visit history or prior status for the active canal first"}
-            className="rounded-xl border border-amber-400 bg-amber-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="rounded-xl border border-amber-400 bg-amber-900 px-4 py-2 text-sm font-bold text-white transition hover:bg-amber-800 disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate"
           >
             Resume from prior visit setup
           </button>

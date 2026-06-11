@@ -26,7 +26,7 @@ export function DifficultyBanner({
         <button
           type="button"
           onClick={onOpenPhaseMap}
-          className="shrink-0 rounded-full border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+          className="shrink-0 rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
         >
           Phase / canal map
         </button>

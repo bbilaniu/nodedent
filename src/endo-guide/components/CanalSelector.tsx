@@ -72,7 +72,7 @@ export function CanalSelector({
             <button
               key={canal.name}
               onClick={() => onSelectCanal(canal.name)}
-              className={`rounded-xl border p-3 text-left text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${canal.name === caseData.currentCanal ? "border-slate-900 bg-slate-900 text-white shadow-sm" : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"}`}
+              className={`rounded-xl border p-3 text-left text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${canal.name === caseData.currentCanal ? "border-brand-navy bg-brand-navy text-white shadow-sm" : "border-brand-light-node bg-brand-light-slate text-brand-slate hover:bg-brand-light-node"}`}
             >
               <span className="flex items-center justify-between gap-2">
                 <strong>{canal.name}</strong>
@@ -87,34 +87,34 @@ export function CanalSelector({
         <details
           open={isAddOpen}
           onToggle={(event) => setIsAddOpen(event.currentTarget.open)}
-          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3"
         >
-          <summary className="cursor-pointer text-sm font-semibold text-slate-800">Add new canal</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-brand-navy">Add new canal</summary>
           <div className="mt-3 grid gap-2">
             <input
               value={newCanalName}
               onChange={(event) => onNewCanalNameChange(event.target.value)}
-              className="min-w-0 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+              className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
               placeholder="blank = New"
             />
-            <button onClick={addCanalAndCollapse} className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">Add new canal</button>
+            <button onClick={addCanalAndCollapse} className="w-full rounded-xl bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep">Add new canal</button>
           </div>
         </details>
 
         <details
           open={isEditOpen}
           onToggle={(event) => setIsEditOpen(event.currentTarget.open)}
-          className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+          className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3"
         >
-          <summary className="cursor-pointer text-sm font-semibold text-slate-800">Edit active canal</summary>
+          <summary className="cursor-pointer text-sm font-semibold text-brand-navy">Edit active canal</summary>
           <div className="mt-3 grid gap-2">
             <input
               value={renameCanalName}
               onChange={(event) => onRenameCanalNameChange(event.target.value)}
-              className="min-w-0 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400"
+              className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
               placeholder="e.g., B, L, P"
             />
-            <button onClick={renameActiveCanalAndCollapse} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Rename active canal</button>
+            <button onClick={renameActiveCanalAndCollapse} className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate">Rename active canal</button>
             <button
               type="button"
               onClick={requestDeleteActiveCanal}
@@ -132,7 +132,7 @@ export function CanalSelector({
               <button
                 type="button"
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate"
               >
                 Cancel
               </button>
@@ -146,17 +146,17 @@ export function CanalSelector({
             </div>
           </div>
         ) : null}
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="rounded-xl border border-brand-light-node bg-white p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-slate-900">Active canal status</span>
+            <span className="text-sm font-semibold text-brand-navy">Active canal status</span>
             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
           </div>
           <div className="grid gap-2 text-sm">
-            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className="rounded-xl border border-green-200 bg-green-50 px-3 py-2 font-semibold text-green-900 hover:bg-green-100">Mark {activeCanalName} complete</button>
-            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-700 hover:bg-slate-100">Pause {activeCanalName}</button>
+            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className="rounded-xl border border-brand-mint/50 bg-brand-mint/15 px-3 py-2 font-semibold text-brand-navy hover:bg-brand-mint/25">Mark {activeCanalName} complete</button>
+            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 font-semibold text-brand-slate hover:bg-brand-light-node">Pause {activeCanalName}</button>
             <button onClick={() => onManualEvent("canal.medicated", `Medicate ${activeCanalName}`, "temporary-closure", "high")} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-900 hover:bg-amber-100">Medicate {activeCanalName}</button>
             <button onClick={() => onManualEvent("canal.referred", `Refer ${activeCanalName}`, "refer-pathway", "refer")} className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-800 hover:bg-red-100">Refer {activeCanalName}</button>
-            <button onClick={onResetManualStatus} className="rounded-xl border border-slate-300 bg-white px-3 py-2 font-semibold text-slate-800 hover:bg-slate-50">Return {activeCanalName} to automatic status</button>
+            <button onClick={onResetManualStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 font-semibold text-brand-navy hover:bg-brand-light-slate">Return {activeCanalName} to automatic status</button>
           </div>
         </div>
       </div>

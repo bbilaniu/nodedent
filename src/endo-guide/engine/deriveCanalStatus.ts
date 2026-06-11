@@ -2,15 +2,15 @@ import type { CanalRecord, CanalStatus } from "../types";
 import { isBlank } from "./measurements";
 
 export const statusStyles: Record<CanalStatus, string> = {
-  notStarted: "bg-slate-100 text-slate-600 border-slate-200",
-  estimated: "bg-sky-50 text-sky-800 border-sky-200",
-  scouted: "bg-blue-50 text-blue-800 border-blue-200",
+  notStarted: "bg-brand-light-slate text-brand-slate border-brand-light-node",
+  estimated: "bg-brand-blue-light/20 text-brand-navy border-brand-blue-light/50",
+  scouted: "bg-brand-blue/15 text-brand-navy border-brand-blue/50",
   wlEstablished: "bg-violet-50 text-violet-800 border-violet-200",
   glidePath: "bg-cyan-50 text-cyan-800 border-cyan-200",
-  shaped: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  disinfected: "bg-teal-50 text-teal-800 border-teal-200",
-  complete: "bg-green-100 text-green-900 border-green-300",
-  paused: "bg-slate-100 text-slate-700 border-slate-300",
+  shaped: "bg-brand-mint/10 text-brand-navy border-brand-mint/40",
+  disinfected: "bg-brand-mint/15 text-brand-navy border-brand-mint/50",
+  complete: "bg-brand-mint/20 text-brand-navy border-brand-mint",
+  paused: "bg-brand-light-slate text-brand-slate border-brand-light-node",
   medicated: "bg-amber-50 text-amber-900 border-amber-200",
   referred: "bg-red-50 text-red-800 border-red-200",
 };

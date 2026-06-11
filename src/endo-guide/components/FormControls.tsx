@@ -21,7 +21,7 @@ export function TextInput({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-brand-slate">{label}</span>
       <input
         value={draft}
         onChange={(event) => {
@@ -30,7 +30,7 @@ export function TextInput({
           onChange(next);
         }}
         placeholder={placeholder}
-        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-slate-400 focus:ring-slate-100"}`}
+        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       />
     </label>
   );
@@ -55,7 +55,7 @@ export function SelectInput({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-slate-600">{label}</span>
+      <span className="mb-1 block text-xs font-medium text-brand-slate">{label}</span>
       <select
         value={draft}
         onChange={(event) => {
@@ -63,7 +63,7 @@ export function SelectInput({
           setDraft(next);
           onChange(next);
         }}
-        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+        className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
       >
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>
@@ -81,8 +81,8 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section className={`min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
-      <h3 className="mb-3 text-sm font-semibold text-slate-900">{title}</h3>
+    <section className={`min-w-0 overflow-hidden rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm ${className}`}>
+      <h3 className="mb-3 text-sm font-semibold text-brand-navy">{title}</h3>
       {children}
     </section>
   );

@@ -1,7 +1,7 @@
 import type { EndoCase } from "../types";
 
 export const difficultyStyles = {
-  none: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  none: "bg-brand-mint/10 text-brand-navy border-brand-mint/40",
   caution: "bg-amber-50 text-amber-900 border-amber-200",
   high: "bg-orange-50 text-orange-900 border-orange-200",
   refer: "bg-red-50 text-red-900 border-red-200",

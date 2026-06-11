@@ -56,23 +56,23 @@ export function DecisionCard({
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
 
   return (
-    <section className="order-2 min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
+    <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-slate-900">Decision card</h3>
-        <button onClick={onUndo} disabled={!historyLength} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40">Undo last decision</button>
+        <h3 className="text-sm font-semibold text-brand-navy">Decision card</h3>
+        <button onClick={onUndo} disabled={!historyLength} className="rounded-xl border border-brand-light-node px-3 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-slate disabled:cursor-not-allowed disabled:opacity-40">Undo last decision</button>
       </div>
       <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Phase : {currentNode.phase}</p>
-        <h2 className="mt-1 text-2xl font-bold text-slate-950">{currentNode.title}</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-slate">Phase : {currentNode.phase}</p>
+        <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
       </div>
-      <p className="rounded-2xl bg-slate-50 p-4 text-base leading-7 text-slate-800">{currentNode.chairsideInstruction}</p>
+      <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
       {currentNode.id === "preop" ? (
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="mb-3 grid gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={onOpenSavedWorkflow}
-              className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-900 transition hover:bg-blue-100"
+              className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
             >
               Resume saved workflow
             </button>
@@ -84,7 +84,7 @@ export function DecisionCard({
               Set up prior visit
             </button>
           </div>
-          <h4 className="text-sm font-bold text-slate-900">Case setup</h4>
+          <h4 className="text-sm font-bold text-brand-navy">Case setup</h4>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
             <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
@@ -93,18 +93,18 @@ export function DecisionCard({
             <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
             <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
           </div>
-          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Pre-op radiographs reviewed</p>
+          <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>
             <div className="grid gap-2 sm:grid-cols-3">
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
                 <input type="checkbox" checked={paReviewed} onChange={(event) => onUpdatePreOp("paReviewed", event.target.checked)} />
                 PA
               </label>
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
                 <input type="checkbox" checked={bwReviewed} onChange={(event) => onUpdatePreOp("bwReviewed", event.target.checked)} />
                 BW
               </label>
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800">
+              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
                 <input type="checkbox" checked={Boolean(caseData.preOp?.cbctReviewed)} onChange={(event) => onUpdatePreOp("cbctReviewed", event.target.checked)} />
                 CBCT
               </label>
@@ -117,9 +117,9 @@ export function DecisionCard({
       ) : null}
       {(currentNode.instruments?.length || currentNode.materials?.length || currentNode.requiredInputs?.length) && (
         <div className={`mt-4 grid gap-3 ${supportGridClass}`}>
-          {currentNode.instruments?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Instruments</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.instruments)}</p></div> : null}
-          {currentNode.materials?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Materials</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.materials)}</p></div> : null}
-          {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-slate-200 p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">Record before continuing</h4><p className="mt-2 text-sm text-slate-700">{compactList(currentNode.requiredInputs)}</p></div> : null}
+          {currentNode.instruments?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Instruments</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.instruments)}</p></div> : null}
+          {currentNode.materials?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Materials</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.materials)}</p></div> : null}
+          {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Record before continuing</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.requiredInputs)}</p></div> : null}
         </div>
       )}
       {currentNode.safetyNotes?.length ? (
@@ -141,17 +141,17 @@ export function DecisionCard({
           const displayOption = { ...option, id: option.id || option.label, label: displayLabel };
           const missing = getMissingRequirements(currentNode.id, displayOption, caseData, activeCanal);
           return (
-            <button key={option.label} onClick={() => onApplyDecision(displayOption)} className={`rounded-2xl border bg-white p-4 text-left text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${missing.length ? "border-red-200 text-slate-800 hover:bg-red-50" : "border-slate-200 text-slate-800 hover:border-slate-300 hover:bg-slate-50"}`}>
+            <button key={option.label} onClick={() => onApplyDecision(displayOption)} className={`rounded-2xl border bg-white p-4 text-left text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${missing.length ? "border-red-200 text-brand-navy hover:bg-red-50" : "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate"}`}>
               {displayLabel}
-              <span className="mt-1 block text-xs font-normal text-slate-500">Next: {protocolNodes[option.nextNodeId]?.title || option.nextNodeId}</span>
+              <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {protocolNodes[option.nextNodeId]?.title || option.nextNodeId}</span>
               {missing.length ? <span className="mt-2 block rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Missing: {missing.join(", ")}</span> : null}
             </button>
           );
         })}
       </div>
       {isHandoffNode ? (
-        <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-          <h4 className="text-sm font-bold text-blue-950">Work on another canal</h4>
+        <div className="mt-5 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
+          <h4 className="text-sm font-bold text-brand-navy">Work on another canal</h4>
           <div className="mt-3 grid gap-2">
             {continuationTargets.length ? continuationTargets.map((target) => (
               <button
@@ -159,25 +159,25 @@ export function DecisionCard({
                 type="button"
                 disabled={target.disabled}
                 onClick={() => onContinueCanal(target)}
-                className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${target.disabled ? "cursor-not-allowed border-slate-200 bg-white/70 text-slate-400" : "border-blue-200 bg-white text-blue-950 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm"}`}
+                className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${target.disabled ? "cursor-not-allowed border-brand-light-node bg-white/70 text-brand-slate/60" : "border-brand-blue-light/70 bg-white text-brand-navy hover:-translate-y-0.5 hover:border-brand-blue hover:shadow-sm"}`}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span>{target.label}</span>
                   <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[target.status]}`}>{statusLabels[target.status]}</span>
                 </span>
-                <span className="mt-1 block text-xs font-normal text-slate-500">
+                <span className="mt-1 block text-xs font-normal text-brand-slate">
                   {target.nextNodeId ? `Next: ${protocolNodes[target.nextNodeId]?.title || target.nextNodeId}` : target.reason || "No continuation action"}
                 </span>
               </button>
             )) : (
-              <p className="rounded-xl border border-blue-100 bg-white/70 px-3 py-2 text-sm text-blue-900">No other canals are recorded yet.</p>
+              <p className="rounded-xl border border-brand-blue-light/60 bg-white/70 px-3 py-2 text-sm text-brand-navy">No other canals are recorded yet.</p>
             )}
           </div>
-          <div className="mt-3 border-t border-blue-100 pt-3">
+          <div className="mt-3 border-t border-brand-blue-light/60 pt-3">
             <button
               type="button"
               onClick={onCreateNewCanal}
-              className="w-full rounded-xl border border-dashed border-blue-300 bg-white px-3 py-3 text-sm font-bold text-blue-950 transition hover:bg-blue-100"
+              className="w-full rounded-xl border border-dashed border-brand-blue bg-white px-3 py-3 text-sm font-bold text-brand-navy transition hover:bg-brand-blue-light/30"
             >
               Add new canal
             </button>

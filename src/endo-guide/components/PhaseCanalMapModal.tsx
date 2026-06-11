@@ -21,16 +21,16 @@ export function PhaseCanalMapModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-slate-950/30 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
       <button aria-label="Close phase details" onClick={onClose} className="absolute inset-0" />
-      <section className="relative mt-6 w-full max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-2xl">
+      <section className="relative mt-6 w-full max-w-3xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Phase / canal map</p>
-            <h2 className="mt-1 text-2xl font-bold text-slate-950">{progressPhase}</h2>
-            <p className="mt-1 text-sm text-slate-600">Inspect phase progress by canal. Selecting a canal changes the active canal, but does not advance the workflow.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Phase / canal map</p>
+            <h2 className="mt-1 text-2xl font-bold text-brand-navy">{progressPhase}</h2>
+            <p className="mt-1 text-sm text-brand-slate">Inspect phase progress by canal. Selecting a canal changes the active canal, but does not advance the workflow.</p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+          <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
             Close
           </button>
         </div>
@@ -43,25 +43,25 @@ export function PhaseCanalMapModal({
               <button
                 key={phase}
                 onClick={() => onSelectProgressPhase(phase)}
-                className={`flex items-center gap-2 rounded-2xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${isSelected ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white hover:bg-slate-50"}`}
+                className={`flex items-center gap-2 rounded-2xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${isSelected ? "border-brand-navy bg-brand-navy text-white" : "border-brand-light-node bg-white hover:bg-brand-light-slate"}`}
               >
-                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isSelected ? "bg-white text-slate-900" : indicator.className}`}>{idx + 1}</span>
+                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${isSelected ? "bg-white text-brand-navy" : indicator.className}`}>{idx + 1}</span>
                 <span className={`min-w-0 truncate text-sm ${isSelected ? "font-semibold text-white" : indicator.textClassName}`}>{phase}</span>
               </button>
             );
           })}
         </div>
 
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Selected phase</p>
-              <h3 className="text-lg font-bold text-slate-950">{progressPhase}</h3>
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Selected phase</p>
+              <h3 className="text-lg font-bold text-brand-navy">{progressPhase}</h3>
             </div>
-            <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-              <span className="rounded-full border border-slate-900 bg-slate-900 px-2 py-1 text-white">● Current</span>
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-emerald-800">✓ Recorded</span>
-              <span className="rounded-full border border-slate-200 bg-white px-2 py-1 text-slate-500">· Not recorded</span>
+            <div className="flex flex-wrap gap-2 text-xs text-brand-slate">
+              <span className="rounded-full border border-brand-navy bg-brand-navy px-2 py-1 text-white">● Current</span>
+              <span className="rounded-full border border-brand-mint/50 bg-brand-mint/15 px-2 py-1 text-brand-navy">✓ Recorded</span>
+              <span className="rounded-full border border-brand-light-node bg-white px-2 py-1 text-brand-slate">· Not recorded</span>
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
