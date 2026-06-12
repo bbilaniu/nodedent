@@ -1,3 +1,9 @@
+---
+status: implemented
+created_on: 2026-05-27
+completed_on: 2026-06-07
+---
+
 # Codex Implementation Instructions: Endodontic Chairside Decision Guide MVP
 
 ## Context

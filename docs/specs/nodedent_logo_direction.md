@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-06-09
+---
+
 # NodeDent Logo Direction
 
 ## Brand name

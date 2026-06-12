@@ -1,3 +1,9 @@
+---
+status: implemented
+created_on: 2026-06-07
+completed_on: 2026-06-07
+---
+
 Update the endodontic guide terminology so the final shaping step is not limited to `.04` taper systems.
 
 Context:

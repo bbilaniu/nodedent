@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-06-07
+---
+
 # Endodontic Guide Refactor Notes
 
 This guide is split into small modules so protocol data, decision logic, notes, and UI rendering can be verified independently.

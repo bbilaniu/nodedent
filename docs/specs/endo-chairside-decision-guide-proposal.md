@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-05-27
+---
+
 # Interactive Endodontic Chairside Decision Guide + Note Generator Proposal
 
 ## Purpose

@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-06-07
+---
+
 # Endodontic Guide Continued Development Roadmap
 
 Use this file to continue developing the app after the MVP/refactor work. The next phase should stay focused on making the **endodontic chairside guide** clinically complete, testable, and usable. Do not generalize into a broader clinical-guide framework until the endodontic workflow works end-to-end.

@@ -1,3 +1,9 @@
+---
+status: implemented
+created_on: 2026-06-07
+completed_on: 2026-06-07
+---
+
 # Proposal: Add Phase-Aware Canal Switch Menus At Key Endodontic Handoff Nodes
 
 ## Context

@@ -1,3 +1,9 @@
+---
+status: implemented
+created_on: 2026-06-07
+completed_on: 2026-06-07
+---
+
 Refactor the current endodontic chairside guide Canvas/JSX MVP into production-ready modules while preserving existing behavior.
 
 Context:
