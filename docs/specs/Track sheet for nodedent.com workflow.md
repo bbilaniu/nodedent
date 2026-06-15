@@ -21,10 +21,18 @@ npm run test
 npm run build
 ```
 
-The developer-facing workflow graph export was implemented after that pass. Run it with:
+The developer-facing workflow graph export was implemented after that pass in commit `9adbb1a` (`Add generated endo workflow graph`). Run it with:
 
 ```bash
 npm run docs:workflow-graph
+```
+
+Verification completed for the workflow graph export:
+
+```bash
+npm run docs:workflow-graph
+npm run docs:check
+npm run build
 ```
 
 ## Implemented
@@ -124,6 +132,10 @@ PS implemented:
 - The generator validates that every option target exists before writing output.
 - The generated Mermaid graph includes node id, title, phase groupings, option labels, target nodes, difficulty flags, note event types, and self-loop markers.
 - Generated artifacts are written to `docs/generated/endo-workflow.md` and `docs/generated/endo-workflow.mmd`.
+- `docs/generated/endo-workflow.md` includes a Mermaid code block for GitHub/Markdown preview.
+- `docs/generated/endo-workflow.mmd` is the standalone Mermaid source for Mermaid Live Editor or future CLI exports.
+- Current generated graph summary: 60 nodes, 121 edges, 5 self-loops, 58 difficulty edges, and 15 phases.
+- `scripts/**/*.ts` is included in `tsconfig.json`, so the graph script is typechecked by `npm run build`.
 
 Implemented files:
 - `scripts/export-protocol-graph.ts`
@@ -132,6 +144,10 @@ Implemented files:
 - `docs/generated/endo-workflow.md`
 - `docs/generated/endo-workflow.mmd`
 - `docs/README.md`
+
+How to inspect:
+- Open `docs/generated/endo-workflow.md` in GitHub or a Markdown preview with Mermaid support.
+- Copy `docs/generated/endo-workflow.mmd` into Mermaid Live Editor if local Markdown preview does not render Mermaid.
 
 ## Active Backlog
 

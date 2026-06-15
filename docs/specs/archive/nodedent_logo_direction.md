@@ -1,9 +1,12 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-09
+completed_on: 2026-06-15
 ---
 
 # NodeDent Logo Direction
+
+Archived status: implemented. The durable brand identity decision is captured in [ADR 0003: Adopt NodeDent Brand Identity](../../adr/0003-adopt-nodedent-brand-identity.md). This file remains as detailed exploration and design brief context.
 
 ## Brand name
 

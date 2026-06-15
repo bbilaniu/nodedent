@@ -1,9 +1,12 @@
 ---
-status: active
+status: implemented
 created_on: 2026-05-27
+completed_on: 2026-06-15
 ---
 
 # Interactive Endodontic Chairside Decision Guide + Note Generator Proposal
+
+Archived status: implemented. The durable product/architecture decision is captured in [ADR 0001: Create an Endodontic Decision Guide and Note Generator](../../adr/0001-create-decision-guide-and-note-generator.md). This file remains as historical proposal context.
 
 ## Purpose
 

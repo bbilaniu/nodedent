@@ -1,11 +1,8 @@
----
-status: active
-created_on: 2026-06-07
----
-
-# Endodontic Guide Refactor Notes
+# Endodontic Guide Development Guide
 
 This guide is split into small modules so protocol data, decision logic, notes, and UI rendering can be verified independently.
+
+This is living contributor guidance, not a lifecycle-tracked product spec. Keep it current when the endodontic guide architecture or extension workflow changes.
 
 ## Module Map
 
