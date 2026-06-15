@@ -46,25 +46,35 @@ export function MeasurementPanel({
               value={caseData.preOp.estimatedChamberDepth}
               onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)}
               placeholder="mm"
+              inputMode="decimal"
               invalid={currentNodeId === "access-chamber" && !isPositiveMeasurement(caseData.preOp.estimatedChamberDepth)}
             />
             <p className="mt-2 text-xs text-brand-slate">Used for access planning and pre-op/access validation.</p>
           </div>
           <div className={pairedFieldGridClass}>
-            <TextInput label="Estimated WL" value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" invalid={["estimate-wl", "advance-10c"].includes(currentNodeId) && !isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
+            <TextInput label="Estimated WL" value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" inputMode="decimal" invalid={["estimate-wl", "advance-10c"].includes(currentNodeId) && !isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
             <TextInput label="Reference point" value={activeCanal?.referencePoint} onChange={(value) => onUpdateActiveCanal("referencePoint", value)} placeholder="e.g., MB cusp" invalid={["measure-available-space", "establish-eal0"].includes(currentNodeId) && isBlank(activeCanal?.referencePoint)} />
           </div>
           <div className={pairedFieldGridClass}>
-            <TextInput label="10C terminal length" value={activeCanal?.fileTerminalLength} onChange={(value) => onUpdateActiveCanal("fileTerminalLength", value)} placeholder="if stopped short" />
-            <TextInput label="Available treatment space" value={activeCanal?.availableTreatmentSpace} onChange={(value) => onUpdateActiveCanal("availableTreatmentSpace", value)} placeholder="mm" invalid={currentNodeId === "measure-available-space" && !isPositiveMeasurement(activeCanal?.availableTreatmentSpace)} />
+            <TextInput label="10C terminal length" value={activeCanal?.fileTerminalLength} onChange={(value) => onUpdateActiveCanal("fileTerminalLength", value)} placeholder="if stopped short" inputMode="decimal" />
+            <TextInput label="Available treatment space" value={activeCanal?.availableTreatmentSpace} onChange={(value) => onUpdateActiveCanal("availableTreatmentSpace", value)} placeholder="mm" inputMode="decimal" invalid={currentNodeId === "measure-available-space" && !isPositiveMeasurement(activeCanal?.availableTreatmentSpace)} />
           </div>
+          <details className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs text-brand-slate">
+            <summary className="cursor-pointer font-semibold text-brand-navy">Available treatment space and terminal length</summary>
+            <div className="mt-2 space-y-2 leading-5">
+              <p>Use these measurements when a reliable EAL endpoint cannot be established.</p>
+              <p><strong>10C terminal length:</strong> how far the 10C scouting file advanced when it stopped short of the expected endpoint.</p>
+              <p><strong>Available treatment space:</strong> measured canal space available for instrumentation from the selected reference point.</p>
+              <p>When EAL 0 is established, EAL-derived patency and shaping lengths take precedence.</p>
+            </div>
+          </details>
           <div className={pairedFieldGridClass}>
-            <TextInput label="EAL 0" value={activeCanal?.eal0} onChange={(value) => onUpdateActiveCanal("eal0", value)} placeholder="mm" />
+            <TextInput label="EAL 0" value={activeCanal?.eal0} onChange={(value) => onUpdateActiveCanal("eal0", value)} placeholder="mm" inputMode="decimal" />
             <SelectInput label="WL PA" value={activeCanal?.wlRadiographStatus || ""} onChange={(value) => onUpdateActiveCanal("wlRadiographStatus", value)} options={["", "acceptable", "short", "long", "not taken"]} />
           </div>
           <div className={pairedFieldGridClass}>
-            <TextInput label="Patency" value={activeCanal?.patencyLength} onChange={(value) => onUpdateActiveCanal("patencyLength", value)} placeholder="mm" />
-            <TextInput label="Shaping" value={activeCanal?.shapingLength} onChange={(value) => onUpdateActiveCanal("shapingLength", value)} placeholder="mm" />
+            <TextInput label="Patency" value={activeCanal?.patencyLength} onChange={(value) => onUpdateActiveCanal("patencyLength", value)} placeholder="mm" inputMode="decimal" rightLabel={suggestedLengths.patency ? `Suggested: ${suggestedLengths.patency} mm` : null} />
+            <TextInput label="Shaping" value={activeCanal?.shapingLength} onChange={(value) => onUpdateActiveCanal("shapingLength", value)} placeholder="mm" inputMode="decimal" rightLabel={suggestedLengths.shaping ? `Suggested: ${suggestedLengths.shaping} mm` : null} />
           </div>
           <div className="rounded-xl bg-brand-blue-light/20 px-3 py-2 text-xs text-brand-navy">
             {suggestedLengths.patency && suggestedLengths.shaping ? <span>Suggested from EAL 0: patency <strong>{suggestedLengths.patency}</strong> mm, shaping <strong>{suggestedLengths.shaping}</strong> mm.</span> : <span>Enter EAL 0 to preview suggested patency/shaping lengths.</span>}
@@ -75,7 +85,7 @@ export function MeasurementPanel({
             <TextInput label="Master cone" value={activeCanal?.masterCone} onChange={(value) => onUpdateActiveCanal("masterCone", value)} placeholder="30/.04" />
           </div>
           <div className={pairedFieldGridClass}>
-            <TextInput label="Obturation gauge" value={activeCanal?.obturationGauge} onChange={(value) => onUpdateActiveCanal("obturationGauge", value)} placeholder="30" />
+            <TextInput label="Obturation gauge" value={activeCanal?.obturationGauge} onChange={(value) => onUpdateActiveCanal("obturationGauge", value)} placeholder="30" inputMode="decimal" />
             <SelectInput label="Cone fit PA" value={activeCanal?.coneFitRadiograph || ""} onChange={(value) => onUpdateActiveCanal("coneFitRadiograph", value)} options={["", "acceptable", "short", "long", "not taken"]} />
           </div>
           <label className="block">

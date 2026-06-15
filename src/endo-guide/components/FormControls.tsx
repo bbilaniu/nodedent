@@ -6,12 +6,18 @@ export function TextInput({
   onChange,
   placeholder,
   invalid = false,
+  inputMode,
+  helperText,
+  rightLabel,
 }: {
   label: string;
   value?: string;
   onChange: (value: string) => void;
   placeholder?: string;
   invalid?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  helperText?: React.ReactNode;
+  rightLabel?: React.ReactNode;
 }) {
   const [draft, setDraft] = useState(value ?? "");
 
@@ -21,7 +27,10 @@ export function TextInput({
 
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium text-brand-slate">{label}</span>
+      <span className="mb-1 flex min-h-5 items-center justify-between gap-2 text-xs font-medium text-brand-slate">
+        <span>{label}</span>
+        {rightLabel ? <span className="shrink-0 text-[11px] font-semibold text-brand-navy">{rightLabel}</span> : null}
+      </span>
       <input
         value={draft}
         onChange={(event) => {
@@ -30,8 +39,10 @@ export function TextInput({
           onChange(next);
         }}
         placeholder={placeholder}
+        inputMode={inputMode}
         className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       />
+      {helperText ? <span className="mt-1 block text-xs leading-5 text-brand-slate">{helperText}</span> : null}
     </label>
   );
 }

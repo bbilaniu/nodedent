@@ -347,6 +347,15 @@ test("final shaping protocol labels are system-flexible", () => {
   assert.match(node.chairsideInstruction, /final shaping file\/system/);
 });
 
+test("increase shaping gauge loop does not require final shaping file until gauge selection", () => {
+  const continueGauging = protocolNodes["increase-shaping-gauge"].options[0];
+  const finalGaugeSelected = protocolNodes["increase-shaping-gauge"].options[1];
+  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), shapingLength: "19" }] });
+
+  assert.deepEqual(getMissingRequirements("increase-shaping-gauge", continueGauging, caseData, caseData.canals[0]), []);
+  assert.ok(getMissingRequirements("increase-shaping-gauge", finalGaugeSelected, caseData, caseData.canals[0]).includes("Final shaping file, e.g. 30/.04 or PTN X2 25/.06"));
+});
+
 test("final shaping notes include the recorded file or system", () => {
   const caseData = baseCase({
     canals: [{ ...blankCanal("MB"), finalShape: "PTN X2 25/.06" }],
@@ -451,10 +460,25 @@ test("obturation gauge alternate branches route to expected protocol nodes", () 
 
 test("obturation gauge alternate branches enforce required measurements", () => {
   const blank = baseCase({ canals: [{ ...blankCanal("MB") }] });
+  const noGauge = baseCase({ canals: [{ ...blankCanal("MB"), shapingLength: "19" }] });
+  const largerStopOption = protocolNodes["gauge-obturation-larger"].options[0];
+  const largerBeyondOption = protocolNodes["gauge-obturation-larger"].options[1];
 
   assert.ok(getMissingRequirements("gauge-obturation-30", protocolNodes["gauge-obturation-30"].options[1], blank, blank.canals[0]).includes("Shaping length in mm"));
   assert.ok(getMissingRequirements("gauge-obturation-25", protocolNodes["gauge-obturation-25"].options[0], blank, blank.canals[0]).includes("Shaping length in mm"));
-  assert.ok(getMissingRequirements("gauge-obturation-larger", protocolNodes["gauge-obturation-larger"].options[0], blank, blank.canals[0]).includes("Obturation gauge size, e.g. 30"));
+  assert.ok(getMissingRequirements("gauge-obturation-larger", largerStopOption, noGauge, noGauge.canals[0]).includes("Obturation gauge size, e.g. 30"));
+  assert.deepEqual(getMissingRequirements("gauge-obturation-larger", largerBeyondOption, noGauge, noGauge.canals[0]), []);
+
+  const largerBeyond = applyDecision({
+    currentNodeId: "gauge-obturation-larger",
+    selectedOptionLabel: largerBeyondOption.label,
+    caseData: noGauge,
+    activeCanalName: "MB",
+  });
+
+  assert.deepEqual(largerBeyond.errors, []);
+  assert.equal(largerBeyond.nextNodeId, "gauge-obturation-larger");
+  assert.equal(largerBeyond.generatedEvent?.type, "obturationGauge.largerSizeAdvancesBeyond");
 });
 
 test("smear layer and final NaOCl deferred routes can medicate and temporize", () => {

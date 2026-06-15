@@ -13,6 +13,21 @@ export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, a
   return option.label;
 }
 
+function getRecentNodeFeedback(currentNode: ProtocolNode, activeCanal?: CanalRecord | null) {
+  const lastEvent = [...(activeCanal?.events || [])].reverse()[0];
+  if (!lastEvent || lastEvent.details?.nodeId !== currentNode.id) return "";
+
+  if (currentNode.id === "gauge-obturation-larger" && lastEvent.type === "obturationGauge.largerSizeAdvancesBeyond") {
+    return "Recorded: the larger NiTi advanced beyond. Try the next larger file, then record the first size that stops at shaping length.";
+  }
+
+  if (currentNode.id === "increase-shaping-gauge" && lastEvent.type === "shaping.nextGaugeReachedLength") {
+    return "Recorded: the next larger NiTi reached shaping length. Try the next ISO size, then record the largest size that predictably reaches shaping length.";
+  }
+
+  return "";
+}
+
 export function DecisionCard({
   currentNode,
   caseData,
@@ -54,6 +69,7 @@ export function DecisionCard({
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
+  const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
 
   return (
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
@@ -66,6 +82,11 @@ export function DecisionCard({
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
+      {recentNodeFeedback ? (
+        <div className="mt-4 rounded-2xl border border-brand-blue-light bg-brand-blue-light/20 p-4 text-sm font-semibold text-brand-navy">
+          {recentNodeFeedback}
+        </div>
+      ) : null}
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="mb-3 grid gap-2 sm:grid-cols-2">
@@ -89,7 +110,7 @@ export function DecisionCard({
             <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
             <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
             <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
-            <TextInput label="Estimated chamber depth" value={caseData.preOp?.estimatedChamberDepth} onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)} placeholder="mm" invalid={!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)} />
+            <TextInput label="Estimated chamber depth" value={caseData.preOp?.estimatedChamberDepth} onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)} placeholder="mm" inputMode="decimal" invalid={!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)} />
             <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
             <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
           </div>
@@ -111,7 +132,15 @@ export function DecisionCard({
             </div>
           </div>
           <div className="mt-3">
-            <TextInput label={`Estimated WL for ${activeCanal?.name || "active canal"}`} value={activeCanal?.estimatedWorkingLength} onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)} placeholder="mm" invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)} />
+            <TextInput
+              label={`Estimated WL for ${activeCanal?.name || "active canal"}`}
+              value={activeCanal?.estimatedWorkingLength}
+              onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)}
+              placeholder="mm"
+              inputMode="decimal"
+              invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)}
+              helperText="This field is for the active canal. Add or rename canals in the canal selector before working on additional canals."
+            />
           </div>
         </div>
       ) : null}

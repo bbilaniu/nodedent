@@ -65,6 +65,9 @@ export function CanalSelector({
 
   return (
     <SectionCard title="Canal selector" className={className}>
+      <p className="mb-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
+        Add or rename canals here. Pre-op completion uses the estimated WL recorded for the active canal.
+      </p>
       <div className="mb-3 grid gap-2">
         {caseData.canals.map((canal) => {
           const status = getCanalStatus(canal);

@@ -114,7 +114,7 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   if (nodeId === "gauge-final-shape" && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
   if (nodeId === "increase-shaping-gauge") {
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
-    if (label.includes("binds") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
+    if (option?.noteEvent?.type === "shaping.finalGaugeSelected" && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
   }
   if (nodeId === "create-final-shape" && label.includes("reached") && !isValidFinalShape(activeCanal?.finalShape)) addMissing("Final shaping file, e.g. 30/.04 or PTN X2 25/.06");
   if (nodeId === "remove-smear-layer") {
@@ -123,7 +123,8 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   }
   if (nodeId === "agitate-edta" && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
   if (["gauge-obturation-30", "gauge-obturation-25"].includes(nodeId) && !isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");
-  if (["gauge-obturation-larger", "record-obturation-gauge"].includes(nodeId) && isBlank(activeCanal?.obturationGauge)) addMissing("Obturation gauge size, e.g. 30");
+  if (nodeId === "gauge-obturation-larger" && option?.noteEvent?.type === "obturationGauge.largerSizeStop" && isBlank(activeCanal?.obturationGauge)) addMissing("Obturation gauge size, e.g. 30");
+  if (nodeId === "record-obturation-gauge" && isBlank(activeCanal?.obturationGauge)) addMissing("Obturation gauge size, e.g. 30");
   if (nodeId === "fit-master-cone") {
     if (isBlank(activeCanal?.masterCone)) addMissing("Master cone, e.g. 30/.04");
     if (!isPositiveMeasurement(activeCanal?.shapingLength)) addMissing("Shaping length in mm");

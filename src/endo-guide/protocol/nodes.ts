@@ -283,7 +283,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Increase NiTi hand-file gauge",
     chairsideInstruction: "Use the next size NiTi hand file at shaping length. Continue increasing one ISO size at a time until the next larger file no longer reaches shaping length or has clear binding/resistance. Record the largest size that predictably reaches shaping length, then choose the final shaping file/system.",
     instruments: ["Sequential NiTi hand files"],
-    requiredInputs: ["Shaping length", "Final shaping file"],
+    requiredInputs: ["Shaping length", "Final shaping file when the next larger file binds or stops short"],
     options: [
       { label: "Next larger NiTi reaches shaping length; continue gauging", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.nextGaugeReachedLength" } },
       { label: "Next larger NiTi binds / does not reach shaping length", nextNodeId: "create-final-shape", noteEvent: { type: "shaping.finalGaugeSelected" } },
@@ -399,7 +399,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Gauge with next larger NiTi file",
     chairsideInstruction: "Set the next successively larger NiTi hand file to shaping length. Advance and apply firm apical pressure until a size reaches shaping length and does not advance beyond.",
     instruments: ["NiTi hand files"],
-    requiredInputs: ["Obturation gauge size"],
+    requiredInputs: ["Obturation gauge size when a larger file stops at shaping length"],
     options: [
       { label: "Larger NiTi size stops at shaping length", nextNodeId: "record-obturation-gauge", noteEvent: { type: "obturationGauge.largerSizeStop" } },
       { label: "Larger NiTi continues to advance beyond", nextNodeId: "gauge-obturation-larger", difficultyFlag: "caution", noteEvent: { type: "obturationGauge.largerSizeAdvancesBeyond" } },
