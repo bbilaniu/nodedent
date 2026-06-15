@@ -1,122 +1,145 @@
-# Track sheet for nodedent.com workflow
+---
+status: active
+created_on: 2026-06-15
+---
 
-This document tracks workflow observations and proposed fixes for future implementation.
+# Track Sheet For nodedent.com Workflow
+
+This document tracks workflow observations, implemented fixes, and remaining product backlog for the NodeDent endodontic chairside workflow.
 
 PO = problem or observation  
 PS = possibility or solution
 
-## Implementation Priorities
+## Current Status
 
-### P0 - Confirmed Workflow Blockers
+The first P0/P1 implementation pass was completed in commit `575deaf` (`Fix endo workflow loop feedback and guards`).
 
-| Area | Current behavior | Proposed behavior | Acceptance criteria | Likely files |
-| --- | --- | --- | --- | --- |
-| Obturation gauging: next larger NiTi | On "Gauge with next larger NiTi file", the app requires an obturation gauge before the user can press either option. This blocks the user from choosing "Larger NiTi continues to advance beyond", even though the final gauge is not known yet. | Only require an obturation gauge when the user selects an option that records or confirms the final stopping gauge. The "continues to advance beyond" option should remain available without a gauge. | A user can press "Larger NiTi continues to advance beyond" without entering obturation gauge. "Larger NiTi size stops at shaping length" still requires obturation gauge. "Record obturation gauge" still requires obturation gauge. Engine tests cover both allowed and blocked paths. | `src/endo-guide/engine/validateDecision.ts`, `src/endo-guide/protocol/nodes.ts`, `src/endo-guide/__tests__/engine.test.ts` |
-| Obturation gauging: self-loop feedback | Pressing "Larger NiTi continues to advance beyond" returns to the same card with no clear visual feedback. Users may click repeatedly without realizing the action was recorded. | Show a visible confirmation or recent-action message after self-loop decisions. | After selecting the self-loop option, the card clearly shows that the event was recorded and instructs the user to try the next larger file. The event log still receives the corresponding event. | `src/endo-guide/EndoChairsideGuide.tsx`, `src/endo-guide/components/DecisionCard.tsx`, `src/endo-guide/protocol/nodes.ts` |
+Verification completed for that implementation:
 
-## P1 - Focused UX Fixes
+```bash
+npm run test
+npm run build
+```
 
-### Pre-op setup and canal naming
+The developer-facing workflow graph export was implemented after that pass. Run it with:
 
-PO: Only one canal is shown at the bottom of the setup card.
+```bash
+npm run docs:workflow-graph
+```
 
-PS: Keep the current data model with one default canal, but make the setup behavior clearer.
+## Implemented
 
-Proposed changes:
-- Add short helper text near the pre-op estimated WL field: "This is for the active canal. Add or rename canals in the canal selector before working on additional canals."
-- In the canal selector, make it clearer that more canals can be added and that the active canal needs its own estimated WL before pre-op can be marked complete.
-- Keep the default canal named `Main` for now. Starting with zero canals would be a larger schema/workflow change because the app currently assumes at least one canal.
+### P0 - Obturation Gauging Guard And Self-Loop Feedback
 
-Acceptance criteria:
-- New users can understand why only one estimated WL field appears during pre-op.
-- Users can find the add/rename canal controls before access.
-- Pre-op validation remains active-canal based.
-- No schema migration is required.
+PO: On "Gauge with next larger NiTi file", the app required an obturation gauge before the user could press either option. This blocked "Larger NiTi continues to advance beyond", even though the final gauge was not known yet.
 
-Likely files:
+PS implemented:
+- "Larger NiTi continues to advance beyond" can be selected without an obturation gauge.
+- "Larger NiTi size stops at shaping length" still requires an obturation gauge.
+- "Record obturation gauge" still requires an obturation gauge.
+- Returning to the same card after the self-loop now shows a confirmation message that the larger NiTi advanced beyond and instructs the user to try the next larger file.
+- Engine tests cover the allowed and blocked branches.
+
+Implemented files:
+- `src/endo-guide/engine/validateDecision.ts`
+- `src/endo-guide/protocol/nodes.ts`
+- `src/endo-guide/components/DecisionCard.tsx`
+- `src/endo-guide/__tests__/engine.test.ts`
+
+### P0 - Shaping Gauge Self-Loop Feedback
+
+PO: On "Increase NiTi hand-file gauge", pressing "Next larger NiTi reaches shaping length; continue gauging" returned to the same card with no visual feedback.
+
+PS implemented:
+- Returning to the same card after this self-loop now shows a confirmation message that the next larger NiTi reached shaping length and instructs the user to try the next ISO size.
+- The card's required-input text now clarifies that final shaping file is needed when the next larger file binds or stops short, not while the user is still continuing the gauge loop.
+- Validation now keys the final-shaping-file requirement off the option event type instead of matching visible label text.
+- Engine tests cover that the continue-gauging loop does not require final shaping file, while final gauge selection does.
+
+Implemented files:
+- `src/endo-guide/components/DecisionCard.tsx`
+- `src/endo-guide/protocol/nodes.ts`
+- `src/endo-guide/engine/validateDecision.ts`
+- `src/endo-guide/__tests__/engine.test.ts`
+
+### P1 - Pre-op Setup And Canal Naming Clarity
+
+PO: Only one canal is shown during setup, and it was not clear that the estimated WL field applies to the active canal.
+
+PS implemented:
+- Added helper text near the pre-op estimated WL field explaining that the field is for the active canal.
+- Added canal selector helper text explaining that canals can be added or renamed there and that pre-op completion uses the active canal's estimated WL.
+- Kept the current model with one default canal named `Main`; starting with zero canals remains deferred.
+
+Implemented files:
 - `src/endo-guide/components/DecisionCard.tsx`
 - `src/endo-guide/components/CanalSelector.tsx`
-- `src/endo-guide/state/persistence.ts`
 
-Open question:
-- Should `Main` be renamed to a more tooth-neutral placeholder such as `Canal 1`, or should it remain `Main` until the clinician renames it?
+### P1 - Attach EAL To 10C Measurement Explanation
 
-### Attach EAL to 10C: measurement explanation
+PO: `10C terminal length` and `Available treatment space` were not explained.
 
-PO: The values for `10C terminal length` and `Available treatment space` are not explained.
+PS implemented:
+- Added a collapsible measurement-panel help block explaining when those measurements are used.
+- Clarified that EAL-derived patency and shaping lengths take precedence when EAL 0 is established.
 
-PS: Add concise help text or a tooltip near those fields.
-
-Suggested help copy:
-
-**Available treatment space and terminal length**
-
-These measurements are used when a reliable EAL endpoint cannot be established.
-
-- `10C terminal length`: how far the 10C scouting file advanced when it stopped short of the expected endpoint.
-- `Available treatment space`: the measured canal space available for instrumentation from the selected reference point.
-
-When EAL 0 is established, EAL-derived patency and shaping lengths take precedence. When EAL 0 cannot be established, these values help document limited access and guide safer planning.
-
-Acceptance criteria:
-- Help is available without crowding the measurement panel.
-- The copy explains when the fields matter and when EAL takes precedence.
-- The fields remain editable in the same place.
-
-Likely files:
+Implemented files:
 - `src/endo-guide/components/MeasurementPanel.tsx`
-- `src/endo-guide/components/FormControls.tsx` if a reusable help/tooltip API is added.
 
-### EAL measurement touch input
+### P1 - Touch Input For Measurements
 
-PO: Measurement input is difficult on touchscreen devices.
+PO: Measurement entry was difficult on touchscreen devices.
 
-PS: First pass should improve numeric entry before adding larger controls.
+PS implemented:
+- Added reusable `inputMode` support to `TextInput`.
+- Applied decimal keyboard hints to measurement fields such as chamber depth, estimated WL, terminal length, available treatment space, EAL 0, patency, shaping, and obturation gauge.
+- Non-measurement text fields such as reference point and master cone remain normal text inputs.
 
-Proposed changes:
-- Add numeric keyboard hints for measurement fields, such as `inputMode="decimal"`.
-- Consider a reusable `measurement` input variant instead of changing every field ad hoc.
-- Defer +/- steppers until after testing; they add UI weight and need clear increment rules.
-
-Acceptance criteria:
-- On mobile/tablet, measurement fields open a numeric/decimal keyboard where supported.
-- Placeholder text still appears when the field is empty.
-- Existing text fields that are not measurements, such as reference point or master cone, are not forced into numeric input.
-
-Likely files:
+Implemented files:
 - `src/endo-guide/components/FormControls.tsx`
 - `src/endo-guide/components/MeasurementPanel.tsx`
 - `src/endo-guide/components/DecisionCard.tsx`
 
-### EAL-derived patency and shaping suggestions
+### P1 - EAL-Derived Patency And Shaping Suggestions
 
-PO: Patency and shaping calculated values are currently shown in a separate hint/button, not beside the individual fields.
+PO: Calculated patency and shaping values were shown only in a separate hint/button, not next to the individual fields.
 
-PS: Show suggested values directly near the Patency and Shaping fields when EAL 0 is entered.
+PS implemented:
+- Patency and shaping fields now show field-level suggested values when a valid EAL 0 is entered.
+- The existing "Use EAL +/-1" action remains available to apply both suggested values.
+- Users can still type different values manually.
 
-Proposed changes:
-- Show "Suggested: X mm" near the Patency field.
-- Show "Suggested: Y mm" near the Shaping field.
-- Keep the existing "Use EAL +/-1" action for users who want to apply both values.
-- Use "patency", not "potency".
-
-Acceptance criteria:
-- Entering a valid EAL 0 immediately previews suggested patency and shaping values.
-- The user can still type different values manually.
-- The "Use EAL +/-1" button fills both fields with the suggested values.
-- Validation still requires actual recorded values before continuing from EAL 0.
-
-Likely files:
+Implemented files:
+- `src/endo-guide/components/FormControls.tsx`
 - `src/endo-guide/components/MeasurementPanel.tsx`
 - `src/endo-guide/engine/measurements.ts`
 
-## P2 - Product Backlog / Larger Design Work
+### P2 - Developer-Facing Workflow Visualization Export
 
-### Static instruments on every card
+PO: Developers or curious users could not visualize the workflow as a flow chart, idea tree, or spider web.
+
+PS implemented:
+- Added `npm run docs:workflow-graph`.
+- Added a deterministic graph generator that reads `protocolNodes` as the source of truth.
+- The generator validates that every option target exists before writing output.
+- The generated Mermaid graph includes node id, title, phase groupings, option labels, target nodes, difficulty flags, note event types, and self-loop markers.
+- Generated artifacts are written to `docs/generated/endo-workflow.md` and `docs/generated/endo-workflow.mmd`.
+
+Implemented files:
+- `scripts/export-protocol-graph.ts`
+- `package.json`
+- `tsconfig.json`
+- `docs/generated/endo-workflow.md`
+- `docs/generated/endo-workflow.mmd`
+- `docs/README.md`
+
+## Active Backlog
+
+### Static Instruments On Every Card
 
 PO: Instruments are static and cannot be customized.
 
-PS: Add instrument preferences so offices can adjust instruments/materials while preserving the workflow logic.
+PS: Add instrument preferences so offices can adjust instruments/materials while preserving workflow logic.
 
 Notes for future implementation:
 - Treat this as a preferences feature, not a bug fix.
@@ -129,33 +152,38 @@ Likely files:
 - New preferences state/storage module.
 - UI entry point in case/settings management.
 
-### Workflow visualization
+### In-App Workflow Graph Viewer
 
-PO: Developers or curious users cannot visualize the workflow as a flow chart, idea tree, or spider web.
+PO: The developer-facing Mermaid export makes the graph inspectable in docs, but there is still no in-app full workflow graph.
 
-PS: Generate a protocol visualization from the node graph.
+PS: Consider an in-app workflow map only if users need graph navigation inside the chairside guide.
 
 Notes for future implementation:
-- Start with a developer-facing export or static diagram.
-- Use `protocolNodes` as the source of truth.
-- Include node id, title, phase, options, next node, and difficulty flags.
-- Later, consider an in-app visual map if it helps clinicians navigate.
+- Reuse the same graph-extraction rules as `scripts/export-protocol-graph.ts`.
+- Keep `PhaseCanalMapModal` focused on per-canal phase progress; a full protocol graph is a separate view.
+- Avoid adding a graph layout dependency until there is a concrete user-facing workflow for it.
 
-Likely files:
-- `src/endo-guide/protocol/nodes.ts`
-- New script under `scripts/` or a docs generation command.
-- Existing `PhaseCanalMapModal` may be relevant for in-app display, but this is not the same as a full graph visualization.
+### Touchscreen Measurement Steppers
+
+PO: Decimal keyboard hints improve mobile entry, but some operators may still prefer +/- controls for precise chairside adjustment.
+
+PS: Consider stepper controls only after hands-on testing.
+
+Notes for future implementation:
+- Define increment size before implementation, such as 0.5 mm or 1.0 mm.
+- Keep placeholders visible when fields are empty.
+- Avoid adding steppers to non-measurement fields.
 
 ## Deferred / Needs Decision
 
-### Starting with no canals
+### Starting With No Canals
 
 PO: The default canal is called `Main`.
 
 PS considered: Start with no canals, then suggest `Main` only if the user enters no name.
 
 Recommendation:
-- Do not include this in the bug-fix pass.
+- Do not include this in the current bug-fix pass.
 - The app currently requires at least one canal in the case schema and uses the active canal for pre-op validation, measurements, notes, and workflow state.
 - A zero-canal start would require broader changes to validation, persistence, UI empty states, and note generation.
 

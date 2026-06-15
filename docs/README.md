@@ -13,6 +13,11 @@ This folder separates clinical source material, active product specs, architectu
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
 - [Refactor architecture notes](specs/endo-guide-refactor-notes.md)
 - [NodeDent logo direction](specs/nodedent_logo_direction.md)
+- [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
+
+## Generated Documentation
+
+- [Endodontic workflow graph](generated/endo-workflow.md)
 
 ## Architectural Decisions
 
