@@ -31,6 +31,8 @@ Keep clinical warning/error families semantically distinct:
 - Red remains referral, destructive actions, and validation errors.
 - Violet/cyan can remain for specific workflow sub-states where they add useful separation.
 
+Support dark mode as an alternate rendering of the same clinical color roles, not as a separate color language. The app sets `data-theme="dark"` on the document root and `src/styles.css` remaps existing utility classes to darker surfaces, softer borders, and higher-contrast text. Primary actions remain navy, positive/progress states remain mint, informational workflow states remain blue, and amber/orange/red/violet/cyan keep their clinical meanings with dark-mode contrast adjustments.
+
 ## Rationale
 
 Named tokens make the brand system explicit and reduce scattered hardcoded color choices. A deliberate role mapping prevents accidental search-and-replace changes that would make clinically different states look equivalent.
@@ -44,6 +46,7 @@ Preserving warning, high-difficulty, and referral colors protects chairside scan
 - Status style maps should remain centralized in `src/endo-guide/engine/deriveCanalStatus.ts`, `src/endo-guide/engine/deriveCaseStatus.ts`, and `src/endo-guide/engine/phaseProgress.ts`.
 - New status colors should be added by clinical meaning, not by visual preference alone.
 - Optional blue should be used sparingly for informational or secondary actions, not for primary CTAs, completion, warnings, or errors.
+- Dark mode should be maintained through the document-level theme override in `src/styles.css`; avoid duplicating every component class unless a component has a unique contrast problem.
 
 ## Alternatives Considered
 

@@ -39,12 +39,29 @@ type SavedCaseSummary = {
   autosavedAt: string;
 };
 
+type ThemeMode = "light" | "dark";
+
+const THEME_STORAGE_KEY = "nodedent-theme";
+const LIGHT_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference.svg";
+const DARK_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference_inverted_dark_bg.svg";
+
 function getSavedCaseIndex(): SavedCaseSummary[] {
   try {
     return JSON.parse(window.localStorage.getItem(CASE_INDEX_KEY) || "[]");
   } catch {
     return [];
   }
+}
+
+function getInitialTheme(): ThemeMode {
+  try {
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+  } catch {
+    return "light";
+  }
+
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 function createRuntimeEventArgs() {
@@ -89,6 +106,7 @@ export default function EndoChairsideGuide() {
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>(getSavedCaseIndex);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
 
   const currentNode = protocolNodes[currentNodeId] || protocolNodes.preop;
   const activeCanal = useMemo(
@@ -112,6 +130,15 @@ export default function EndoChairsideGuide() {
   );
 
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    document.documentElement.style.colorScheme = themeMode;
+    document
+      .getElementById("app-favicon")
+      ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
+    window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -609,6 +636,15 @@ export default function EndoChairsideGuide() {
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{caseData.procedureType || "RCT"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
+              <button
+                type="button"
+                aria-pressed={themeMode === "dark"}
+                onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+                className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-brand-light-node bg-white px-3 py-1.5 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
+              >
+                <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
+                {themeMode === "dark" ? "Dark" : "Light"} mode
+              </button>
               <button
                 type="button"
                 onClick={() => setIsCasePanelOpen(true)}
