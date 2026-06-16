@@ -11,6 +11,7 @@ This folder separates clinical source material, active product specs, architectu
 
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
 - [Generalized workflow nodes](specs/generalized-workflow-nodes.md)
+- [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 
 ## Engineering Guides
