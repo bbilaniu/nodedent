@@ -10,6 +10,7 @@ This folder separates clinical source material, active product specs, architectu
 ## Active Product And Implementation Specs
 
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
+- [Generalized workflow nodes](specs/generalized-workflow-nodes.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 
 ## Engineering Guides
@@ -25,6 +26,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0001: Create an Endodontic Decision Guide and Note Generator](adr/0001-create-decision-guide-and-note-generator.md)
 - [ADR 0002: Apply the NodeDent Color System Without Losing Clinical Semantics](adr/0002-apply-nodedent-color-system.md)
 - [ADR 0003: Adopt NodeDent Brand Identity](adr/0003-adopt-nodedent-brand-identity.md)
+- [ADR 0004: Generalize Clinical Workflow Nodes Through Reusable Workflow Modules](adr/0004-generalize-clinical-workflow-nodes.md)
 
 ## Archived Implemented Specs
 
