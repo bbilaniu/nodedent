@@ -1,8 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import type { CanalRecord, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
+import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
+import { isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { SelectInput, TextInput } from "./FormControls";
 
@@ -10,6 +12,21 @@ function statusClass(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
   if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
   return "border-brand-light-node bg-white text-brand-slate";
+}
+
+const isolationActionLabels = {
+  [isolationEventTypes.rubberDamPlaced]: "Rubber dam placed",
+  [isolationEventTypes.alternativeIsolationUsed]: "Alternative isolation used",
+  [isolationEventTypes.compromised]: "Isolation compromised",
+  [isolationEventTypes.removed]: "Isolation removed",
+  [isolationEventTypes.replaced]: "Isolation replaced",
+} as const satisfies Record<IsolationEventType, string>;
+
+const isolationActionOptions = Object.values(isolationActionLabels);
+
+function eventTypeFromLabel(label: string): IsolationEventType {
+  const entry = Object.entries(isolationActionLabels).find(([, actionLabel]) => actionLabel === label);
+  return (entry?.[0] as IsolationEventType | undefined) || isolationEventTypes.rubberDamPlaced;
 }
 
 export function CaseSetupStatusPanel({
@@ -20,6 +37,7 @@ export function CaseSetupStatusPanel({
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
+  onRecordIsolationEvent,
 }: {
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
@@ -28,9 +46,18 @@ export function CaseSetupStatusPanel({
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
+  onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
+  const [isolationAction, setIsolationAction] = useState<IsolationEventType>(isolationEventTypes.rubberDamPlaced);
+  const [isolationMethod, setIsolationMethod] = useState<IsolationMethod>("rubberDam");
+  const [regionKind, setRegionKind] = useState<IsolationRegionKind>("custom");
+  const [regionLabel, setRegionLabel] = useState("");
+  const [exposedTeeth, setExposedTeeth] = useState(caseData.tooth || "");
+  const [clampCode, setClampCode] = useState("");
+  const [clampTooth, setClampTooth] = useState(caseData.tooth || "");
+  const [isolationNote, setIsolationNote] = useState("");
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const statusItems = [
     { label: "Diagnosis", status: capabilitySummary.diagnosis },
@@ -38,6 +65,24 @@ export function CaseSetupStatusPanel({
     { label: "Anesthesia", status: capabilitySummary.anesthesia },
     { label: "Isolation", status: capabilitySummary.isolation },
   ];
+  const showClampFields = isolationAction === isolationEventTypes.rubberDamPlaced || isolationAction === isolationEventTypes.replaced;
+  const actionIsReassessment = isolationAction === isolationEventTypes.compromised || isolationAction === isolationEventTypes.removed;
+
+  function submitIsolationEvent() {
+    const teeth = exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
+    const details: IsolationEventDetails = {
+      method: isolationAction === isolationEventTypes.alternativeIsolationUsed ? isolationMethod : "rubberDam",
+      regionKind,
+      regionLabel: regionLabel.trim() || undefined,
+      exposedTeeth: teeth.length ? teeth : undefined,
+      clampCode: showClampFields ? clampCode.trim() || undefined : undefined,
+      clampTooth: showClampFields ? clampTooth.trim() || undefined : undefined,
+      reason: actionIsReassessment ? isolationNote.trim() || undefined : undefined,
+      notes: !actionIsReassessment ? isolationNote.trim() || undefined : undefined,
+    };
+
+    onRecordIsolationEvent(isolationAction, details);
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -131,6 +176,59 @@ export function CaseSetupStatusPanel({
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 lg:col-span-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-brand-navy">Isolation</h3>
+            <p className="mt-1 text-sm leading-6 text-brand-slate">{capabilitySummary.isolation.summary}</p>
+          </div>
+          <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}`}>
+            {capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending"}
+          </span>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <SelectInput
+            label="Isolation action"
+            value={isolationActionLabels[isolationAction]}
+            onChange={(value) => setIsolationAction(eventTypeFromLabel(value))}
+            options={isolationActionOptions}
+          />
+          <SelectInput
+            label="Method"
+            value={isolationMethod}
+            onChange={(value) => setIsolationMethod(value as IsolationMethod)}
+            options={[...isolationMethods]}
+          />
+          <SelectInput
+            label="Region"
+            value={regionKind}
+            onChange={(value) => setRegionKind(value as IsolationRegionKind)}
+            options={[...isolationRegionKinds]}
+          />
+          <TextInput label="Region label" value={regionLabel} onChange={setRegionLabel} placeholder="e.g., Q3, upper anterior, custom" />
+          <TextInput label="Exposed teeth" value={exposedTeeth} onChange={setExposedTeeth} placeholder="e.g., 34 35 36 37" />
+          {showClampFields ? (
+            <>
+              <TextInput label="Clamp tooth" value={clampTooth} onChange={setClampTooth} placeholder="e.g., 37" />
+              <TextInput label="Clamp code" value={clampCode} onChange={setClampCode} placeholder="e.g., W8A" />
+            </>
+          ) : null}
+          <TextInput
+            label={actionIsReassessment ? "Reason" : "Notes"}
+            value={isolationNote}
+            onChange={setIsolationNote}
+            placeholder={isolationAction === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={submitIsolationEvent}
+          className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+        >
+          Record isolation event
+        </button>
       </section>
     </div>
   );

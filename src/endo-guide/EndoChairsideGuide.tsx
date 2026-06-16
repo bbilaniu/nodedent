@@ -22,6 +22,14 @@ import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
+import type { IsolationEventDetails, IsolationEventType } from "./workflow/isolation";
+import {
+  buildIsolationEstablishedCapability,
+  getIsolationScopeFromDetails,
+  isolationEventTypes,
+  sharedIsolationWorkflowId,
+  sharedIsolationWorkflowVersion,
+} from "./workflow/isolation";
 
 type HistoryEntry = {
   caseData: EndoCase;
@@ -184,6 +192,37 @@ export default function EndoChairsideGuide() {
 
   function applySuggestedCaseStatus() {
     updateCase({ caseStatus: "" });
+  }
+
+  function recordIsolationEvent(eventType: IsolationEventType, details: IsolationEventDetails) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const scope = getIsolationScopeFromDetails(details, caseData.tooth);
+    const event = makeRuntimeEvent({
+      type: eventType,
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: currentNode.id,
+      label: eventType,
+      activeCanal,
+      workflowId: sharedIsolationWorkflowId,
+      workflowVersion: sharedIsolationWorkflowVersion,
+      scope,
+    });
+    event.details = { ...event.details, ...details };
+    if (
+      eventType === isolationEventTypes.rubberDamPlaced ||
+      eventType === isolationEventTypes.alternativeIsolationUsed ||
+      eventType === isolationEventTypes.replaced
+    ) {
+      event.capabilitiesSatisfied = [buildIsolationEstablishedCapability(event)];
+    }
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
   }
 
   function updateActiveCanal(field: string, value: string) {
@@ -756,6 +795,7 @@ export default function EndoChairsideGuide() {
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
+            onRecordIsolationEvent={recordIsolationEvent}
             onDownloadCaseJson={downloadCaseJson}
           />
         ) : null}

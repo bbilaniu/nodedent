@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { CanalRecord, EndoCase, PriorCanalStatus } from "../types";
+import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
@@ -29,6 +30,7 @@ export function CaseManagementModal({
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
+  onRecordIsolationEvent,
   onDownloadCaseJson,
 }: {
   caseData: EndoCase;
@@ -40,6 +42,7 @@ export function CaseManagementModal({
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
+  onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
   onDownloadCaseJson: () => void;
 }) {
   const closureLabel = caseData.closure?.type
@@ -102,6 +105,7 @@ export function CaseManagementModal({
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
+            onRecordIsolationEvent={onRecordIsolationEvent}
           />
         </div>
         <div className="mt-4">

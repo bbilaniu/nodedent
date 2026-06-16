@@ -381,7 +381,7 @@ Remaining:
 
 ### Phase 3 - Extract The First Shared Module
 
-Status: Phase 3A implemented as isolation model/event scaffolding; embedded UI still pending.
+Status: Phase 3A model/event scaffolding, Phase 3B Case Setup capture UI, and Phase 3C non-blocking readiness prompts implemented; embedded module runner still pending.
 Reasoning level: high.
 
 Recommended first module: isolation.
@@ -409,9 +409,31 @@ Implemented in Phase 3A:
 - Extended full notes with an isolation section.
 - Added selector coverage for exposed teeth, unrelated teeth, compromised/removed isolation, and replacement.
 
+Implemented in Phase 3B:
+
+- Added an isolation capture area inside Case Setup & Status.
+- Captures isolation action, method, region, exposed teeth, clamp code, clamp tooth, notes, and compromise/removal reason.
+- Appends structured isolation events to the case event ledger.
+- Emits `isolation.established` capability output for established/replaced isolation events so existing selectors update the shared status summary.
+- Kept the endodontic decision-card flow unchanged.
+
+Implemented in Phase 3C:
+
+- Added non-blocking shared readiness prompts to the pre-op/access area before the workflow moves deeply into access.
+- Shows diagnosis, radiograph, anesthesia, and isolation status without forcing anesthesia or isolation as hard stops.
+- Keeps `Pre-op review complete -> Access pulp chamber` available for fast workflow continuation.
+- Adds direct access from the readiness prompt to Case Setup & Status and isolation capture.
+
+Planned Phase 3D:
+
+- Show the most recent isolation event in the Isolation panel.
+- Add a current coverage summary for exposed teeth, region, clamp tooth, and clamp code.
+- Improve isolation capture defaults after recording, including active-tooth prefill and sensible reset behavior.
+- Add quick actions for compromised, removed, and replaced isolation when isolation is currently established.
+- Keep anesthesia as a visible status until minimal anesthesia events and reassessment rules are modeled.
+
 Remaining:
 
-- Add user-facing capture UI for the isolation module.
 - Add the parent workflow prompt that acknowledges existing isolation and allows revision.
 - Refine region vocabulary and clamp recommendation data after the initial module UI is designed.
 

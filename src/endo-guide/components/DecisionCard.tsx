@@ -6,6 +6,8 @@ import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 
+const sharedReadinessNodeIds = new Set(["preop", "access-chamber", "confirm-chamber"]);
+
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
     return `Proceed to obturation gauging for ${activeCanal?.name || "active canal"}`;
@@ -35,6 +37,12 @@ function formatMm(value?: string) {
 function compactStatusLabel(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "review";
   return satisfied ? "ready" : "pending";
+}
+
+function readinessStatusClass(satisfied: boolean, needsReassessment: boolean) {
+  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
+  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
+  return "border-brand-light-node bg-white text-brand-slate";
 }
 
 export function DecisionCard({
@@ -73,6 +81,13 @@ export function DecisionCard({
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
+  const readinessItems = [
+    { label: "Diagnosis", status: capabilitySummary.diagnosis },
+    { label: "Radiographs", status: capabilitySummary.radiographs },
+    { label: "Anesthesia", status: capabilitySummary.anesthesia },
+    { label: "Isolation", status: capabilitySummary.isolation },
+  ];
   const radiographLabels = [
     caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ? "PA" : null,
     caseData.preOp?.bwReviewed ? "BW" : null,
@@ -90,6 +105,44 @@ export function DecisionCard({
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
+      {showSharedReadiness ? (
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+          <div className="grid gap-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <h4 className="text-sm font-bold text-brand-navy">Pre-access readiness</h4>
+              <div className="grid gap-2 sm:grid-cols-2 lg:w-auto">
+                <button
+                  type="button"
+                  onClick={onOpenCaseSetupStatus}
+                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+                >
+                  Open Case Setup
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCaseSetupStatus}
+                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+                >
+                  Record isolation
+                </button>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
+              {readinessItems.map(({ label, status }) => (
+                <div key={label} className={`min-w-0 rounded-xl border px-3 py-2 ${readinessStatusClass(status.satisfied, status.needsReassessment)}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold">{label}</span>
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
+                      {compactStatusLabel(status.satisfied, status.needsReassessment)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 opacity-80">{status.summary}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {recentNodeFeedback ? (
         <div className="mt-4 rounded-2xl border border-brand-blue-light bg-brand-blue-light/20 p-4 text-sm font-semibold text-brand-navy">
           {recentNodeFeedback}
