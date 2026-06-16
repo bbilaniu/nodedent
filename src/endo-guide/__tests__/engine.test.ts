@@ -20,6 +20,7 @@ import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
+import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -1347,6 +1348,78 @@ test("clinical event schema accepts optional workflow context without requiring 
       },
     ],
   }).success, true);
+});
+
+test("capability selectors derive diagnosis and radiograph status from case fields", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "Necrotic pulp", apical: "" },
+    preOp: { radiographsReviewed: false, paReviewed: true, cbctReviewed: false, estimatedChamberDepth: "5" },
+  });
+  const summary = getCaseCapabilitySummary(caseData);
+
+  assert.equal(summary.diagnosis.satisfied, true);
+  assert.equal(summary.diagnosis.source, "caseField");
+  assert.equal(summary.radiographs.satisfied, true);
+  assert.equal(summary.radiographs.source, "caseField");
+  assert.equal(summary.anesthesia.satisfied, false);
+  assert.equal(summary.isolation.satisfied, false);
+});
+
+test("capability selectors match isolation events by exposed tooth and invalidate after compromise", () => {
+  const isolatedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_rd",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "isolation.rubberDamPlaced",
+        scope: { kind: "custom", teeth: ["34", "35", "36", "37"], regionLabel: "Q3" },
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "36" }), true);
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "46" }), false);
+
+  const compromisedCase: EndoCase = {
+    ...isolatedCase,
+    globalEvents: [
+      ...isolatedCase.globalEvents,
+      {
+        id: "evt_rd_compromised",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: "isolation.compromised",
+        scope: { kind: "tooth", tooth: "36" },
+      },
+    ],
+  };
+  const status = getCapabilityStatus(compromisedCase, "isolation.established", { kind: "tooth", tooth: "36" });
+
+  assert.equal(status.satisfied, false);
+  assert.equal(status.needsReassessment, true);
+});
+
+test("capability selectors use explicit capability expiry for reassessment", () => {
+  const caseData = baseCase({
+    globalEvents: [
+      {
+        id: "evt_anesthesia",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "anesthesia.localDelivered",
+        capabilitiesSatisfied: [
+          {
+            name: "anesthesia.adequate",
+            scope: { kind: "tooth", tooth: "36" },
+            expiresAt: "2026-01-01T10:30:00.000Z",
+          },
+        ],
+      },
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31:00.000Z"));
+
+  assert.equal(status.satisfied, false);
+  assert.equal(status.needsReassessment, true);
 });
 
 test("normalized JSON import preserves exported case data", () => {

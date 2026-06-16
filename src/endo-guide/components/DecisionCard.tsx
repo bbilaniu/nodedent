@@ -4,6 +4,7 @@ import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
+import { getCaseCapabilitySummary } from "../workflow/selectors";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -29,6 +30,11 @@ function getRecentNodeFeedback(currentNode: ProtocolNode, activeCanal?: CanalRec
 
 function formatMm(value?: string) {
   return value ? `${value} mm` : "not set";
+}
+
+function compactStatusLabel(satisfied: boolean, needsReassessment: boolean) {
+  if (needsReassessment) return "review";
+  return satisfied ? "ready" : "pending";
 }
 
 export function DecisionCard({
@@ -66,6 +72,7 @@ export function DecisionCard({
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
+  const capabilitySummary = getCaseCapabilitySummary(caseData);
   const radiographLabels = [
     caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ? "PA" : null,
     caseData.preOp?.bwReviewed ? "BW" : null,
@@ -122,6 +129,9 @@ export function DecisionCard({
                 </p>
                 <p className="mt-1 text-xs leading-5 text-brand-slate">
                   Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographLabels.length ? radiographLabels.join(", ") : "not recorded"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-brand-slate">
+                  Shared status: diagnosis {compactStatusLabel(capabilitySummary.diagnosis.satisfied, capabilitySummary.diagnosis.needsReassessment)} · radiographs {compactStatusLabel(capabilitySummary.radiographs.satisfied, capabilitySummary.radiographs.needsReassessment)} · anesthesia {compactStatusLabel(capabilitySummary.anesthesia.satisfied, capabilitySummary.anesthesia.needsReassessment)} · isolation {compactStatusLabel(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}
                 </p>
               </div>
               <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${preOpMissing.length ? "border-red-200 bg-red-50 text-red-800" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>

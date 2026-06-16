@@ -3,7 +3,14 @@ import type { CanalRecord, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
+import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { SelectInput, TextInput } from "./FormControls";
+
+function statusClass(satisfied: boolean, needsReassessment: boolean) {
+  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
+  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
+  return "border-brand-light-node bg-white text-brand-slate";
+}
 
 export function CaseSetupStatusPanel({
   caseData,
@@ -24,6 +31,13 @@ export function CaseSetupStatusPanel({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
+  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const statusItems = [
+    { label: "Diagnosis", status: capabilitySummary.diagnosis },
+    { label: "Radiographs", status: capabilitySummary.radiographs },
+    { label: "Anesthesia", status: capabilitySummary.anesthesia },
+    { label: "Isolation", status: capabilitySummary.isolation },
+  ];
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -98,6 +112,24 @@ export function CaseSetupStatusPanel({
             invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)}
             helperText="This field is for the active canal. Add or rename canals in the canal selector before working on additional canals."
           />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 lg:col-span-2">
+        <h3 className="text-sm font-semibold text-brand-navy">Shared clinical status</h3>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {statusItems.map(({ label, status }) => (
+            <div key={label} className={`rounded-xl border px-3 py-2 ${statusClass(status.satisfied, status.needsReassessment)}`}>
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
+                <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
+                  {status.needsReassessment ? "Review" : status.satisfied ? "Ready" : "Pending"}
+                </span>
+              </div>
+              <p className="mt-2 text-sm font-semibold leading-5">{status.summary}</p>
+              {status.reason ? <p className="mt-1 text-xs leading-5 opacity-80">{status.reason}</p> : null}
+            </div>
+          ))}
         </div>
       </section>
     </div>

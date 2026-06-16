@@ -328,6 +328,7 @@ Implemented:
 
 ### Phase 2 - Add Query Helpers
 
+Status: implemented for derived capability status selectors and conservative UI summaries.
 Reasoning level: medium.
 
 - Add selectors that answer questions such as:
@@ -337,6 +338,21 @@ Reasoning level: medium.
   - Does this capability need reassessment?
 - Derive those answers from the event ledger and current case fields instead of storing mutable capability flags on the case.
 - Use selectors in validation and decision-card messaging before building embedded workflow UI.
+
+Implemented:
+
+- Added derived selectors for known capability satisfaction, reassessment status, and Case Setup & Status summaries.
+- Derived diagnosis and radiograph readiness from existing case fields.
+- Derived future anesthesia status from explicit capability events, including expiry-based reassessment.
+- Derived future isolation status from explicit capability events or initial isolation events, with compromise/removal events triggering reassessment.
+- Added capability-requirement evaluation to decision validation without changing current endodontic node behavior.
+- Added compact shared-status messaging to the pre-op decision card and fuller status summaries to Case Setup & Status.
+
+Remaining:
+
+- Attach capability requirements to concrete nodes after anesthesia/isolation module events are defined.
+- Refine anesthesia reassessment once anesthetic type, vasoconstrictor/adrenaline, dose, timing, and clinical response are modeled.
+- Refine isolation region matching once the final quadrant/sextant/arch-segment vocabulary exists.
 
 ### Phase 2A - Extract Case Setup And Status UI
 
