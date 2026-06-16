@@ -302,7 +302,15 @@ Special behavior:
 
 ## Migration Plan
 
+Reasoning levels:
+
+- Low: mostly mechanical implementation from existing patterns.
+- Medium: requires cross-module design judgment, but should be implementable without settling major product decisions.
+- High: requires careful architecture or clinical workflow reasoning before implementation.
+
 ### Phase 1 - Document And Type The Shared Model
+
+Reasoning level: medium.
 
 - Add generic workflow definition types alongside the current endodontic types.
 - Add explicit workflow and scope fields to new events while preserving import compatibility.
@@ -310,6 +318,8 @@ Special behavior:
 - Keep the current endodontic UI behavior unchanged.
 
 ### Phase 2 - Add Query Helpers
+
+Reasoning level: medium.
 
 - Add selectors that answer questions such as:
   - Is anesthesia adequate for this tooth and visit?
@@ -322,6 +332,7 @@ Special behavior:
 ### Phase 2A - Extract Case Setup And Status UI
 
 Status: first UI extraction implemented.
+Reasoning level: low for the completed extraction; medium for future event-backed status summaries.
 
 - Extract the current pre-op express setup fields into a reusable setup/status component.
 - Render the component from the existing case panel or a modal/panel first.
@@ -345,6 +356,8 @@ Remaining:
 
 ### Phase 3 - Extract The First Shared Module
 
+Reasoning level: high.
+
 Recommended first module: isolation.
 
 Reason:
@@ -362,6 +375,8 @@ Deliverables:
 
 ### Phase 4 - Add Embedded Module UI
 
+Reasoning level: high.
+
 - Add a sidecar/modal workflow runner that can open from the current decision card or Case Setup & Status.
 - Preserve the parent `currentNodeId`.
 - Record child workflow events with parent workflow context.
@@ -369,11 +384,15 @@ Deliverables:
 
 ### Phase 5 - Generalize Beyond Endodontics
 
+Reasoning level: high.
+
 - Add operative workflow definitions that reuse diagnosis, anesthesia, isolation, and restoration modules.
 - Introduce surface-level scope where operative workflows need it.
 - Keep endodontic canal scope separate from operative surface scope.
 
 ### Phase 6 - Add NodeDent Home And Workflow Launcher
+
+Reasoning level: medium.
 
 - Add an operational home screen for starting, choosing, and resuming workflows.
 - Preserve a fast path to the active or most recent endodontic workflow.
