@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CanalRecordSchema } from "./CanalRecord.schema";
-import { ClinicalEventSchema, ClosureRecordSchema } from "./ClinicalEvent.schema";
+import { ClinicalEventSchema, ClosureRecordSchema, WorkflowScopeKindSchema, WorkflowScopeSchema } from "./ClinicalEvent.schema";
 
 export const ProcedureTypeSchema = z.union([
   z.literal("RCT"),
@@ -30,6 +30,22 @@ export const DecisionGuardSchema = z.union([
   }),
 ]);
 
+export const CapabilityRequirementSchema = z.object({
+  name: z.string(),
+  scopeKind: WorkflowScopeKindSchema.optional(),
+  message: z.string().optional(),
+  allowReassessment: z.boolean().optional(),
+});
+
+export const WorkflowModuleCallSchema = z.object({
+  workflowId: z.string().trim().min(1),
+  title: z.string().trim().min(1),
+  reason: z.string().optional(),
+  scope: WorkflowScopeSchema.optional(),
+  requiredCapabilities: z.array(CapabilityRequirementSchema).optional(),
+  returnedCapabilities: z.array(z.string()).optional(),
+});
+
 export const DecisionOptionSchema = z.object({
   id: z.string().optional(),
   label: z.string().trim().min(1),
@@ -37,6 +53,7 @@ export const DecisionOptionSchema = z.object({
   difficultyFlag: z.union([z.literal("none"), z.literal("caution"), z.literal("high"), z.literal("refer")]).optional(),
   noteEvent: z.object({ type: z.string() }).optional(),
   guards: z.array(DecisionGuardSchema).optional(),
+  moduleCalls: z.array(WorkflowModuleCallSchema).optional(),
 });
 
 export const ProtocolNodeSchema = z.object({
@@ -49,6 +66,9 @@ export const ProtocolNodeSchema = z.object({
   requiredInputs: z.array(z.string()).optional(),
   safetyNotes: z.array(z.string()).optional(),
   options: z.array(DecisionOptionSchema),
+  workflowId: z.string().optional(),
+  capabilityRequirements: z.array(CapabilityRequirementSchema).optional(),
+  moduleCalls: z.array(WorkflowModuleCallSchema).optional(),
 });
 
 export const EndoCaseSchema = z.object({

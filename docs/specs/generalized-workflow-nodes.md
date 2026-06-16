@@ -310,12 +310,21 @@ Reasoning levels:
 
 ### Phase 1 - Document And Type The Shared Model
 
+Status: implemented as model/schema scaffolding.
 Reasoning level: medium.
 
 - Add generic workflow definition types alongside the current endodontic types.
 - Add explicit workflow and scope fields to new events while preserving import compatibility.
 - Define capability names and scope rules for diagnosis, anesthesia, isolation, and restoration.
 - Keep the current endodontic UI behavior unchanged.
+
+Implemented:
+
+- Added generic workflow, node, module-call, scope, capability requirement, and capability satisfaction types alongside the existing endodontic types.
+- Added optional workflow context fields to `ClinicalEvent`, including workflow identifiers, run identifiers, node ID, scope, satisfied capabilities, and expiry.
+- Updated event schemas so legacy events remain valid while future workflow-scoped events can be imported/exported.
+- Added initial capability scope rules for diagnosis, radiograph review, anesthesia, isolation, temporary closure, referral, and final restoration.
+- Left the current endodontic UI behavior unchanged.
 
 ### Phase 2 - Add Query Helpers
 

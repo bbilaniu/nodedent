@@ -27,10 +27,102 @@ export type PriorCanalStatus =
   | "coneFitVerified"
   | "partiallyObturated";
 
+export type WorkflowDiscipline = "endo" | "operative" | "shared" | (string & {});
+
+export type WorkflowScopeKind =
+  | "patient"
+  | "visit"
+  | "tooth"
+  | "canal"
+  | "surface"
+  | "procedure"
+  | "quadrant"
+  | "sextant"
+  | "archSegment"
+  | "custom";
+
+export type WorkflowScope = {
+  kind: WorkflowScopeKind;
+  patientId?: string;
+  visitId?: string;
+  procedureId?: string;
+  tooth?: string;
+  teeth?: string[];
+  canal?: string;
+  surface?: string;
+  surfaces?: string[];
+  regionLabel?: string;
+  label?: string;
+  details?: Record<string, unknown>;
+};
+
+export type KnownCapabilityName =
+  | "diagnosis.recorded"
+  | "radiographs.reviewed"
+  | "anesthesia.adequate"
+  | "isolation.established"
+  | "temporaryClosure.placed"
+  | "referral.recommended"
+  | "finalRestoration.placed";
+
+export type CapabilityName = KnownCapabilityName | (string & {});
+
+export type CapabilitySatisfaction = {
+  name: CapabilityName;
+  scope: WorkflowScope;
+  sourceEventId?: string;
+  workflowId?: string;
+  workflowRunId?: string;
+  satisfiedAt?: string;
+  expiresAt?: string;
+  details?: Record<string, unknown>;
+};
+
+export type CapabilityRequirement = {
+  name: CapabilityName;
+  scopeKind?: WorkflowScopeKind;
+  message?: string;
+  allowReassessment?: boolean;
+};
+
+export type WorkflowModuleCall = {
+  workflowId: string;
+  title: string;
+  reason?: string;
+  scope?: WorkflowScope;
+  requiredCapabilities?: CapabilityRequirement[];
+  returnedCapabilities?: CapabilityName[];
+};
+
+export type ClinicalNode = ProtocolNode & {
+  workflowId?: string;
+  capabilityRequirements?: CapabilityRequirement[];
+  moduleCalls?: WorkflowModuleCall[];
+};
+
+export type WorkflowDefinition<NodeType extends ClinicalNode = ClinicalNode> = {
+  workflowId: string;
+  version: string;
+  discipline: WorkflowDiscipline;
+  title: string;
+  entryNodeIds: string[];
+  completionNodeIds: string[];
+  supportedScopes: WorkflowScopeKind[];
+  nodes: Record<string, NodeType>;
+};
+
 export type ClinicalEvent = {
   id: string;
   timestamp: string;
   type: string;
+  workflowId?: string;
+  workflowVersion?: string;
+  workflowRunId?: string;
+  parentWorkflowRunId?: string | null;
+  nodeId?: string;
+  scope?: WorkflowScope;
+  capabilitiesSatisfied?: CapabilitySatisfaction[];
+  expiresAt?: string;
   tooth?: string;
   canal?: string;
   details?: Record<string, any>;
@@ -131,6 +223,7 @@ export type DecisionOption = {
   difficultyFlag?: DifficultyFlag;
   noteEvent?: { type: string };
   guards?: DecisionGuard[];
+  moduleCalls?: WorkflowModuleCall[];
 };
 
 export type ProtocolNode = {
@@ -143,6 +236,9 @@ export type ProtocolNode = {
   requiredInputs?: string[];
   safetyNotes?: string[];
   options: DecisionOption[];
+  workflowId?: string;
+  capabilityRequirements?: CapabilityRequirement[];
+  moduleCalls?: WorkflowModuleCall[];
 };
 
 export type CanalContinuationTarget = {

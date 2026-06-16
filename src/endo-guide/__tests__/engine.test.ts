@@ -16,8 +16,10 @@ import { getManualResumeNodeForCanal } from "../engine/resume";
 import { getNextRecommendedNodeForCanal, getPhaseAwareCanalTargets } from "../protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
+import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
+import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -1301,6 +1303,50 @@ test("schema allows valid radiograph statuses plus blank and undefined before en
     assert.equal(RadiographStatusSchema.safeParse(status).success, true);
   });
   assert.equal(RadiographStatusSchema.safeParse("missing").success, false);
+});
+
+test("shared workflow capability vocabulary has scope rules", () => {
+  knownCapabilityNames.forEach((capability) => {
+    const rule = capabilityScopeRules[capability];
+    assert.ok(rule);
+    assert.ok(rule.acceptedScopes.some((scope) => scope === rule.defaultScope));
+  });
+});
+
+test("clinical event schema accepts optional workflow context without requiring it", () => {
+  assert.equal(ClinicalEventSchema.safeParse({
+    id: "evt_legacy",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "preop.reviewCompleted",
+  }).success, true);
+
+  assert.equal(ClinicalEventSchema.safeParse({
+    id: "evt_isolation",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "isolation.rubberDamPlaced",
+    workflowId: "shared.isolation",
+    workflowVersion: "1.0.0",
+    workflowRunId: "run_isolation_1",
+    parentWorkflowRunId: "run_endo_1",
+    nodeId: "rubber-dam-placement",
+    scope: {
+      kind: "custom",
+      teeth: ["34", "35", "36", "37"],
+      regionLabel: "Q3",
+    },
+    capabilitiesSatisfied: [
+      {
+        name: "isolation.established",
+        scope: {
+          kind: "tooth",
+          tooth: "36",
+        },
+        workflowId: "shared.isolation",
+        workflowRunId: "run_isolation_1",
+        satisfiedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+  }).success, true);
 });
 
 test("normalized JSON import preserves exported case data", () => {
