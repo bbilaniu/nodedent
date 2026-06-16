@@ -650,7 +650,7 @@ export default function EndoChairsideGuide() {
                 onClick={() => setIsCasePanelOpen(true)}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-brand-navy-deep"
               >
-                Case panel
+                Case Setup & Status
               </button>
               <button
                 type="button"
@@ -718,12 +718,9 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
+              onOpenCaseSetupStatus={() => setIsCasePanelOpen(true)}
               onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
               onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
-              onUpdateCase={updateCase}
-              onUpdateDiagnosis={updateDiagnosis}
-              onUpdatePreOp={updatePreOp}
-              onUpdateActiveCanal={updateActiveCanal}
             />
           </section>
 
@@ -751,10 +748,13 @@ export default function EndoChairsideGuide() {
         {isCasePanelOpen ? (
           <CaseManagementModal
             caseData={caseData}
+            activeCanal={activeCanal}
             currentNodeId={currentNodeId}
             onClose={() => setIsCasePanelOpen(false)}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
+            onUpdatePreOp={updatePreOp}
+            onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onDownloadCaseJson={downloadCaseJson}
           />

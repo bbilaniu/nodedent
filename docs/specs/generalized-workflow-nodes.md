@@ -321,6 +321,8 @@ Special behavior:
 
 ### Phase 2A - Extract Case Setup And Status UI
 
+Status: first UI extraction implemented.
+
 - Extract the current pre-op express setup fields into a reusable setup/status component.
 - Render the component from the existing case panel or a modal/panel first.
 - Keep the decision card focused on the current protocol node.
@@ -328,6 +330,18 @@ Special behavior:
 - Preserve pre-op validation so missing required setup remains obvious before the user advances.
 - Add status summaries for anesthesia/sedation and isolation before those modules become fully embedded workflows, using conservative event-backed or field-backed placeholders as needed.
 - Defer a persistent right-side setup/status card until the panel content and responsive layout needs are clearer.
+
+Implemented:
+
+- Added a reusable `CaseSetupStatusPanel` component for case identity, case status, diagnosis, pre-op radiographs, chamber depth, and active-canal estimated WL.
+- Rendered the setup/status component from the existing case modal.
+- Replaced the pre-op inline express setup form with a compact summary and an action that opens Case Setup & Status.
+- Preserved pre-op missing-requirement validation on the decision action.
+
+Remaining:
+
+- Add event-backed anesthesia/sedation and isolation summaries after those shared module events exist.
+- Reassess whether a persistent right-side setup/status card is useful after the modal/panel content stabilizes.
 
 ### Phase 3 - Extract The First Shared Module
 
