@@ -1,6 +1,11 @@
 import type { ClinicalEvent, EndoCase } from "../types";
+import { formatIsolationEventFragment, isolationEventTypes } from "../workflow/isolation";
 
 export function eventFragment(event: ClinicalEvent) {
+  if (Object.values(isolationEventTypes).includes(event.type as typeof isolationEventTypes[keyof typeof isolationEventTypes])) {
+    return formatIsolationEventFragment(event);
+  }
+
   const canal = event.canal ? `${event.canal}: ` : "";
   const snap = event.details?.canalSnapshot || {};
   const fragments: Record<string, string> = {

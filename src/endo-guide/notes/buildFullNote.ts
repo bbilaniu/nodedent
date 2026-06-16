@@ -26,6 +26,7 @@ export function buildFullNote(caseData: EndoCase) {
     caseData.preOp?.estimatedChamberDepth ? `Estimated chamber depth: ${caseData.preOp.estimatedChamberDepth} mm` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));
+  appendSection(lines, "Isolation:", groupEventsByPrefix(caseData, ["isolation."]));
   appendSection(lines, "Access / canals:", groupEventsByPrefix(caseData, ["access."]));
   const canalLines: string[] = [];
   caseData.canals.forEach((canal) => {

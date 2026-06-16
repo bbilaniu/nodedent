@@ -1,6 +1,7 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
 import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
+import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";
 
 export type CapabilityStatusSource = "caseField" | "event" | "none";
 
@@ -23,8 +24,8 @@ export type CaseCapabilitySummary = {
 };
 
 const knownCapabilityNameSet = new Set<CapabilityName>(knownCapabilityNames);
-const isolationEstablishedEvents = new Set(["isolation.established", "isolation.rubberDamPlaced", "isolation.alternativeIsolationUsed", "isolation.replaced"]);
-const isolationInvalidatingEvents = new Set(["isolation.compromised", "isolation.removed", "isolation.failed"]);
+const isolationEstablishedEvents = new Set<string>(isolationEstablishedEventTypes);
+const isolationInvalidatingEvents = new Set<string>(isolationInvalidatingEventTypes);
 
 export function isKnownCapabilityName(name: CapabilityName): name is KnownCapabilityName {
   return knownCapabilityNameSet.has(name);
@@ -49,6 +50,7 @@ function getEventDetails(event: ClinicalEvent) {
 }
 
 function getEventScope(event: ClinicalEvent): WorkflowScope | undefined {
+  if (isolationEstablishedEvents.has(event.type) || isolationInvalidatingEvents.has(event.type)) return getIsolationScopeFromEvent(event);
   if (event.scope) return event.scope;
   const details = getEventDetails(event);
   const exposedTeeth = Array.isArray(details.exposedTeeth) ? details.exposedTeeth.map(String) : undefined;
@@ -105,6 +107,11 @@ function statusFromCapabilityEvent(event: ClinicalEvent, capability: CapabilityS
     summary: expired ? `${name} was recorded but needs reassessment` : `${name} recorded`,
     reason: expired ? "Recorded capability has expired." : undefined,
   };
+}
+
+function eventTime(event?: ClinicalEvent) {
+  const timestamp = event?.timestamp ? new Date(event.timestamp).getTime() : Number.NaN;
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
 function diagnosisStatus(caseData: EndoCase): CapabilityStatus {
@@ -175,9 +182,11 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
     })
     .at(-1);
 
-  if (explicitStatus) return explicitStatus;
-
   const fallbackStatus = fallbackStatusFromEvents(name, events, queryScope);
+  if (explicitStatus && fallbackStatus && name === "isolation.established") {
+    return eventTime(fallbackStatus.sourceEvent) >= eventTime(explicitStatus.sourceEvent) ? fallbackStatus : explicitStatus;
+  }
+  if (explicitStatus) return explicitStatus;
   if (fallbackStatus) return fallbackStatus;
 
   const rule = capabilityScopeRules[name];

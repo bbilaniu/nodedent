@@ -381,6 +381,7 @@ Remaining:
 
 ### Phase 3 - Extract The First Shared Module
 
+Status: Phase 3A implemented as isolation model/event scaffolding; embedded UI still pending.
 Reasoning level: high.
 
 Recommended first module: isolation.
@@ -397,6 +398,22 @@ Deliverables:
 - Capability output `isolation.established`.
 - Note fragments for each event.
 - A parent workflow prompt that acknowledges existing isolation and allows revision.
+
+Implemented in Phase 3A:
+
+- Added a `shared.isolation` workflow definition scaffold without adding an embedded workflow runner.
+- Defined structured isolation event names for rubber dam placement, alternative isolation, compromised isolation, removal, and replacement.
+- Added isolation details for method, region, exposed teeth, supports, clamp code, clamp tooth, notes, and reason.
+- Added helper output for `isolation.established` capability satisfaction.
+- Added note fragments for isolation events.
+- Extended full notes with an isolation section.
+- Added selector coverage for exposed teeth, unrelated teeth, compromised/removed isolation, and replacement.
+
+Remaining:
+
+- Add user-facing capture UI for the isolation module.
+- Add the parent workflow prompt that acknowledges existing isolation and allows revision.
+- Refine region vocabulary and clamp recommendation data after the initial module UI is designed.
 
 ### Phase 4 - Add Embedded Module UI
 

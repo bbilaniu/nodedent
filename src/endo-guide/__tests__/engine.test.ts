@@ -20,6 +20,7 @@ import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
+import { buildIsolationEstablishedCapability, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
@@ -1366,20 +1367,36 @@ test("capability selectors derive diagnosis and radiograph status from case fiel
 });
 
 test("capability selectors match isolation events by exposed tooth and invalidate after compromise", () => {
+  const rubberDamEvent = {
+    id: "evt_rd",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    scope: { kind: "custom" as const, teeth: ["34", "35", "36", "37"], regionLabel: "Q3" },
+    details: {
+      method: "rubberDam",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+      exposedTeeth: ["34", "35", "36", "37"],
+      supports: [{ type: "clamp", tooth: "37", clampCode: "W8A" }],
+    },
+  };
   const isolatedCase = baseCase({
     tooth: "36",
     globalEvents: [
       {
-        id: "evt_rd",
-        timestamp: "2026-01-01T10:00:00.000Z",
-        type: "isolation.rubberDamPlaced",
-        scope: { kind: "custom", teeth: ["34", "35", "36", "37"], regionLabel: "Q3" },
+        ...rubberDamEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(rubberDamEvent)],
       },
     ],
   });
 
   assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "36" }), true);
   assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "46" }), false);
+  assert.match(eventFragment(rubberDamEvent), /Rubber dam isolation placed/);
+  assert.match(eventFragment(rubberDamEvent), /Clamp W8A on tooth 37/);
+  assert.match(buildFullNote(isolatedCase), /Rubber dam isolation placed/);
 
   const compromisedCase: EndoCase = {
     ...isolatedCase,
@@ -1388,8 +1405,9 @@ test("capability selectors match isolation events by exposed tooth and invalidat
       {
         id: "evt_rd_compromised",
         timestamp: "2026-01-01T10:05:00.000Z",
-        type: "isolation.compromised",
+        type: isolationEventTypes.compromised,
         scope: { kind: "tooth", tooth: "36" },
+        details: { reason: "saliva contamination" },
       },
     ],
   };
@@ -1397,6 +1415,41 @@ test("capability selectors match isolation events by exposed tooth and invalidat
 
   assert.equal(status.satisfied, false);
   assert.equal(status.needsReassessment, true);
+  assert.match(eventFragment(compromisedCase.globalEvents[1]), /Isolation compromised: saliva contamination/);
+});
+
+test("shared isolation replacement re-establishes the isolation capability", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_rd",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: isolationEventTypes.rubberDamPlaced,
+        details: { exposedTeeth: ["36"], clampCode: "W8A", clampTooth: "37" },
+      },
+      {
+        id: "evt_rd_removed",
+        timestamp: "2026-01-01T10:10:00.000Z",
+        type: isolationEventTypes.removed,
+        scope: { kind: "tooth", tooth: "36" },
+      },
+      {
+        id: "evt_rd_replaced",
+        timestamp: "2026-01-01T10:15:00.000Z",
+        type: isolationEventTypes.replaced,
+        details: { exposedTeeth: ["36"], clampCode: "W14A", clampTooth: "36" },
+      },
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" });
+
+  assert.equal(sharedIsolationWorkflow.workflowId, "shared.isolation");
+  assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-complete"), true);
+  assert.equal(status.satisfied, true);
+  assert.equal(status.needsReassessment, false);
+  assert.match(eventFragment(caseData.globalEvents[2]), /Isolation replaced/);
+  assert.match(eventFragment(caseData.globalEvents[2]), /Clamp W14A on tooth 36/);
 });
 
 test("capability selectors use explicit capability expiry for reassessment", () => {
