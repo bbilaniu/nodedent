@@ -456,11 +456,19 @@ Implemented:
 
 ### Phase 5 - Generalize Beyond Endodontics
 
+Status: implemented as operative workflow-definition scaffolding.
 Reasoning level: high.
 
 - Add operative workflow definitions that reuse diagnosis, anesthesia, isolation, and restoration modules.
 - Introduce surface-level scope where operative workflows need it.
 - Keep endodontic canal scope separate from operative surface scope.
+
+Implemented:
+
+- Added an `operative.direct-restoration` workflow definition that reuses shared diagnosis/radiograph, anesthesia, isolation, and final-restoration module contracts through capability requirements and module calls.
+- Added operative surface-scope helpers so operative workflows can target tooth/surface context without reusing endodontic canal scope.
+- Tightened capability scope matching so canal-scoped capabilities on a tooth do not satisfy operative tooth/surface restoration requirements unless a future workflow explicitly maps them.
+- Kept this phase as model scaffolding only; it does not add operative clinical chairside protocol guidance or a new operative UI.
 
 ### Phase 6 - Add NodeDent Home And Workflow Launcher
 

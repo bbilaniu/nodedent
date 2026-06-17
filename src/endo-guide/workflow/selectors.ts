@@ -65,19 +65,44 @@ function getEventScope(event: ClinicalEvent): WorkflowScope | undefined {
   return undefined;
 }
 
+function hasCanalSubscope(scope: WorkflowScope) {
+  return scope.kind === "canal" || Boolean(scope.canal);
+}
+
+function hasSurfaceSubscope(scope: WorkflowScope) {
+  return scope.kind === "surface" || Boolean(scope.surface || scope.surfaces?.length);
+}
+
 function scopeMatches(candidate?: WorkflowScope, query?: WorkflowScope) {
   if (!query || !candidate) return true;
   if (query.kind === "patient") return candidate.kind === "patient";
   if (candidate.kind === "patient") return true;
 
+  const queryHasCanal = hasCanalSubscope(query);
+  const candidateHasCanal = hasCanalSubscope(candidate);
+  const queryHasSurface = hasSurfaceSubscope(query);
+  const candidateHasSurface = hasSurfaceSubscope(candidate);
+
+  if ((queryHasCanal && candidateHasSurface) || (queryHasSurface && candidateHasCanal)) return false;
+  if (query.kind === "tooth" && (candidateHasCanal || candidateHasSurface)) return false;
+
   if (query.tooth) {
-    if (candidate.tooth === query.tooth) return true;
-    if (candidate.teeth?.includes(query.tooth)) return true;
+    const sameTooth = candidate.tooth === query.tooth || candidate.teeth?.includes(query.tooth);
+    const candidateHasToothScope = Boolean(candidate.tooth || candidate.teeth?.length);
+    if (candidateHasToothScope && !sameTooth) return false;
+    if (sameTooth && !queryHasCanal && !queryHasSurface) return true;
   }
 
   if (query.canal && candidate.canal && query.canal !== candidate.canal) return false;
+  if (query.canal && candidateHasCanal && !candidate.canal) return false;
+  if (query.canal && !candidate.canal) return false;
   if (query.surface && candidate.surfaces?.includes(query.surface)) return true;
-  if (query.surface && candidate.surface === query.surface) return true;
+  if (query.surface && candidate.surface) return candidate.surface === query.surface;
+  if (query.surface && candidateHasSurface) return false;
+  if (query.surface && !candidate.surface) return false;
+  if (query.surfaces?.length && candidate.surfaces?.length) return query.surfaces.every((surface) => candidate.surfaces?.includes(surface));
+  if (query.surfaces?.length && candidate.surface) return query.surfaces.length === 1 && query.surfaces[0] === candidate.surface;
+  if (query.surfaces?.length && candidateHasSurface) return false;
 
   if (query.kind === candidate.kind && query.regionLabel && candidate.regionLabel === query.regionLabel) return true;
   if (query.procedureId && candidate.procedureId === query.procedureId) return true;

@@ -21,6 +21,18 @@ import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import {
+  createOperativeSurfaceScope,
+  isEndodonticCanalScope,
+  isOperativeSurfaceScope,
+  operativeDirectRestorationWorkflow,
+  operativeReadinessCapabilityRequirements,
+  operativeRestorationModuleCall,
+  scopesTargetDifferentToothSubstructures,
+  sharedAnesthesiaWorkflowId,
+  sharedDiagnosisWorkflowId,
+  sharedFinalRestorationWorkflowId,
+} from "../workflow/operative";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
@@ -1313,6 +1325,65 @@ test("shared workflow capability vocabulary has scope rules", () => {
     assert.ok(rule);
     assert.ok(rule.acceptedScopes.some((scope) => scope === rule.defaultScope));
   });
+});
+
+test("operative direct restoration workflow reuses shared capabilities and modules", () => {
+  const workflow = operativeDirectRestorationWorkflow;
+  const readinessNode = workflow.nodes["operative-readiness"];
+  const restorationNode = workflow.nodes["operative-restoration-record"];
+
+  assert.equal(workflow.discipline, "operative");
+  assert.equal(workflow.supportedScopes.includes("surface"), true);
+  assert.equal(workflow.supportedScopes.includes("canal"), false);
+  assert.deepEqual(
+    operativeReadinessCapabilityRequirements.map((requirement) => requirement.name),
+    ["diagnosis.recorded", "radiographs.reviewed", "anesthesia.adequate", "isolation.established"]
+  );
+  assert.deepEqual(
+    readinessNode.moduleCalls?.map((call) => call.workflowId),
+    [sharedDiagnosisWorkflowId, sharedAnesthesiaWorkflowId, sharedIsolationWorkflow.workflowId]
+  );
+  assert.equal(restorationNode.moduleCalls?.[0].workflowId, sharedFinalRestorationWorkflowId);
+  assert.deepEqual(operativeRestorationModuleCall.returnedCapabilities, ["finalRestoration.placed"]);
+});
+
+test("operative surface scope stays separate from endodontic canal scope", () => {
+  const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
+  const canalScope = { kind: "canal" as const, tooth: "36", canal: "MB" };
+
+  assert.deepEqual(surfaceScope, {
+    kind: "surface",
+    tooth: "36",
+    procedureId: "op_36_mo",
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+  assert.equal(isOperativeSurfaceScope(surfaceScope), true);
+  assert.equal(isEndodonticCanalScope(surfaceScope), false);
+  assert.equal(isEndodonticCanalScope(canalScope), true);
+  assert.equal(isOperativeSurfaceScope(canalScope), false);
+  assert.equal(scopesTargetDifferentToothSubstructures(surfaceScope, canalScope), true);
+
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_canal_only",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "endo.canalProgress",
+        capabilitiesSatisfied: [
+          {
+            name: "finalRestoration.placed",
+            scope: canalScope,
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", surfaceScope), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
 });
 
 test("clinical event schema accepts optional workflow context without requiring it", () => {
