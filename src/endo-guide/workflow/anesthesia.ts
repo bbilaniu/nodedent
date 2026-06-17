@@ -10,6 +10,9 @@ export const anesthesiaEventTypes = {
   needsReassessment: "anesthesia.needsReassessment",
 } as const;
 
+export const anesthesiaRoutes = ["injection", "topical", "other"] as const;
+export const anesthesiaAdequacyResponses = ["adequate", "partial", "notAdequate", "notAssessed"] as const;
+
 export const anesthesiaAdequacyEventTypes = [
   anesthesiaEventTypes.adequacyConfirmed,
 ] as const;
@@ -19,15 +22,20 @@ export const anesthesiaInvalidatingEventTypes = [
 ] as const;
 
 export type AnesthesiaEventType = typeof anesthesiaEventTypes[keyof typeof anesthesiaEventTypes];
+export type AnesthesiaRoute = typeof anesthesiaRoutes[number];
+export type AnesthesiaAdequacyResponse = typeof anesthesiaAdequacyResponses[number];
 
 export type AnesthesiaEventDetails = {
+  route?: AnesthesiaRoute;
   agentLabel?: string;
   technique?: string;
+  applicationType?: string;
   site?: string;
   dose?: string;
   doseUnit?: string;
+  administeredAt?: string;
   vasoconstrictor?: string;
-  response?: string;
+  response?: AnesthesiaAdequacyResponse;
   notes?: string;
   reason?: string;
   tooth?: string;
@@ -43,16 +51,36 @@ function normalizeStringArray(value: unknown) {
   return Array.isArray(value) ? value.map(String).map((item) => item.trim()).filter(Boolean) : undefined;
 }
 
+function normalizeEnum<T extends readonly string[]>(value: unknown, allowed: T): T[number] | undefined {
+  const normalized = normalizeString(value);
+  return normalized && (allowed as readonly string[]).includes(normalized) ? normalized as T[number] : undefined;
+}
+
+export function isAnesthesiaRoute(value: unknown): value is AnesthesiaRoute {
+  return Boolean(normalizeEnum(value, anesthesiaRoutes));
+}
+
+export function isAnesthesiaAdequacyResponse(value: unknown): value is AnesthesiaAdequacyResponse {
+  return Boolean(normalizeEnum(value, anesthesiaAdequacyResponses));
+}
+
+export function isAdequateAnesthesiaResponse(value: unknown): value is "adequate" {
+  return normalizeEnum(value, anesthesiaAdequacyResponses) === "adequate";
+}
+
 export function getAnesthesiaEventDetails(event: ClinicalEvent): AnesthesiaEventDetails {
   const details = event.details && typeof event.details === "object" ? event.details : {};
   return {
+    route: normalizeEnum(details.route, anesthesiaRoutes),
     agentLabel: normalizeString(details.agentLabel),
     technique: normalizeString(details.technique),
+    applicationType: normalizeString(details.applicationType),
     site: normalizeString(details.site),
     dose: normalizeString(details.dose),
     doseUnit: normalizeString(details.doseUnit),
+    administeredAt: normalizeString(details.administeredAt),
     vasoconstrictor: normalizeString(details.vasoconstrictor),
-    response: normalizeString(details.response),
+    response: normalizeEnum(details.response, anesthesiaAdequacyResponses),
     notes: normalizeString(details.notes),
     reason: normalizeString(details.reason),
     tooth: normalizeString(details.tooth) || event.tooth,
@@ -99,10 +127,13 @@ function formatDose(details: AnesthesiaEventDetails) {
 
 function formatAnesthesiaContext(details: AnesthesiaEventDetails) {
   return [
+    details.route ? `route: ${details.route}` : null,
     details.agentLabel,
     details.technique,
+    details.applicationType,
     details.site,
     formatDose(details),
+    details.administeredAt ? `time: ${details.administeredAt}` : null,
     details.vasoconstrictor ? `vasoconstrictor: ${details.vasoconstrictor}` : null,
   ].filter(Boolean).join("; ");
 }

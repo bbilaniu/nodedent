@@ -19,7 +19,19 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
-import { anesthesiaEventTypes, buildAnesthesiaAdequateCapability, sharedAnesthesiaWorkflow, sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
+import {
+  anesthesiaAdequacyResponses,
+  anesthesiaEventTypes,
+  anesthesiaRoutes,
+  buildAnesthesiaAdequateCapability,
+  getAnesthesiaEventDetails,
+  getAnesthesiaScopeFromEvent,
+  isAdequateAnesthesiaResponse,
+  isAnesthesiaAdequacyResponse,
+  isAnesthesiaRoute,
+  sharedAnesthesiaWorkflow,
+  sharedAnesthesiaWorkflowId,
+} from "../workflow/anesthesia";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import {
@@ -1411,6 +1423,68 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "modelOnly");
   assert.equal(operativeEntry?.availability, "modelOnly");
+});
+
+test("shared anesthesia phase 1 model parses typed details and preserves legacy events", () => {
+  const event = {
+    id: "evt_anesthesia_details",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "topical",
+      agentLabel: "documented anesthetic",
+      technique: "documented technique",
+      applicationType: "documented application",
+      site: "documented site",
+      dose: "1.7",
+      doseUnit: "mL",
+      administeredAt: "09:55",
+      vasoconstrictor: "none documented",
+      response: "partial",
+      notes: "assessment note",
+      reason: "documented reason",
+      teeth: ["36", " 37 ", ""],
+      regionLabel: "Q3",
+    },
+  };
+  const legacyEvent = {
+    id: "evt_anesthesia_legacy",
+    timestamp: "2026-01-01T09:56:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "legacy route",
+      response: "assessment pending",
+    },
+  };
+
+  assert.deepEqual([...anesthesiaRoutes], ["injection", "topical", "other"]);
+  assert.deepEqual([...anesthesiaAdequacyResponses], ["adequate", "partial", "notAdequate", "notAssessed"]);
+  assert.equal(isAnesthesiaRoute("topical"), true);
+  assert.equal(isAnesthesiaRoute("legacy route"), false);
+  assert.equal(isAnesthesiaAdequacyResponse("partial"), true);
+  assert.equal(isAnesthesiaAdequacyResponse("assessment pending"), false);
+  assert.equal(isAdequateAnesthesiaResponse("adequate"), true);
+  assert.equal(isAdequateAnesthesiaResponse("partial"), false);
+
+  const details = getAnesthesiaEventDetails(event);
+  assert.equal(details.route, "topical");
+  assert.equal(details.applicationType, "documented application");
+  assert.equal(details.administeredAt, "09:55");
+  assert.equal(details.response, "partial");
+  assert.deepEqual(details.teeth, ["36", "37"]);
+  assert.deepEqual(getAnesthesiaScopeFromEvent(event), { kind: "custom", teeth: ["36", "37"], regionLabel: "Q3" });
+  assert.match(eventFragment(event), /route: topical/);
+  assert.match(eventFragment(event), /documented application/);
+  assert.match(eventFragment(event), /time: 09:55/);
+  assert.match(eventFragment(event), /Response: partial/);
+
+  const legacyDetails = getAnesthesiaEventDetails(legacyEvent);
+  assert.equal(legacyDetails.route, undefined);
+  assert.equal(legacyDetails.response, undefined);
+  assert.equal(legacyDetails.tooth, "36");
+  assert.equal(isCapabilitySatisfied(baseCase({ tooth: "36", globalEvents: [legacyEvent] }), "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
 });
 
 test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {
