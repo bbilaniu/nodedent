@@ -48,6 +48,29 @@ export type IsolationEventDetails = {
   reason?: string;
 };
 
+export type IsolationCoverageSummary = {
+  method: string;
+  region: string;
+  exposedTeeth: string;
+  clampCode: string;
+  clampTooth: string;
+};
+
+const isolationMethodLabels = {
+  rubberDam: "Rubber dam",
+  splitDam: "Split dam",
+  cottonRoll: "Cotton roll",
+  isovac: "Isovac",
+  other: "Other",
+} as const satisfies Record<IsolationMethod, string>;
+
+const isolationRegionLabels = {
+  quadrant: "Quadrant",
+  sextant: "Sextant",
+  archSegment: "Arch segment",
+  custom: "Custom",
+} as const satisfies Record<IsolationRegionKind, string>;
+
 function normalizeTeeth(teeth?: unknown) {
   return Array.isArray(teeth)
     ? teeth.map(String).map((tooth) => tooth.trim()).filter(Boolean)
@@ -107,6 +130,42 @@ export function buildIsolationEstablishedCapability(event: ClinicalEvent): Capab
     workflowId: event.workflowId || sharedIsolationWorkflowId,
     workflowRunId: event.workflowRunId,
     satisfiedAt: event.timestamp,
+  };
+}
+
+function formatRegion(details: IsolationEventDetails, scope: WorkflowScope) {
+  const regionKind = details.regionKind || (scope.kind in isolationRegionLabels ? scope.kind as IsolationRegionKind : undefined);
+  const label = details.regionLabel || scope.regionLabel || scope.label;
+  const regionKindLabel = regionKind ? isolationRegionLabels[regionKind] : "";
+
+  if (regionKindLabel && label) return `${regionKindLabel}: ${label}`;
+  return regionKindLabel || label || "not recorded";
+}
+
+export function getIsolationCoverageSummary(event?: ClinicalEvent | null): IsolationCoverageSummary {
+  if (!event) {
+    return {
+      method: "not recorded",
+      region: "not recorded",
+      exposedTeeth: "not recorded",
+      clampCode: "not recorded",
+      clampTooth: "not recorded",
+    };
+  }
+
+  const details = getIsolationEventDetails(event);
+  const scope = getIsolationScopeFromEvent(event);
+  const clampSupport = details.supports?.find((support) => support.type === "clamp");
+  const exposedTeeth = details.exposedTeeth?.length ? details.exposedTeeth : scope.teeth || (scope.tooth ? [scope.tooth] : []);
+  const clampCode = details.clampCode || clampSupport?.clampCode;
+  const clampTooth = details.clampTooth || clampSupport?.tooth;
+
+  return {
+    method: details.method ? isolationMethodLabels[details.method] : "not recorded",
+    region: formatRegion(details, scope),
+    exposedTeeth: exposedTeeth.length ? exposedTeeth.join(", ") : "not recorded",
+    clampCode: clampCode || "not recorded",
+    clampTooth: clampTooth || "not recorded",
   };
 }
 

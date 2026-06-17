@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import type { CanalRecord, EndoCase } from "../types";
+import React, { useEffect, useRef, useState } from "react";
+import type { CanalRecord, ClinicalEvent, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
 import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
-import { isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
+import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { SelectInput, TextInput } from "./FormControls";
 
@@ -23,10 +23,80 @@ const isolationActionLabels = {
 } as const satisfies Record<IsolationEventType, string>;
 
 const isolationActionOptions = Object.values(isolationActionLabels);
+const alternativeIsolationMethodOptions = isolationMethods.filter((method) => method !== "rubberDam");
+const replacementIsolationMethodOptions = [...isolationMethods];
+
+const isolationSubmitLabels = {
+  [isolationEventTypes.rubberDamPlaced]: "Record rubber dam placement",
+  [isolationEventTypes.alternativeIsolationUsed]: "Record alternative isolation",
+  [isolationEventTypes.compromised]: "Record isolation compromise",
+  [isolationEventTypes.removed]: "Record isolation removal",
+  [isolationEventTypes.replaced]: "Record isolation replacement",
+} as const satisfies Record<IsolationEventType, string>;
 
 function eventTypeFromLabel(label: string): IsolationEventType {
   const entry = Object.entries(isolationActionLabels).find(([, actionLabel]) => actionLabel === label);
   return (entry?.[0] as IsolationEventType | undefined) || isolationEventTypes.rubberDamPlaced;
+}
+
+function defaultIsolationMethod(action: IsolationEventType): IsolationMethod {
+  return action === isolationEventTypes.alternativeIsolationUsed ? "splitDam" : "rubberDam";
+}
+
+type IsolationFormState = {
+  action: IsolationEventType;
+  method: IsolationMethod;
+  regionKind: IsolationRegionKind;
+  regionLabel: string;
+  exposedTeeth: string;
+  clampCode: string;
+  clampTooth: string;
+  note: string;
+};
+
+function defaultIsolationFormState(tooth: string, action: IsolationEventType = isolationEventTypes.rubberDamPlaced): IsolationFormState {
+  return {
+    action,
+    method: defaultIsolationMethod(action),
+    regionKind: "custom",
+    regionLabel: "",
+    exposedTeeth: tooth || "",
+    clampCode: "",
+    clampTooth: tooth || "",
+    note: "",
+  };
+}
+
+function getClampDetails(details: IsolationEventDetails) {
+  const clampSupport = details.supports?.find((support) => support.type === "clamp");
+  return {
+    clampCode: details.clampCode || clampSupport?.clampCode || "",
+    clampTooth: details.clampTooth || clampSupport?.tooth || "",
+  };
+}
+
+function buildIsolationFormState(tooth: string, action: IsolationEventType, sourceEvent?: ClinicalEvent): IsolationFormState {
+  if (!sourceEvent) return defaultIsolationFormState(tooth, action);
+
+  const details = getIsolationEventDetails(sourceEvent);
+  const clamp = getClampDetails(details);
+
+  return {
+    ...defaultIsolationFormState(tooth, action),
+    method: details.method || defaultIsolationMethod(action),
+    regionKind: details.regionKind || "custom",
+    regionLabel: details.regionLabel || "",
+    exposedTeeth: details.exposedTeeth?.join(" ") || tooth || "",
+    clampCode: clamp.clampCode,
+    clampTooth: clamp.clampTooth || tooth || "",
+  };
+}
+
+function formatEventTimestamp(timestamp?: string) {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
 }
 
 export function CaseSetupStatusPanel({
@@ -50,38 +120,77 @@ export function CaseSetupStatusPanel({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
-  const [isolationAction, setIsolationAction] = useState<IsolationEventType>(isolationEventTypes.rubberDamPlaced);
-  const [isolationMethod, setIsolationMethod] = useState<IsolationMethod>("rubberDam");
-  const [regionKind, setRegionKind] = useState<IsolationRegionKind>("custom");
-  const [regionLabel, setRegionLabel] = useState("");
-  const [exposedTeeth, setExposedTeeth] = useState(caseData.tooth || "");
-  const [clampCode, setClampCode] = useState("");
-  const [clampTooth, setClampTooth] = useState(caseData.tooth || "");
-  const [isolationNote, setIsolationNote] = useState("");
+  const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
+  const previousToothRef = useRef(caseData.tooth);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const latestIsolationEvent = capabilitySummary.isolation.sourceEvent;
+  const latestIsolationEventTime = formatEventTimestamp(latestIsolationEvent?.timestamp);
+  const isolationCoverage = getIsolationCoverageSummary(latestIsolationEvent);
+  const isolationCoverageItems = [
+    { label: "Exposed teeth", value: isolationCoverage.exposedTeeth },
+    { label: "Region", value: isolationCoverage.region },
+    { label: "Clamp tooth", value: isolationCoverage.clampTooth },
+    { label: "Clamp code", value: isolationCoverage.clampCode },
+  ];
   const statusItems = [
     { label: "Diagnosis", status: capabilitySummary.diagnosis },
     { label: "Radiographs", status: capabilitySummary.radiographs },
     { label: "Anesthesia", status: capabilitySummary.anesthesia },
     { label: "Isolation", status: capabilitySummary.isolation },
   ];
-  const showClampFields = isolationAction === isolationEventTypes.rubberDamPlaced || isolationAction === isolationEventTypes.replaced;
-  const actionIsReassessment = isolationAction === isolationEventTypes.compromised || isolationAction === isolationEventTypes.removed;
+  const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
+  const showMethodField = isolationForm.action === isolationEventTypes.alternativeIsolationUsed || isolationForm.action === isolationEventTypes.replaced;
+  const methodOptions = isolationForm.action === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
+  const showClampFields =
+    isolationForm.action === isolationEventTypes.rubberDamPlaced ||
+    (isolationForm.action === isolationEventTypes.replaced && isolationForm.method === "rubberDam");
+  const actionIsReassessment = isolationForm.action === isolationEventTypes.compromised || isolationForm.action === isolationEventTypes.removed;
+
+  useEffect(() => {
+    const previousTooth = previousToothRef.current;
+    previousToothRef.current = caseData.tooth;
+    setIsolationForm((prev) => ({
+      ...prev,
+      exposedTeeth: !prev.exposedTeeth || prev.exposedTeeth === previousTooth ? caseData.tooth || "" : prev.exposedTeeth,
+      clampTooth: !prev.clampTooth || prev.clampTooth === previousTooth ? caseData.tooth || "" : prev.clampTooth,
+    }));
+  }, [caseData.tooth]);
+
+  function updateIsolationForm(updates: Partial<IsolationFormState>) {
+    setIsolationForm((prev) => ({ ...prev, ...updates }));
+  }
+
+  function updateIsolationAction(action: IsolationEventType) {
+    setIsolationForm((prev) => ({
+      ...prev,
+      action,
+      method: action === isolationEventTypes.alternativeIsolationUsed && prev.method === "rubberDam" ? "splitDam" : action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : prev.method,
+    }));
+  }
+
+  function resetIsolationForm(action: IsolationEventType = isolationEventTypes.rubberDamPlaced) {
+    setIsolationForm(defaultIsolationFormState(caseData.tooth, action));
+  }
+
+  function prepareIsolationAction(action: IsolationEventType) {
+    setIsolationForm(buildIsolationFormState(caseData.tooth, action, latestIsolationEvent));
+  }
 
   function submitIsolationEvent() {
-    const teeth = exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
+    const teeth = isolationForm.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
     const details: IsolationEventDetails = {
-      method: isolationAction === isolationEventTypes.alternativeIsolationUsed ? isolationMethod : "rubberDam",
-      regionKind,
-      regionLabel: regionLabel.trim() || undefined,
+      method: isolationForm.action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : actionIsReassessment ? undefined : isolationForm.method,
+      regionKind: isolationForm.regionKind,
+      regionLabel: isolationForm.regionLabel.trim() || undefined,
       exposedTeeth: teeth.length ? teeth : undefined,
-      clampCode: showClampFields ? clampCode.trim() || undefined : undefined,
-      clampTooth: showClampFields ? clampTooth.trim() || undefined : undefined,
-      reason: actionIsReassessment ? isolationNote.trim() || undefined : undefined,
-      notes: !actionIsReassessment ? isolationNote.trim() || undefined : undefined,
+      clampCode: showClampFields ? isolationForm.clampCode.trim() || undefined : undefined,
+      clampTooth: showClampFields ? isolationForm.clampTooth.trim() || undefined : undefined,
+      reason: actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
+      notes: !actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
     };
 
-    onRecordIsolationEvent(isolationAction, details);
+    onRecordIsolationEvent(isolationForm.action, details);
+    resetIsolationForm();
   }
 
   return (
@@ -188,38 +297,88 @@ export function CaseSetupStatusPanel({
             {capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending"}
           </span>
         </div>
+        {latestIsolationEvent ? (
+          <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_1.85fr]">
+            <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest event</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatIsolationEventFragment(latestIsolationEvent)}</p>
+              {latestIsolationEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestIsolationEventTime}</p> : null}
+            </div>
+            <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Current coverage</p>
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {isolationCoverageItems.map((item) => (
+                  <div key={item.label} className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{item.label}</p>
+                    <p className="truncate text-sm font-semibold text-brand-navy">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+        {isolationIsEstablished ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              aria-label="Prepare compromised isolation event"
+              onClick={() => prepareIsolationAction(isolationEventTypes.compromised)}
+              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
+            >
+              Compromised
+            </button>
+            <button
+              type="button"
+              aria-label="Prepare removed isolation event"
+              onClick={() => prepareIsolationAction(isolationEventTypes.removed)}
+              className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-50"
+            >
+              Removed
+            </button>
+            <button
+              type="button"
+              aria-label="Prepare replacement isolation event"
+              onClick={() => prepareIsolationAction(isolationEventTypes.replaced)}
+              className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+            >
+              Replace isolation
+            </button>
+          </div>
+        ) : null}
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <SelectInput
             label="Isolation action"
-            value={isolationActionLabels[isolationAction]}
-            onChange={(value) => setIsolationAction(eventTypeFromLabel(value))}
+            value={isolationActionLabels[isolationForm.action]}
+            onChange={(value) => updateIsolationAction(eventTypeFromLabel(value))}
             options={isolationActionOptions}
           />
-          <SelectInput
-            label="Method"
-            value={isolationMethod}
-            onChange={(value) => setIsolationMethod(value as IsolationMethod)}
-            options={[...isolationMethods]}
-          />
+          {showMethodField ? (
+            <SelectInput
+              label="Method"
+              value={isolationForm.method}
+              onChange={(value) => updateIsolationForm({ method: value as IsolationMethod })}
+              options={methodOptions}
+            />
+          ) : null}
           <SelectInput
             label="Region"
-            value={regionKind}
-            onChange={(value) => setRegionKind(value as IsolationRegionKind)}
+            value={isolationForm.regionKind}
+            onChange={(value) => updateIsolationForm({ regionKind: value as IsolationRegionKind })}
             options={[...isolationRegionKinds]}
           />
-          <TextInput label="Region label" value={regionLabel} onChange={setRegionLabel} placeholder="e.g., Q3, upper anterior, custom" />
-          <TextInput label="Exposed teeth" value={exposedTeeth} onChange={setExposedTeeth} placeholder="e.g., 34 35 36 37" />
+          <TextInput label="Region label" value={isolationForm.regionLabel} onChange={(value) => updateIsolationForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" />
+          <TextInput label="Exposed teeth" value={isolationForm.exposedTeeth} onChange={(value) => updateIsolationForm({ exposedTeeth: value })} placeholder="e.g., 34 35 36 37" />
           {showClampFields ? (
             <>
-              <TextInput label="Clamp tooth" value={clampTooth} onChange={setClampTooth} placeholder="e.g., 37" />
-              <TextInput label="Clamp code" value={clampCode} onChange={setClampCode} placeholder="e.g., W8A" />
+              <TextInput label="Clamp tooth" value={isolationForm.clampTooth} onChange={(value) => updateIsolationForm({ clampTooth: value })} placeholder="e.g., 37" />
+              <TextInput label="Clamp code" value={isolationForm.clampCode} onChange={(value) => updateIsolationForm({ clampCode: value })} placeholder="e.g., W8A" />
             </>
           ) : null}
           <TextInput
             label={actionIsReassessment ? "Reason" : "Notes"}
-            value={isolationNote}
-            onChange={setIsolationNote}
-            placeholder={isolationAction === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
+            value={isolationForm.note}
+            onChange={(value) => updateIsolationForm({ note: value })}
+            placeholder={isolationForm.action === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
           />
         </div>
         <button
@@ -227,7 +386,7 @@ export function CaseSetupStatusPanel({
           onClick={submitIsolationEvent}
           className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
         >
-          Record isolation event
+          {isolationSubmitLabels[isolationForm.action]}
         </button>
       </section>
     </div>

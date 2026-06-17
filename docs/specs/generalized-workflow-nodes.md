@@ -381,7 +381,7 @@ Remaining:
 
 ### Phase 3 - Extract The First Shared Module
 
-Status: Phase 3A model/event scaffolding, Phase 3B Case Setup capture UI, and Phase 3C non-blocking readiness prompts implemented; embedded module runner still pending.
+Status: Phase 3A model/event scaffolding, Phase 3B Case Setup capture UI, Phase 3C non-blocking readiness prompts, and Phase 3D isolation panel refinements implemented; embedded module runner still pending.
 Reasoning level: high.
 
 Recommended first module: isolation.
@@ -424,7 +424,11 @@ Implemented in Phase 3C:
 - Keeps `Pre-op review complete -> Access pulp chamber` available for fast workflow continuation.
 - Adds direct access from the readiness prompt to Case Setup & Status and isolation capture.
 
-Planned Phase 3D:
+Caveat:
+
+- The readiness prompt's `Record isolation` action currently opens Case Setup & Status, where the isolation capture section is available; it does not yet deep-link, scroll, or focus directly into that section.
+
+Implemented in Phase 3D:
 
 - Show the most recent isolation event in the Isolation panel.
 - Add a current coverage summary for exposed teeth, region, clamp tooth, and clamp code.

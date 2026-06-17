@@ -20,7 +20,7 @@ import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
-import { buildIsolationEstablishedCapability, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
@@ -1394,6 +1394,13 @@ test("capability selectors match isolation events by exposed tooth and invalidat
 
   assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "36" }), true);
   assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "46" }), false);
+  assert.deepEqual(getIsolationCoverageSummary(rubberDamEvent), {
+    method: "Rubber dam",
+    region: "Quadrant: Q3",
+    exposedTeeth: "34, 35, 36, 37",
+    clampCode: "W8A",
+    clampTooth: "37",
+  });
   assert.match(eventFragment(rubberDamEvent), /Rubber dam isolation placed/);
   assert.match(eventFragment(rubberDamEvent), /Clamp W8A on tooth 37/);
   assert.match(buildFullNote(isolatedCase), /Rubber dam isolation placed/);
