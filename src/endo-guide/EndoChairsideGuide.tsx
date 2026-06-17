@@ -24,6 +24,13 @@ import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
+import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
+import {
+  getAnesthesiaAdequateCapabilityOutput,
+  getAnesthesiaScopeFromDetails,
+  sharedAnesthesiaWorkflowId,
+  sharedAnesthesiaWorkflowVersion,
+} from "./workflow/anesthesia";
 import type { IsolationEventDetails, IsolationEventType } from "./workflow/isolation";
 import {
   buildIsolationEstablishedCapability,
@@ -204,6 +211,32 @@ export default function EndoChairsideGuide() {
 
   function applySuggestedCaseStatus() {
     updateCase({ caseStatus: "" });
+  }
+
+  function recordAnesthesiaEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
+    const event = makeRuntimeEvent({
+      type: eventType,
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: currentNode.id,
+      label: eventType,
+      activeCanal,
+      workflowId: sharedAnesthesiaWorkflowId,
+      workflowVersion: sharedAnesthesiaWorkflowVersion,
+      scope,
+    });
+    event.details = { ...event.details, ...details };
+    const capability = getAnesthesiaAdequateCapabilityOutput(event);
+    if (capability) event.capabilitiesSatisfied = [capability];
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
   }
 
   function recordIsolationEvent(
@@ -879,6 +912,7 @@ export default function EndoChairsideGuide() {
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
+            onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             onDownloadCaseJson={downloadCaseJson}

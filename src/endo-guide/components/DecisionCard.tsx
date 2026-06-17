@@ -108,6 +108,12 @@ export function DecisionCard({
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
+      {currentNode.safetyNotes?.length ? (
+        <div className="mt-3 border-l-4 border-amber-300 bg-amber-50/70 px-3 py-2 text-sm leading-6 text-amber-950">
+          <strong className="font-semibold">Safety / stop rule:</strong>{" "}
+          <span>{currentNode.safetyNotes.join(" ")}</span>
+        </div>
+      ) : null}
       {showSharedReadiness ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="grid gap-3">
@@ -223,12 +229,6 @@ export function DecisionCard({
           {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Record before continuing</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.requiredInputs)}</p></div> : null}
         </div>
       )}
-      {currentNode.safetyNotes?.length ? (
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Safety / stop rule</strong>
-          <ul className="mt-2 list-inside list-disc space-y-1">{currentNode.safetyNotes.map((note) => <li key={note}>{note}</li>)}</ul>
-        </div>
-      ) : null}
       {validationMessage ? (
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           <strong>Cannot continue with “{validationMessage.optionLabel}” yet.</strong>

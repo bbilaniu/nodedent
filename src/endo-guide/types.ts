@@ -256,7 +256,7 @@ export type ValidationMessage = {
   missing: string[];
 };
 
-export type CaseSetupFocusTarget = "isolation";
+export type CaseSetupFocusTarget = "anesthesia" | "isolation";
 
 export type EmbeddedWorkflowLaunch = {
   workflowId: string;

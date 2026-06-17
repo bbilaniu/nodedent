@@ -204,13 +204,26 @@ Implemented:
 
 ### Phase 3: Case Setup And Status Form
 
+Status: implemented as non-blocking Case Setup & Status anesthesia capture.
 Reasoning level: medium.
 
 - Add the first anesthesia UI as a Case Setup & Status panel form rather than a full embedded runner.
 - Show the current derived anesthesia status for the active tooth/scope.
-- Let users record administration details, confirm adequacy, record top-up/reassessment, and mark needs reassessment without leaving the current parent workflow node.
+- Split the UI into administration capture and assessment capture without leaving the current parent workflow node.
 - Append structured events instead of overwriting prior anesthesia history.
 - Keep endodontic workflow progression non-blocking.
+
+Implemented:
+
+- Added an Anesthesia section to Case Setup & Status.
+- Shows derived anesthesia capability status and the latest anesthesia event when present.
+- Uses two user-facing actions: `Record administration` and `Record assessment`.
+- Administration records initial administration or top-up using the same detail fields.
+- Assessment records adequate, partial, not adequate, or needs-reassessment outcomes without requiring anesthesia detail fields.
+- Appends anesthesia events to the global event ledger with `shared.anesthesia` workflow context and active-tooth scope.
+- Uses the guarded Phase 2 capability helper so assessment with `response: "adequate"` can satisfy `anesthesia.adequate`.
+- Keeps administration-only, top-up-only, and non-adequate assessment events from satisfying adequacy.
+- Keeps the active endodontic decision-card position unchanged.
 
 ### Phase 4: Route-Aware Local Anesthesia Entries
 

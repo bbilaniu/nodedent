@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { CanalRecord, CaseSetupFocusTarget, EndoCase, PriorCanalStatus } from "../types";
+import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
@@ -30,6 +31,7 @@ export function CaseManagementModal({
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
+  onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
   onOpenIsolationWorkflow,
   onDownloadCaseJson,
@@ -44,6 +46,7 @@ export function CaseManagementModal({
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
+  onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onDownloadCaseJson: () => void;
@@ -109,6 +112,7 @@ export function CaseManagementModal({
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
+            onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
             onRecordIsolationEvent={onRecordIsolationEvent}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             initialFocusSection={initialFocusSection}
