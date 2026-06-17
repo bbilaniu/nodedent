@@ -120,6 +120,14 @@ export function buildAnesthesiaAdequateCapability(event: ClinicalEvent): Capabil
   };
 }
 
+export function getAnesthesiaAdequateCapabilityOutput(event: ClinicalEvent): CapabilitySatisfaction | undefined {
+  if (event.type === anesthesiaEventTypes.adequacyConfirmed) return buildAnesthesiaAdequateCapability(event);
+  if (event.type === anesthesiaEventTypes.topUpGiven && isAdequateAnesthesiaResponse(getAnesthesiaEventDetails(event).response)) {
+    return buildAnesthesiaAdequateCapability(event);
+  }
+  return undefined;
+}
+
 function formatDose(details: AnesthesiaEventDetails) {
   if (details.dose && details.doseUnit) return `${details.dose} ${details.doseUnit}`;
   return details.dose || details.doseUnit || "";

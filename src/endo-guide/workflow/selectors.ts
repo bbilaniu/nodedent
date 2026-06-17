@@ -1,7 +1,7 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
 import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
-import { anesthesiaAdequacyEventTypes, anesthesiaInvalidatingEventTypes, getAnesthesiaScopeFromEvent } from "./anesthesia";
+import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent } from "./anesthesia";
 import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";
 
 export type CapabilityStatusSource = "caseField" | "event" | "none";
@@ -25,7 +25,6 @@ export type CaseCapabilitySummary = {
 };
 
 const knownCapabilityNameSet = new Set<CapabilityName>(knownCapabilityNames);
-const anesthesiaAdequacyEvents = new Set<string>(anesthesiaAdequacyEventTypes);
 const anesthesiaInvalidatingEvents = new Set<string>(anesthesiaInvalidatingEventTypes);
 const isolationEstablishedEvents = new Set<string>(isolationEstablishedEventTypes);
 const isolationInvalidatingEvents = new Set<string>(isolationInvalidatingEventTypes);
@@ -53,7 +52,7 @@ function getEventDetails(event: ClinicalEvent) {
 }
 
 function getEventScope(event: ClinicalEvent): WorkflowScope | undefined {
-  if (anesthesiaAdequacyEvents.has(event.type) || anesthesiaInvalidatingEvents.has(event.type)) return getAnesthesiaScopeFromEvent(event);
+  if (getAnesthesiaAdequateCapabilityOutput(event) || anesthesiaInvalidatingEvents.has(event.type)) return getAnesthesiaScopeFromEvent(event);
   if (isolationEstablishedEvents.has(event.type) || isolationInvalidatingEvents.has(event.type)) return getIsolationScopeFromEvent(event);
   if (event.scope) return event.scope;
   const details = getEventDetails(event);
@@ -177,12 +176,14 @@ function radiographStatus(caseData: EndoCase): CapabilityStatus {
 
 function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEvent[], queryScope: WorkflowScope | undefined): CapabilityStatus | undefined {
   if (name !== "isolation.established" && name !== "anesthesia.adequate") return undefined;
-  const establishedEvents = name === "anesthesia.adequate" ? anesthesiaAdequacyEvents : isolationEstablishedEvents;
   const invalidatingEvents = name === "anesthesia.adequate" ? anesthesiaInvalidatingEvents : isolationInvalidatingEvents;
 
   const matchingEvents = events.filter((event) => {
     const eventScope = getEventScope(event);
-    return (establishedEvents.has(event.type) || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope);
+    const satisfiesCapability = name === "anesthesia.adequate"
+      ? Boolean(getAnesthesiaAdequateCapabilityOutput(event))
+      : isolationEstablishedEvents.has(event.type);
+    return (satisfiesCapability || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope);
   });
   const latest = matchingEvents.at(-1);
   if (!latest) return undefined;

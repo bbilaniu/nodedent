@@ -180,7 +180,7 @@ Implemented:
 
 ### Phase 2: Capability Semantics
 
-Status: planned.
+Status: implemented as guarded adequacy capability fallback and tests.
 Reasoning level: medium.
 
 - Emit `anesthesia.adequate` from `anesthesia.adequacyConfirmed`.
@@ -190,6 +190,17 @@ Reasoning level: medium.
 - Ensure `anesthesia.needsReassessment` invalidates the latest matching adequacy status for the same scope.
 - Add tests for administration-only, adequacy confirmed, top-up without refreshed adequacy, top-up with refreshed adequacy, and reassessment invalidation.
 - Preserve no-automatic-expiry behavior unless an explicit `expiresAt` is already present.
+
+Implemented:
+
+- Added a guarded anesthesia adequacy capability-output helper.
+- Kept `anesthesia.adequacyConfirmed` as an adequacy-satisfying event.
+- Made `anesthesia.topUpGiven` satisfy `anesthesia.adequate` only when `details.response === "adequate"`.
+- Kept administration-only events from satisfying adequacy.
+- Updated fallback selectors to use the guarded helper instead of treating every top-up event as adequate by type.
+- Preserved explicit `capabilitiesSatisfied` handling for imported or already-materialized capability records.
+- Preserved reassessment invalidation for the latest matching scope.
+- Added tests for administration-only events, adequacy confirmation, partial top-up, adequate top-up, and reassessment invalidation.
 
 ### Phase 3: Case Setup And Status Form
 

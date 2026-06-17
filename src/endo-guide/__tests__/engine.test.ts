@@ -24,6 +24,7 @@ import {
   anesthesiaEventTypes,
   anesthesiaRoutes,
   buildAnesthesiaAdequateCapability,
+  getAnesthesiaAdequateCapabilityOutput,
   getAnesthesiaEventDetails,
   getAnesthesiaScopeFromEvent,
   isAdequateAnesthesiaResponse,
@@ -1522,19 +1523,30 @@ test("shared anesthesia workflow records explicit adequacy without inferring it 
   });
 
   assert.equal(sharedAnesthesiaWorkflow.entryNodeIds[0], "anesthesia-record");
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administeredEvent), undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(adequacyEvent)?.name, "anesthesia.adequate");
   assert.equal(isCapabilitySatisfied(administeredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
   assert.equal(isCapabilitySatisfied(adequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), true);
   assert.match(eventFragment(administeredEvent), /Anesthesia administered/);
   assert.match(buildFullNote(adequateCase), /Anesthesia adequacy confirmed/);
 });
 
-test("shared anesthesia top-up can refresh adequacy and reassessment invalidates it", () => {
-  const topUpEvent = {
-    id: "evt_anesthesia_topup",
+test("shared anesthesia capability fallback requires explicit top-up adequacy and reassessment invalidates it", () => {
+  const topUpWithoutAdequacyEvent = {
+    id: "evt_anesthesia_topup_partial",
     timestamp: "2026-01-01T10:00:00.000Z",
     type: anesthesiaEventTypes.topUpGiven,
     tooth: "36",
     scope: { kind: "tooth" as const, tooth: "36" },
+    details: { response: "partial" },
+  };
+  const topUpAdequateEvent = {
+    id: "evt_anesthesia_topup_adequate",
+    timestamp: "2026-01-01T10:05:00.000Z",
+    type: anesthesiaEventTypes.topUpGiven,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { response: "adequate" },
   };
   const reassessmentEvent = {
     id: "evt_anesthesia_reassess",
@@ -1544,20 +1556,33 @@ test("shared anesthesia top-up can refresh adequacy and reassessment invalidates
     scope: { kind: "tooth" as const, tooth: "36" },
     details: { reason: "clinician reassessment requested" },
   };
-  const caseData = baseCase({
+  const topUpWithoutAdequacyCase = baseCase({
+    tooth: "36",
+    globalEvents: [topUpWithoutAdequacyEvent],
+  });
+  const topUpAdequateCase = baseCase({
+    tooth: "36",
+    globalEvents: [topUpAdequateEvent],
+  });
+  const reassessmentCase = baseCase({
     tooth: "36",
     globalEvents: [
-      {
-        ...topUpEvent,
-        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(topUpEvent)],
-      },
+      topUpAdequateEvent,
       reassessmentEvent,
     ],
   });
-  const status = getCapabilityStatus(caseData, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+  const partialTopUpStatus = getCapabilityStatus(topUpWithoutAdequacyCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+  const adequateTopUpStatus = getCapabilityStatus(topUpAdequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+  const reassessmentStatus = getCapabilityStatus(reassessmentCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
 
-  assert.equal(status.satisfied, false);
-  assert.equal(status.needsReassessment, true);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(topUpWithoutAdequacyEvent), undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(topUpAdequateEvent)?.name, "anesthesia.adequate");
+  assert.equal(partialTopUpStatus.satisfied, false);
+  assert.equal(partialTopUpStatus.needsReassessment, false);
+  assert.equal(adequateTopUpStatus.satisfied, true);
+  assert.equal(adequateTopUpStatus.needsReassessment, false);
+  assert.equal(reassessmentStatus.satisfied, false);
+  assert.equal(reassessmentStatus.needsReassessment, true);
   assert.match(eventFragment(reassessmentEvent), /Anesthesia needs reassessment: clinician reassessment requested/);
 });
 
