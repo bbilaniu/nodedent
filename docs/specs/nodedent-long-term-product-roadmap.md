@@ -87,6 +87,16 @@ The launcher should support:
 
 The launcher should remain clinical and work-focused, not a marketing landing page.
 
+When this launcher becomes the real entry point, declutter the endodontic pre-op setup card. The current pre-op surface is transitional and carries setup, resume, prior-visit, shared-readiness, module-launch, safety, validation, and decision responsibilities in one card. After NodeDent Home and Case Setup & Status own case setup and workflow entry, the pre-op card should become a focused clinical step with:
+
+- concise pre-op instruction
+- compact safety/stop-rule banner
+- required-input summary
+- one primary pre-op completion action
+- validation only when required pre-op facts are missing
+
+Move resume, prior-visit setup, broad case identity, shared module launch, and timeline/history entry points out of the pre-op decision card once equivalent surfaces exist elsewhere.
+
 ### Localization And Internationalization
 
 NodeDent should eventually support localization.
