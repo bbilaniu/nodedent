@@ -229,12 +229,32 @@ Implemented:
 
 Reasoning level: medium.
 
-- Use repeatable `Local anesthesia entries`.
-- Prefer `Add injection entry` and `Add topical entry` actions once route-specific controls exist.
-- Show injection technique only for injected entries and application type only for topical entries.
-- Filter product and technique option lists by route only to prevent inconsistent documentation, not to recommend clinical choices.
+#### Phase 4A: Route-Aware Case Setup Entries
+
+Reasoning level: medium.
+
+- Refine the existing Case Setup & Status anesthesia panel rather than adding the embedded runner.
+- Keep the two primary user-facing actions from Phase 3: `Record administration` and `Record assessment`.
+- Within `Record administration`, replace the generic route-first form with clearer entry actions:
+  - `Add injection entry`
+  - `Add topical entry`
+  - `Add other entry` only if a non-injection, non-topical route must be documented.
+- Show route-specific fields only when they apply:
+  - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, and time administered.
+  - Topical entries: application type, site, agent, time administered, and notes.
+  - Other entries: generic route/application/site/notes fields without forcing injection terminology.
 - Keep time administered editable and clearable.
-- Keep adequacy confirmation separate from entry completion.
+- Keep adequacy confirmation separate from administration entry completion.
+- Continue appending structured events to the global event ledger.
+
+#### Phase 4B: Catalog And Filtering Follow-Up
+
+Reasoning level: medium-high.
+
+- Add route-specific product and technique option lists only after catalog ownership is decided.
+- Filter product and technique option lists by route only to prevent inconsistent documentation, not to recommend clinical choices.
+- Decide whether these catalogs belong in NodeDent core, user preferences, or a future template/config layer.
+- Keep all catalog choices non-prescriptive and avoid adding clinical dose recommendations.
 
 ### Phase 5: Embedded Module Runner
 
