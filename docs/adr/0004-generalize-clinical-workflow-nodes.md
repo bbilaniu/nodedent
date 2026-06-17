@@ -76,4 +76,4 @@ Separating Case Setup & Status from the decision card keeps the active card focu
 
 ## Follow-Up
 
-Use the active generalized workflow node plan in `docs/specs/generalized-workflow-nodes.md` to define the migration path, extract Case Setup & Status incrementally, decide which reusable module should be extracted first, and track the future workflow launcher.
+Use the implemented generalized workflow node plan in `docs/specs/archive/generalized-workflow-nodes.md` as the completed migration record. Use `docs/specs/shared-anesthesia-module.md` for the next shared-module implementation track.

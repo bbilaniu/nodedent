@@ -19,6 +19,7 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
+import { anesthesiaEventTypes, buildAnesthesiaAdequateCapability, sharedAnesthesiaWorkflow, sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import {
@@ -29,7 +30,6 @@ import {
   operativeReadinessCapabilityRequirements,
   operativeRestorationOutputCapabilities,
   scopesTargetDifferentToothSubstructures,
-  sharedAnesthesiaWorkflowId,
   sharedDiagnosisWorkflowId,
 } from "../workflow/operative";
 import {
@@ -1395,7 +1395,7 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
 });
 
-test("workflow launcher registry preserves endodontic fast path and ready shared modules", () => {
+test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {
   const readyEntries = getReadyWorkflowLauncherEntries();
   const sharedEntries = getSharedModuleLauncherEntries();
   const endoEntry = workflowLauncherEntries.find((entry) => entry.workflowId === endodonticRootWorkflowId);
@@ -1411,6 +1411,80 @@ test("workflow launcher registry preserves endodontic fast path and ready shared
   assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "modelOnly");
   assert.equal(operativeEntry?.availability, "modelOnly");
+});
+
+test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {
+  const administeredEvent = {
+    id: "evt_anesthesia_admin",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    workflowId: sharedAnesthesiaWorkflow.workflowId,
+    workflowVersion: sharedAnesthesiaWorkflow.version,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: {
+      agentLabel: "documented anesthetic",
+      technique: "documented technique",
+      dose: "1",
+      doseUnit: "unit",
+      response: "assessment pending",
+    },
+  };
+  const adequacyEvent = {
+    ...administeredEvent,
+    id: "evt_anesthesia_adequate",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+  };
+  const administeredCase = baseCase({ tooth: "36", globalEvents: [administeredEvent] });
+  const adequateCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...adequacyEvent,
+        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(adequacyEvent)],
+      },
+    ],
+  });
+
+  assert.equal(sharedAnesthesiaWorkflow.entryNodeIds[0], "anesthesia-record");
+  assert.equal(isCapabilitySatisfied(administeredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
+  assert.equal(isCapabilitySatisfied(adequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), true);
+  assert.match(eventFragment(administeredEvent), /Anesthesia administered/);
+  assert.match(buildFullNote(adequateCase), /Anesthesia adequacy confirmed/);
+});
+
+test("shared anesthesia top-up can refresh adequacy and reassessment invalidates it", () => {
+  const topUpEvent = {
+    id: "evt_anesthesia_topup",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.topUpGiven,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+  };
+  const reassessmentEvent = {
+    id: "evt_anesthesia_reassess",
+    timestamp: "2026-01-01T10:10:00.000Z",
+    type: anesthesiaEventTypes.needsReassessment,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { reason: "clinician reassessment requested" },
+  };
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...topUpEvent,
+        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(topUpEvent)],
+      },
+      reassessmentEvent,
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+
+  assert.equal(status.satisfied, false);
+  assert.equal(status.needsReassessment, true);
+  assert.match(eventFragment(reassessmentEvent), /Anesthesia needs reassessment: clinician reassessment requested/);
 });
 
 test("clinical event schema accepts optional workflow context without requiring it", () => {

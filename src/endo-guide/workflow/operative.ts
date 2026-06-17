@@ -1,8 +1,8 @@
 import type { CapabilityName, CapabilityRequirement, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
+import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
 
 export const sharedDiagnosisWorkflowId = "shared.diagnosis";
-export const sharedAnesthesiaWorkflowId = "shared.anesthesia";
 export const operativeDirectRestorationWorkflowId = "operative.direct-restoration";
 export const operativeDirectRestorationWorkflowVersion = "0.1.0";
 

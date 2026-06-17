@@ -1,7 +1,12 @@
 import type { ClinicalEvent, EndoCase } from "../types";
+import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, isolationEventTypes } from "../workflow/isolation";
 
 export function eventFragment(event: ClinicalEvent) {
+  if (Object.values(anesthesiaEventTypes).includes(event.type as typeof anesthesiaEventTypes[keyof typeof anesthesiaEventTypes])) {
+    return formatAnesthesiaEventFragment(event);
+  }
+
   if (Object.values(isolationEventTypes).includes(event.type as typeof isolationEventTypes[keyof typeof isolationEventTypes])) {
     return formatIsolationEventFragment(event);
   }

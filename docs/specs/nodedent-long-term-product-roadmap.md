@@ -11,7 +11,7 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ## Relationship To Current Specs
 
-- `docs/specs/generalized-workflow-nodes.md` defines the near-term architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI.
+- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/shared-anesthesia-module.md` tracks the next shared-module implementation.
 - `docs/adr/0004-generalize-clinical-workflow-nodes.md` records the architecture decision behind reusable workflow modules.
 - This roadmap tracks platform-level capabilities that should be revisited after the event ledger and shared modules are stable.
 

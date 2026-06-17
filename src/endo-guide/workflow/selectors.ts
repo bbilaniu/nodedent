@@ -1,6 +1,7 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
 import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
+import { anesthesiaAdequacyEventTypes, anesthesiaInvalidatingEventTypes, getAnesthesiaScopeFromEvent } from "./anesthesia";
 import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";
 
 export type CapabilityStatusSource = "caseField" | "event" | "none";
@@ -24,6 +25,8 @@ export type CaseCapabilitySummary = {
 };
 
 const knownCapabilityNameSet = new Set<CapabilityName>(knownCapabilityNames);
+const anesthesiaAdequacyEvents = new Set<string>(anesthesiaAdequacyEventTypes);
+const anesthesiaInvalidatingEvents = new Set<string>(anesthesiaInvalidatingEventTypes);
 const isolationEstablishedEvents = new Set<string>(isolationEstablishedEventTypes);
 const isolationInvalidatingEvents = new Set<string>(isolationInvalidatingEventTypes);
 
@@ -50,6 +53,7 @@ function getEventDetails(event: ClinicalEvent) {
 }
 
 function getEventScope(event: ClinicalEvent): WorkflowScope | undefined {
+  if (anesthesiaAdequacyEvents.has(event.type) || anesthesiaInvalidatingEvents.has(event.type)) return getAnesthesiaScopeFromEvent(event);
   if (isolationEstablishedEvents.has(event.type) || isolationInvalidatingEvents.has(event.type)) return getIsolationScopeFromEvent(event);
   if (event.scope) return event.scope;
   const details = getEventDetails(event);
@@ -172,16 +176,24 @@ function radiographStatus(caseData: EndoCase): CapabilityStatus {
 }
 
 function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEvent[], queryScope: WorkflowScope | undefined): CapabilityStatus | undefined {
-  if (name !== "isolation.established") return undefined;
+  if (name !== "isolation.established" && name !== "anesthesia.adequate") return undefined;
+  const establishedEvents = name === "anesthesia.adequate" ? anesthesiaAdequacyEvents : isolationEstablishedEvents;
+  const invalidatingEvents = name === "anesthesia.adequate" ? anesthesiaInvalidatingEvents : isolationInvalidatingEvents;
 
   const matchingEvents = events.filter((event) => {
     const eventScope = getEventScope(event);
-    return (isolationEstablishedEvents.has(event.type) || isolationInvalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope);
+    return (establishedEvents.has(event.type) || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope);
   });
   const latest = matchingEvents.at(-1);
   if (!latest) return undefined;
 
-  const invalidated = isolationInvalidatingEvents.has(latest.type);
+  const invalidated = invalidatingEvents.has(latest.type);
+  const summary = name === "anesthesia.adequate"
+    ? invalidated ? "Anesthesia needs reassessment" : "Anesthesia adequate"
+    : invalidated ? "Isolation needs reassessment" : "Isolation established";
+  const reason = name === "anesthesia.adequate"
+    ? "The latest matching anesthesia event indicates reassessment is needed."
+    : "The latest matching isolation event indicates compromised or removed isolation.";
   return {
     name,
     satisfied: !invalidated,
@@ -189,8 +201,8 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
     source: "event",
     sourceEvent: latest,
     scope: getEventScope(latest),
-    summary: invalidated ? "Isolation needs reassessment" : "Isolation established",
-    reason: invalidated ? "The latest matching isolation event indicates compromised or removed isolation." : undefined,
+    summary,
+    reason: invalidated ? reason : undefined,
   };
 }
 
@@ -208,7 +220,7 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
     .at(-1);
 
   const fallbackStatus = fallbackStatusFromEvents(name, events, queryScope);
-  if (explicitStatus && fallbackStatus && name === "isolation.established") {
+  if (explicitStatus && fallbackStatus && (name === "isolation.established" || name === "anesthesia.adequate")) {
     return eventTime(fallbackStatus.sourceEvent) >= eventTime(explicitStatus.sourceEvent) ? fallbackStatus : explicitStatus;
   }
   if (explicitStatus) return explicitStatus;

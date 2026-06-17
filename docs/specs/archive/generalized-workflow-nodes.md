@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-15
+completed_on: 2026-06-17
 ---
 
 # Generalized Workflow Nodes

@@ -1,7 +1,8 @@
 import type { WorkflowDefinition, WorkflowDiscipline, WorkflowScopeKind } from "../types";
 import { protocolNodes } from "../protocol/nodes";
+import { sharedAnesthesiaWorkflow } from "./anesthesia";
 import { sharedIsolationWorkflow } from "./isolation";
-import { operativeDirectRestorationWorkflow, sharedAnesthesiaWorkflowId } from "./operative";
+import { operativeDirectRestorationWorkflow } from "./operative";
 
 export const endodonticRootWorkflowId = "endo.rct";
 export const endodonticRootWorkflowVersion = "0.1.0";
@@ -71,15 +72,16 @@ export const workflowLauncherEntries = [
     definition: sharedIsolationWorkflow,
   },
   {
-    workflowId: sharedAnesthesiaWorkflowId,
-    title: "Anesthesia",
-    discipline: "shared",
+    workflowId: sharedAnesthesiaWorkflow.workflowId,
+    title: sharedAnesthesiaWorkflow.title,
+    discipline: sharedAnesthesiaWorkflow.discipline,
     kind: "sharedModule",
     availability: "modelOnly",
     statusLabel: "Model only",
     launchLabel: "Runner not available",
     summary: "Capability contract exists; dose, timing, adequacy response, and reassessment runner are not modeled yet.",
-    supportedScopes: ["tooth", "quadrant", "sextant", "archSegment", "custom"],
+    supportedScopes: sharedAnesthesiaWorkflow.supportedScopes,
+    definition: sharedAnesthesiaWorkflow,
   },
 ] as const satisfies readonly WorkflowLauncherEntry[];
 
