@@ -472,6 +472,7 @@ Implemented:
 
 ### Phase 6 - Add NodeDent Home And Workflow Launcher
 
+Status: implemented as optional launcher scaffolding.
 Reasoning level: medium.
 
 - Add an operational home screen for starting, choosing, and resuming workflows.
@@ -480,6 +481,15 @@ Reasoning level: medium.
 - Let users open Case Setup & Status before launching a procedure workflow.
 - Keep the launcher focused on clinical work, not marketing content.
 - Defer timeline/evolution graphs until the event ledger can support meaningful longitudinal views.
+
+Implemented:
+
+- Added a workflow launcher registry for the endodontic root workflow, ready shared isolation module, and model-only operative direct-restoration workflow.
+- Added an optional NodeDent Home launcher that opens from the current workspace without replacing direct-to-endo startup.
+- Preserved fast resume to the active endodontic decision card and wired launcher actions to saved cases, new case confirmation, prior visit setup, and Case Setup & Status.
+- Exposed only the shared isolation module as launchable from the launcher because it has event and capability output; diagnosis/anesthesia/restoration module IDs remain model contracts until their runners exist.
+- Showed the operative workflow as model-only so surface-scope definitions are discoverable without implying an available chairside runner.
+- Deferred timeline/evolution graph UI.
 
 ## Recommended Defaults
 

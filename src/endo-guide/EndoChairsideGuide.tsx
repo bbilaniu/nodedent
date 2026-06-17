@@ -9,6 +9,7 @@ import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
+import { WorkflowLauncher } from "./components/WorkflowLauncher";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
@@ -117,6 +118,7 @@ export default function EndoChairsideGuide() {
   const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
   const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
   const [rootWorkflowRunId, setRootWorkflowRunId] = useState(() => makeWorkflowRunId("endo_root"));
+  const [isWorkflowLauncherOpen, setIsWorkflowLauncherOpen] = useState(false);
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
@@ -279,17 +281,20 @@ export default function EndoChairsideGuide() {
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
     setEmbeddedWorkflowLaunch(null);
+    setIsWorkflowLauncherOpen(false);
     setRootWorkflowRunId(makeWorkflowRunId("endo_root"));
     setIsSavedCasesOpen(false);
     setIsPriorVisitOpen(false);
   }
 
   function openCasePanel(focusTarget?: CaseSetupFocusTarget) {
+    setIsWorkflowLauncherOpen(false);
     setCasePanelFocusTarget(focusTarget || null);
     setIsCasePanelOpen(true);
   }
 
   function openIsolationWorkflow(entryNodeId?: string) {
+    setIsWorkflowLauncherOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
     setEmbeddedWorkflowLaunch({
@@ -382,6 +387,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(normalized));
       setHistory([]);
       setValidationMessage(null);
+      setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
     } catch {
       setValidationMessage({ optionLabel: "Load saved case", missing: ["Could not load saved case from local storage"] });
@@ -434,6 +440,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
       setShowImportBox(false);
+      setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
       setImportText("");
       setValidationMessage(null);
@@ -676,6 +683,21 @@ export default function EndoChairsideGuide() {
     setValidationMessage(null);
   }
 
+  function openSavedCases() {
+    setIsWorkflowLauncherOpen(false);
+    setIsSavedCasesOpen(true);
+  }
+
+  function openPriorVisit() {
+    setIsWorkflowLauncherOpen(false);
+    setIsPriorVisitOpen(true);
+  }
+
+  function openNewCaseConfirm() {
+    setIsWorkflowLauncherOpen(false);
+    setIsNewCaseConfirmOpen(true);
+  }
+
   const compactNote = buildCompactNote(caseData);
   const fullNote = buildFullNote(caseData);
   const patientSummary = buildPatientSummary(caseData);
@@ -712,6 +734,13 @@ export default function EndoChairsideGuide() {
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
               <button
                 type="button"
+                onClick={() => setIsWorkflowLauncherOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-mint/50 bg-brand-mint/15 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-mint/25"
+              >
+                NodeDent Home
+              </button>
+              <button
+                type="button"
                 aria-pressed={themeMode === "dark"}
                 onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
                 className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-brand-light-node bg-white px-3 py-1.5 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
@@ -728,21 +757,21 @@ export default function EndoChairsideGuide() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsSavedCasesOpen(true)}
+                onClick={openSavedCases}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-blue-light bg-brand-blue-light/20 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-blue-light/30"
               >
                 Resume saved workflow
               </button>
               <button
                 type="button"
-                onClick={() => setIsPriorVisitOpen(true)}
+                onClick={openPriorVisit}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold leading-none text-amber-950 transition hover:bg-amber-100"
               >
                 Prior visit
               </button>
               <button
                 type="button"
-                onClick={() => setIsNewCaseConfirmOpen(true)}
+                onClick={openNewCaseConfirm}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
               >
                 New case
@@ -794,8 +823,8 @@ export default function EndoChairsideGuide() {
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
               onOpenCaseSetupStatus={openCasePanel}
               onOpenIsolationWorkflow={openIsolationWorkflow}
-              onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
-              onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
+              onOpenSavedWorkflow={openSavedCases}
+              onOpenPriorVisit={openPriorVisit}
             />
           </section>
 
@@ -819,6 +848,22 @@ export default function EndoChairsideGuide() {
             <EventLog events={caseData.globalEvents} />
           </aside>
         </main>
+
+        {isWorkflowLauncherOpen ? (
+          <WorkflowLauncher
+            caseData={caseData}
+            currentNodeTitle={currentNode.title}
+            currentNodePhase={currentNode.phase}
+            savedCaseCount={savedCases.length}
+            onClose={() => setIsWorkflowLauncherOpen(false)}
+            onContinueEndodonticWorkflow={() => setIsWorkflowLauncherOpen(false)}
+            onOpenCaseSetupStatus={() => openCasePanel()}
+            onOpenSavedCases={openSavedCases}
+            onOpenPriorVisit={openPriorVisit}
+            onOpenNewCaseConfirm={openNewCaseConfirm}
+            onOpenIsolationWorkflow={() => openIsolationWorkflow()}
+          />
+        ) : null}
 
         {isCasePanelOpen ? (
           <CaseManagementModal

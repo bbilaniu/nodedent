@@ -33,6 +33,13 @@ import {
   sharedDiagnosisWorkflowId,
   sharedFinalRestorationWorkflowId,
 } from "../workflow/operative";
+import {
+  endodonticRootWorkflow,
+  endodonticRootWorkflowId,
+  getReadyWorkflowLauncherEntries,
+  getSharedModuleLauncherEntries,
+  workflowLauncherEntries,
+} from "../workflow/registry";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
@@ -1384,6 +1391,22 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
 
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", surfaceScope), false);
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+});
+
+test("workflow launcher registry preserves endodontic fast path and ready shared modules", () => {
+  const readyEntries = getReadyWorkflowLauncherEntries();
+  const sharedEntries = getSharedModuleLauncherEntries();
+  const endoEntry = workflowLauncherEntries.find((entry) => entry.workflowId === endodonticRootWorkflowId);
+  const operativeEntry = workflowLauncherEntries.find((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId);
+
+  assert.equal(endodonticRootWorkflow.entryNodeIds[0], "preop");
+  assert.equal(endodonticRootWorkflow.completionNodeIds.includes("endodontic-pathway-complete"), true);
+  assert.equal(endoEntry?.availability, "ready");
+  assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
+  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId]);
+  assert.equal(operativeEntry?.availability, "modelOnly");
 });
 
 test("clinical event schema accepts optional workflow context without requiring it", () => {
