@@ -20,6 +20,7 @@ This spec starts the shared anesthesia module after the generalized workflow-nod
 - Do not recommend anesthetic agents, techniques, doses, vasoconstrictor/adrenaline use, or timing thresholds.
 - Do not copy sibling-project product defaults into NodeDent as clinical recommendations.
 - Do not infer adequacy from administration alone.
+- Do not automatically expire anesthesia adequacy until source-backed timing rules exist.
 - Do not add a full embedded UI runner in the first pass.
 - Do not replace clinician judgment about whether anesthesia is required for a given operative or endodontic workflow.
 
@@ -69,6 +70,27 @@ The app may record route, agent, technique, application type, dose, timing, and 
 
 `response` should distinguish explicit adequacy documentation from other assessment text. An adequacy response is the only response type that can satisfy `anesthesia.adequate`.
 
+## Phase 1 Typed Values
+
+Initial `route` values:
+
+- `injection`
+- `topical`
+- `other`
+
+`route` may be absent on legacy imports and early model-only events. New typed UI should require a route before showing route-specific fields.
+
+Initial adequacy `response` values:
+
+- `adequate`
+- `partial`
+- `notAdequate`
+- `notAssessed`
+
+Only `adequate` can satisfy `anesthesia.adequate`. `partial`, `notAdequate`, and `notAssessed` are documentation states and should not satisfy adequacy. `anesthesia.needsReassessment` remains a separate event because it invalidates prior matching adequacy; it should not be collapsed into `response`.
+
+These values are machine values, not user-facing labels. UI copy may render them as `Injection`, `Topical`, `Other`, `Adequate`, `Partial`, `Not adequate`, and `Not assessed`.
+
 ## Entry Shape For The First Runner
 
 The first UI should use repeatable local-anesthesia entries rather than a single flat anesthesia form.
@@ -115,6 +137,8 @@ The capability should not be emitted by plain `anesthesia.administered` unless a
 
 If a top-up is recorded without a refreshed adequacy response, the event remains useful documentation but should not satisfy `anesthesia.adequate`.
 
+No automatic adequacy expiry should be calculated from anesthetic type, dose, vasoconstrictor/adrenaline, timing, or response until source-backed timing rules exist. Until then, adequacy remains valid for the matching scope unless a later matching reassessment event invalidates it, or a future explicit `expiresAt` is recorded from a source-backed rule.
+
 ## Initial Implementation
 
 - Add `shared.anesthesia` workflow and event vocabulary.
@@ -122,6 +146,75 @@ If a top-up is recorded without a refreshed adequacy response, the event remains
 - Add selector fallback so reassessment events can invalidate the latest matching anesthesia adequacy status.
 - Add the module to the workflow launcher registry as `Model only` until a UI runner exists.
 - Keep existing endodontic workflow behavior unchanged.
+
+## Implementation Plan
+
+Reasoning levels:
+
+- Low: mostly mechanical implementation from existing NodeDent patterns.
+- Medium: requires cross-module design judgment, but should be implementable without settling major product decisions.
+- High: requires careful architecture or clinical workflow reasoning before implementation.
+
+### Phase 1: Model Contract And Tests
+
+Reasoning level: medium.
+
+- Keep the typed core small: event types, `route`, scope, and explicit adequacy response.
+- Keep `agentLabel`, `technique`, `applicationType`, `site`, `dose`, `doseUnit`, `vasoconstrictor`, `notes`, and `reason` as free text or catalog-backed strings.
+- Add or update tests for event detail parsing, scope extraction, route preservation, and note fragment output.
+- Confirm legacy events without `route` still import and summarize safely.
+- Do not add UI, product catalogs, or route-specific option filtering in Phase 1.
+
+### Phase 2: Capability Semantics
+
+Reasoning level: medium.
+
+- Emit `anesthesia.adequate` from `anesthesia.adequacyConfirmed`.
+- Emit `anesthesia.adequate` from `anesthesia.topUpGiven` only when adequacy is explicitly refreshed.
+- Do not emit adequacy from administration-only events.
+- Ensure `anesthesia.needsReassessment` invalidates the latest matching adequacy status for the same scope.
+- Add tests for administration-only, adequacy confirmed, top-up without refreshed adequacy, top-up with refreshed adequacy, and reassessment invalidation.
+- Preserve no-automatic-expiry behavior unless an explicit `expiresAt` is already present.
+
+### Phase 3: Case Setup And Status Form
+
+Reasoning level: medium.
+
+- Add the first anesthesia UI as a Case Setup & Status panel form rather than a full embedded runner.
+- Show the current derived anesthesia status for the active tooth/scope.
+- Let users record administration details, confirm adequacy, record top-up/reassessment, and mark needs reassessment without leaving the current parent workflow node.
+- Append structured events instead of overwriting prior anesthesia history.
+- Keep endodontic workflow progression non-blocking.
+
+### Phase 4: Route-Aware Local Anesthesia Entries
+
+Reasoning level: medium.
+
+- Use repeatable `Local anesthesia entries`.
+- Prefer `Add injection entry` and `Add topical entry` actions once route-specific controls exist.
+- Show injection technique only for injected entries and application type only for topical entries.
+- Filter product and technique option lists by route only to prevent inconsistent documentation, not to recommend clinical choices.
+- Keep time administered editable and clearable.
+- Keep adequacy confirmation separate from entry completion.
+
+### Phase 5: Embedded Module Runner
+
+Reasoning level: high.
+
+- Add an embedded sidecar or modal runner only after the Case Setup & Status form and capability selectors are stable.
+- Open the module from parent workflow nodes without forcing anesthesia as a hard stop.
+- Return to the parent node after recording supplemental events.
+- Preserve parent and child workflow context, including `workflowRunId`, `parentWorkflowRunId`, node ID, and scope.
+- Reuse the same event contract as the Case Setup & Status form.
+
+### Phase 6: Source-Backed Expiry And Catalog Refinement
+
+Reasoning level: high.
+
+- Add automatic expiry only after source-backed timing rules are documented in active specs or ADRs.
+- Decide whether agent, vasoconstrictor/adrenaline, technique, and dose should become typed catalogs based on real product needs and source material.
+- If expiry rules are added, record an explicit `expiresAt` and keep the rule traceable to the source-backed decision.
+- Add tests that separate explicit reassessment, explicit expiry, and administration timing context.
 
 ## Later Runner Acceptance Criteria
 
@@ -135,9 +228,15 @@ If a top-up is recorded without a refreshed adequacy response, the event remains
 - Generated note fragments distinguish administration, adequacy confirmation, top-up, and reassessment events.
 - Tests cover route-aware entry parsing, capability emission, top-up without adequacy, top-up with refreshed adequacy, and reassessment invalidation.
 
+## Decisions
+
+- Typed core now: event types, `route`, scope, and adequacy response. Other anesthesia details stay free text or catalog-backed strings until product needs justify typed enums.
+- No automatic expiry until source-backed timing rules exist.
+- The first UI should be a Case Setup & Status panel form. An embedded runner can follow after the event contract and selectors are stable.
+- Post-administration assessment should remain event-detail text initially. Add separate event types beyond adequacy and reassessment only when they affect status, alerts, follow-up, or note generation.
+
 ## Open Decisions
 
-- Which anesthesia details should become typed enumerations versus free-text documentation fields.
-- How adequacy expiry should be calculated once anesthetic type, dose, vasoconstrictor/adrenaline, timing, and response are modeled.
-- Whether the first UI should be a Case Setup & Status panel form, an embedded workflow runner, or both.
-- Whether post-administration assessment should remain event-detail text or become separate event types beyond adequacy and reassessment.
+- Whether additional route or adequacy-response values are needed after the first typed UI is tested.
+- Whether route-specific product catalogs belong in NodeDent core, user preferences, or a future template/config layer.
+- Whether the Case Setup & Status form and future embedded runner should share a single component or use separate wrappers around shared event helpers.
