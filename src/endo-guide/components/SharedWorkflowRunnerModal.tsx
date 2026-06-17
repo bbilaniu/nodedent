@@ -214,12 +214,12 @@ export function SharedWorkflowRunnerModal({
           </div>
         ) : null}
 
-        <div className="mt-4 grid gap-2">
+        <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
           {completion ? (
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+              className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
             >
               Return to parent workflow
             </button>
@@ -227,7 +227,7 @@ export function SharedWorkflowRunnerModal({
             <button
               type="button"
               onClick={applySelectedOption}
-              className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+              className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
             >
               Record {selectedOption.label.toLowerCase()}
               <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
