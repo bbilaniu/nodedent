@@ -381,7 +381,7 @@ Remaining:
 
 ### Phase 3 - Extract The First Shared Module
 
-Status: Phase 3A model/event scaffolding, Phase 3B Case Setup capture UI, Phase 3C non-blocking readiness prompts, and Phase 3D isolation panel refinements implemented; embedded module runner still pending.
+Status: Phase 3A model/event scaffolding, Phase 3B Case Setup capture UI, Phase 3C non-blocking readiness prompts, Phase 3D isolation panel refinements, and Phase 4 embedded isolation runner implemented.
 Reasoning level: high.
 
 Recommended first module: isolation.
@@ -445,6 +445,14 @@ Reasoning level: high.
 - Preserve the parent `currentNodeId`.
 - Record child workflow events with parent workflow context.
 - Return to the parent decision card after module completion.
+
+Implemented:
+
+- Added an embedded isolation workflow runner modal for `shared.isolation`.
+- The runner can open from the pre-access readiness prompt and the Isolation section in Case Setup & Status.
+- The runner keeps the endodontic parent `currentNodeId` unchanged while it advances through the shared isolation nodes.
+- Isolation events recorded from the runner include `workflowId`, `workflowVersion`, child `workflowRunId`, `parentWorkflowRunId`, child node ID, scope, and capability outputs when applicable.
+- The runner returns to the parent decision card after the shared module reaches a completion node.
 
 ### Phase 5 - Generalize Beyond Endodontics
 

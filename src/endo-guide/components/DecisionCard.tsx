@@ -58,6 +58,7 @@ export function DecisionCard({
   onContinueCanal,
   onCreateNewCanal,
   onOpenCaseSetupStatus,
+  onOpenIsolationWorkflow,
   onOpenSavedWorkflow,
   onOpenPriorVisit,
 }: {
@@ -73,6 +74,7 @@ export function DecisionCard({
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenSavedWorkflow: () => void;
   onOpenPriorVisit: () => void;
 }) {
@@ -121,10 +123,10 @@ export function DecisionCard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onOpenCaseSetupStatus("isolation")}
+                  onClick={() => onOpenIsolationWorkflow(isolationIsEstablished ? "isolation-needs-reassessment" : undefined)}
                   className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
                 >
-                  {isolationIsEstablished ? "Review isolation" : "Record isolation"}
+                  {isolationIsEstablished ? "Review isolation" : "Run isolation"}
                 </button>
               </div>
             </div>
@@ -134,7 +136,7 @@ export function DecisionCard({
                   <p><strong>Isolation already recorded</strong>{caseData.tooth ? ` for tooth ${caseData.tooth}` : ""} this visit.</p>
                   <button
                     type="button"
-                    onClick={() => onOpenCaseSetupStatus("isolation")}
+                    onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
                     className="shrink-0 rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
                   >
                     Revise / add event

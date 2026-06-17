@@ -31,6 +31,7 @@ export function CaseManagementModal({
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onRecordIsolationEvent,
+  onOpenIsolationWorkflow,
   onDownloadCaseJson,
   initialFocusSection,
 }: {
@@ -44,6 +45,7 @@ export function CaseManagementModal({
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onDownloadCaseJson: () => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
@@ -108,6 +110,7 @@ export function CaseManagementModal({
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onRecordIsolationEvent={onRecordIsolationEvent}
+            onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             initialFocusSection={initialFocusSection}
           />
         </div>

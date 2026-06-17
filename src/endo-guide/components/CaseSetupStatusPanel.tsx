@@ -108,6 +108,7 @@ export function CaseSetupStatusPanel({
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onRecordIsolationEvent,
+  onOpenIsolationWorkflow,
   initialFocusSection,
 }: {
   caseData: EndoCase;
@@ -118,6 +119,7 @@ export function CaseSetupStatusPanel({
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
@@ -330,6 +332,14 @@ export function CaseSetupStatusPanel({
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
+              aria-label="Open embedded isolation workflow"
+              onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
+              className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
+            >
+              Open workflow
+            </button>
+            <button
+              type="button"
               aria-label="Prepare compromised isolation event"
               onClick={() => prepareIsolationAction(isolationEventTypes.compromised)}
               className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
@@ -353,7 +363,18 @@ export function CaseSetupStatusPanel({
               Replace isolation
             </button>
           </div>
-        ) : null}
+        ) : (
+          <div className="mt-3">
+            <button
+              type="button"
+              aria-label="Open embedded isolation workflow"
+              onClick={() => onOpenIsolationWorkflow()}
+              className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+            >
+              Open isolation workflow
+            </button>
+          </div>
+        )}
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <SelectInput
             label="Isolation action"

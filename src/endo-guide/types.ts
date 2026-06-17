@@ -257,3 +257,9 @@ export type ValidationMessage = {
 };
 
 export type CaseSetupFocusTarget = "isolation";
+
+export type EmbeddedWorkflowLaunch = {
+  workflowId: string;
+  entryNodeId?: string;
+  workflowRunId: string;
+};

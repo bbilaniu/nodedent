@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
+import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
 import { CanalSelector } from "./components/CanalSelector";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
@@ -8,6 +8,7 @@ import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
+import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
@@ -30,6 +31,7 @@ import {
   sharedIsolationWorkflowId,
   sharedIsolationWorkflowVersion,
 } from "./workflow/isolation";
+import { getCaseCapabilitySummary } from "./workflow/selectors";
 
 type HistoryEntry = {
   caseData: EndoCase;
@@ -52,6 +54,10 @@ type ThemeMode = "light" | "dark";
 const THEME_STORAGE_KEY = "nodedent-theme";
 const LIGHT_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference.svg";
 const DARK_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference_inverted_dark_bg.svg";
+
+function makeWorkflowRunId(prefix: string) {
+  return `run_${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
 
 function getSavedCaseIndex(): SavedCaseSummary[] {
   try {
@@ -109,6 +115,8 @@ export default function EndoChairsideGuide() {
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
   const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
+  const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
+  const [rootWorkflowRunId, setRootWorkflowRunId] = useState(() => makeWorkflowRunId("endo_root"));
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
@@ -123,6 +131,7 @@ export default function EndoChairsideGuide() {
     [caseData.canals, caseData.currentCanal]
   );
   const activeCanalStatus = getCanalStatus(activeCanal);
+  const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const canResumeActiveCanalFromPriorVisit = Boolean(
     caseData.priorVisit?.continuedFromPriorVisit ||
     caseData.globalEvents.some((event) => event.type === "case.continuedFromPriorVisit") ||
@@ -195,21 +204,28 @@ export default function EndoChairsideGuide() {
     updateCase({ caseStatus: "" });
   }
 
-  function recordIsolationEvent(eventType: IsolationEventType, details: IsolationEventDetails) {
+  function recordIsolationEvent(
+    eventType: IsolationEventType,
+    details: IsolationEventDetails,
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
+  ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getIsolationScopeFromDetails(details, caseData.tooth);
     const event = makeRuntimeEvent({
       type: eventType,
       tooth: caseData.tooth,
       canal: "All",
-      nodeId: currentNode.id,
-      label: eventType,
+      nodeId: context?.nodeId || currentNode.id,
+      label: context?.label || eventType,
       activeCanal,
       workflowId: sharedIsolationWorkflowId,
       workflowVersion: sharedIsolationWorkflowVersion,
+      workflowRunId: context?.workflowRunId,
+      parentWorkflowRunId: context?.parentWorkflowRunId,
       scope,
     });
     event.details = { ...event.details, ...details };
+    if (context?.nodeId) event.details.parentNodeId = currentNode.id;
     if (
       eventType === isolationEventTypes.rubberDamPlaced ||
       eventType === isolationEventTypes.alternativeIsolationUsed ||
@@ -262,6 +278,8 @@ export default function EndoChairsideGuide() {
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch(null);
+    setRootWorkflowRunId(makeWorkflowRunId("endo_root"));
     setIsSavedCasesOpen(false);
     setIsPriorVisitOpen(false);
   }
@@ -269,6 +287,16 @@ export default function EndoChairsideGuide() {
   function openCasePanel(focusTarget?: CaseSetupFocusTarget) {
     setCasePanelFocusTarget(focusTarget || null);
     setIsCasePanelOpen(true);
+  }
+
+  function openIsolationWorkflow(entryNodeId?: string) {
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch({
+      workflowId: sharedIsolationWorkflowId,
+      entryNodeId,
+      workflowRunId: makeWorkflowRunId("shared_isolation"),
+    });
   }
 
   function continueFromPriorVisit() {
@@ -765,6 +793,7 @@ export default function EndoChairsideGuide() {
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
               onOpenCaseSetupStatus={openCasePanel}
+              onOpenIsolationWorkflow={openIsolationWorkflow}
               onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
               onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
             />
@@ -806,8 +835,21 @@ export default function EndoChairsideGuide() {
             onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordIsolationEvent={recordIsolationEvent}
+            onOpenIsolationWorkflow={openIsolationWorkflow}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}
+          />
+        ) : null}
+
+        {embeddedWorkflowLaunch ? (
+          <SharedWorkflowRunnerModal
+            launch={embeddedWorkflowLaunch}
+            caseData={caseData}
+            parentNodeTitle={currentNode.title}
+            parentWorkflowRunId={rootWorkflowRunId}
+            latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
+            onClose={() => setEmbeddedWorkflowLaunch(null)}
+            onRecordIsolationEvent={recordIsolationEvent}
           />
         ) : null}
 
