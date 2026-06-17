@@ -52,7 +52,7 @@ export function WorkflowLauncher({
   onOpenIsolationWorkflow: () => void;
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
-  const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries).filter((entry) => entry.availability === "ready");
+  const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const isolationStatus = capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending";
   const activeCaseFacts = [
@@ -94,7 +94,7 @@ export function WorkflowLauncher({
                 Fast resume
               </span>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
               <button
                 type="button"
                 onClick={onContinueEndodonticWorkflow}
@@ -115,6 +115,13 @@ export function WorkflowLauncher({
                 className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
               >
                 Saved cases ({savedCaseCount})
+              </button>
+              <button
+                type="button"
+                onClick={onOpenPriorVisit}
+                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
+              >
+                Prior visit
               </button>
               <button
                 type="button"
@@ -182,10 +189,11 @@ export function WorkflowLauncher({
           </section>
 
           <section className="rounded-2xl border border-brand-light-node bg-white p-4">
-            <h3 className="text-sm font-bold text-brand-navy">Ready shared modules</h3>
+            <h3 className="text-sm font-bold text-brand-navy">Shared modules</h3>
             <div className="mt-3 grid gap-3">
               {sharedModuleEntries.map((entry) => {
                 const isIsolation = entry.workflowId === sharedIsolationWorkflowId;
+                const canLaunch = entry.availability === "ready" && isIsolation;
                 return (
                   <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -200,8 +208,8 @@ export function WorkflowLauncher({
                     </div>
                     <button
                       type="button"
-                      onClick={isIsolation ? onOpenIsolationWorkflow : undefined}
-                      disabled={!isIsolation}
+                      onClick={canLaunch ? onOpenIsolationWorkflow : undefined}
+                      disabled={!canLaunch}
                       className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {entry.launchLabel}
@@ -209,13 +217,6 @@ export function WorkflowLauncher({
                   </div>
                 );
               })}
-              <button
-                type="button"
-                onClick={onOpenPriorVisit}
-                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
-              >
-                Prior visit
-              </button>
             </div>
           </section>
         </div>

@@ -16,7 +16,7 @@ The current app has a strong endodontic workflow model:
 - `ClinicalEvent` records what happened.
 - Canal-aware continuation can resume other canals at appropriate endodontic checkpoints.
 
-That model is useful, but it is not yet general enough for shared clinical work. Anesthesia, isolation, diagnosis, radiographs, temporization, referral, and restoration can be their own workflows, but they can also be subsections inside endodontic or operative workflows.
+That model is useful, but it is not yet general enough for shared clinical work. Anesthesia, isolation, diagnosis, radiographs, temporization, and referral can be reusable workflows or subsections inside endodontic and operative workflows. Restoration is usually better modeled as a primary operative workflow or as an event/capability output of another workflow, not as a standalone shared launcher item.
 
 The current pre-op decision card also carries case setup fields such as patient number, tooth, procedure type, diagnosis, pre-op radiographs, chamber depth, and estimated WL. That is useful for the first screen, but those fields are broader than one protocol node. As the product adds reusable clinical modules, the app needs a persistent case setup/status surface where shared context can be viewed and updated without losing the active decision-card position.
 
@@ -459,15 +459,16 @@ Implemented:
 Status: implemented as operative workflow-definition scaffolding.
 Reasoning level: high.
 
-- Add operative workflow definitions that reuse diagnosis, anesthesia, isolation, and restoration modules.
+- Add operative workflow definitions that reuse diagnosis, anesthesia, and isolation context while recording restoration as an operative workflow output.
 - Introduce surface-level scope where operative workflows need it.
 - Keep endodontic canal scope separate from operative surface scope.
 
 Implemented:
 
-- Added an `operative.direct-restoration` workflow definition that reuses shared diagnosis/radiograph, anesthesia, isolation, and final-restoration module contracts through capability requirements and module calls.
+- Added an `operative.direct-restoration` workflow definition that reuses shared diagnosis/radiograph, anesthesia, and isolation context without forcing those modules as linear steps.
 - Added operative surface-scope helpers so operative workflows can target tooth/surface context without reusing endodontic canal scope.
 - Tightened capability scope matching so canal-scoped capabilities on a tooth do not satisfy operative tooth/surface restoration requirements unless a future workflow explicitly maps them.
+- Kept `finalRestoration.placed` as an output capability of endodontic closure or operative workflows rather than a separate shared module.
 - Kept this phase as model scaffolding only; it does not add operative clinical chairside protocol guidance or a new operative UI.
 
 ### Phase 6 - Add NodeDent Home And Workflow Launcher
@@ -484,11 +485,13 @@ Reasoning level: medium.
 
 Implemented:
 
-- Added a workflow launcher registry for the endodontic root workflow, ready shared isolation module, and model-only operative direct-restoration workflow.
+- Added a workflow launcher registry for the endodontic root workflow, ready shared isolation module, model-only shared anesthesia module, and model-only operative direct-restoration workflow.
 - Added an optional NodeDent Home launcher that opens from the current workspace without replacing direct-to-endo startup.
 - Preserved fast resume to the active endodontic decision card and wired launcher actions to saved cases, new case confirmation, prior visit setup, and Case Setup & Status.
-- Exposed only the shared isolation module as launchable from the launcher because it has event and capability output; diagnosis/anesthesia/restoration module IDs remain model contracts until their runners exist.
+- Renamed the launcher category to Shared modules and used availability tags so isolation is launchable as `Ready` while anesthesia is visible as `Model only`.
+- Exposed only the shared isolation module as launchable from the launcher because it has event and capability output; anesthesia remains a model contract until dose/timing, adequacy response, and reassessment rules exist.
 - Showed the operative workflow as model-only so surface-scope definitions are discoverable without implying an available chairside runner.
+- Did not list final restoration as a shared module; direct restoration is represented by the operative primary workflow and by `finalRestoration.placed` capability output.
 - Deferred timeline/evolution graph UI.
 
 ## Recommended Defaults

@@ -27,11 +27,10 @@ import {
   isOperativeSurfaceScope,
   operativeDirectRestorationWorkflow,
   operativeReadinessCapabilityRequirements,
-  operativeRestorationModuleCall,
+  operativeRestorationOutputCapabilities,
   scopesTargetDifferentToothSubstructures,
   sharedAnesthesiaWorkflowId,
   sharedDiagnosisWorkflowId,
-  sharedFinalRestorationWorkflowId,
 } from "../workflow/operative";
 import {
   endodonticRootWorkflow,
@@ -1334,10 +1333,11 @@ test("shared workflow capability vocabulary has scope rules", () => {
   });
 });
 
-test("operative direct restoration workflow reuses shared capabilities and modules", () => {
+test("operative direct restoration workflow reuses shared context and owns restoration output", () => {
   const workflow = operativeDirectRestorationWorkflow;
   const readinessNode = workflow.nodes["operative-readiness"];
   const restorationNode = workflow.nodes["operative-restoration-record"];
+  const completionNode = workflow.nodes["operative-restoration-complete"];
 
   assert.equal(workflow.discipline, "operative");
   assert.equal(workflow.supportedScopes.includes("surface"), true);
@@ -1350,8 +1350,10 @@ test("operative direct restoration workflow reuses shared capabilities and modul
     readinessNode.moduleCalls?.map((call) => call.workflowId),
     [sharedDiagnosisWorkflowId, sharedAnesthesiaWorkflowId, sharedIsolationWorkflow.workflowId]
   );
-  assert.equal(restorationNode.moduleCalls?.[0].workflowId, sharedFinalRestorationWorkflowId);
-  assert.deepEqual(operativeRestorationModuleCall.returnedCapabilities, ["finalRestoration.placed"]);
+  assert.equal(readinessNode.capabilityRequirements, undefined);
+  assert.equal(restorationNode.moduleCalls, undefined);
+  assert.deepEqual(operativeRestorationOutputCapabilities, ["finalRestoration.placed"]);
+  assert.deepEqual(completionNode.capabilityRequirements?.map((requirement) => requirement.name), ["finalRestoration.placed"]);
 });
 
 test("operative surface scope stays separate from endodontic canal scope", () => {
@@ -1404,8 +1406,10 @@ test("workflow launcher registry preserves endodontic fast path and ready shared
   assert.equal(endoEntry?.availability, "ready");
   assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), false);
   assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
-  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId]);
+  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
+  assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "modelOnly");
   assert.equal(operativeEntry?.availability, "modelOnly");
 });
 

@@ -1,7 +1,7 @@
 import type { WorkflowDefinition, WorkflowDiscipline, WorkflowScopeKind } from "../types";
 import { protocolNodes } from "../protocol/nodes";
 import { sharedIsolationWorkflow } from "./isolation";
-import { operativeDirectRestorationWorkflow } from "./operative";
+import { operativeDirectRestorationWorkflow, sharedAnesthesiaWorkflowId } from "./operative";
 
 export const endodonticRootWorkflowId = "endo.rct";
 export const endodonticRootWorkflowVersion = "0.1.0";
@@ -69,6 +69,17 @@ export const workflowLauncherEntries = [
     summary: "Standalone shared module with event output and isolation capability status.",
     supportedScopes: sharedIsolationWorkflow.supportedScopes,
     definition: sharedIsolationWorkflow,
+  },
+  {
+    workflowId: sharedAnesthesiaWorkflowId,
+    title: "Anesthesia",
+    discipline: "shared",
+    kind: "sharedModule",
+    availability: "modelOnly",
+    statusLabel: "Model only",
+    launchLabel: "Runner not available",
+    summary: "Capability contract exists; dose, timing, adequacy response, and reassessment runner are not modeled yet.",
+    supportedScopes: ["tooth", "quadrant", "sextant", "archSegment", "custom"],
   },
 ] as const satisfies readonly WorkflowLauncherEntry[];
 
