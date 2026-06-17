@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
+import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
 import { CanalSelector } from "./components/CanalSelector";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
@@ -108,6 +108,7 @@ export default function EndoChairsideGuide() {
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
@@ -260,8 +261,14 @@ export default function EndoChairsideGuide() {
     setCopied(false);
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
     setIsSavedCasesOpen(false);
     setIsPriorVisitOpen(false);
+  }
+
+  function openCasePanel(focusTarget?: CaseSetupFocusTarget) {
+    setCasePanelFocusTarget(focusTarget || null);
+    setIsCasePanelOpen(true);
   }
 
   function continueFromPriorVisit() {
@@ -686,7 +693,7 @@ export default function EndoChairsideGuide() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsCasePanelOpen(true)}
+                onClick={() => openCasePanel()}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-brand-navy-deep"
               >
                 Case Setup & Status
@@ -757,7 +764,7 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
-              onOpenCaseSetupStatus={() => setIsCasePanelOpen(true)}
+              onOpenCaseSetupStatus={openCasePanel}
               onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
               onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
             />
@@ -789,7 +796,10 @@ export default function EndoChairsideGuide() {
             caseData={caseData}
             activeCanal={activeCanal}
             currentNodeId={currentNodeId}
-            onClose={() => setIsCasePanelOpen(false)}
+            onClose={() => {
+              setIsCasePanelOpen(false);
+              setCasePanelFocusTarget(null);
+            }}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
             onUpdatePreOp={updatePreOp}
@@ -797,6 +807,7 @@ export default function EndoChairsideGuide() {
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordIsolationEvent={recordIsolationEvent}
             onDownloadCaseJson={downloadCaseJson}
+            initialFocusSection={casePanelFocusTarget}
           />
         ) : null}
 

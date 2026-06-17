@@ -255,3 +255,5 @@ export type ValidationMessage = {
   optionLabel: string;
   missing: string[];
 };
+
+export type CaseSetupFocusTarget = "isolation";

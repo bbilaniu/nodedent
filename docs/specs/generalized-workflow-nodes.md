@@ -422,11 +422,8 @@ Implemented in Phase 3C:
 - Added non-blocking shared readiness prompts to the pre-op/access area before the workflow moves deeply into access.
 - Shows diagnosis, radiograph, anesthesia, and isolation status without forcing anesthesia or isolation as hard stops.
 - Keeps `Pre-op review complete -> Access pulp chamber` available for fast workflow continuation.
-- Adds direct access from the readiness prompt to Case Setup & Status and isolation capture.
-
-Caveat:
-
-- The readiness prompt's `Record isolation` action currently opens Case Setup & Status, where the isolation capture section is available; it does not yet deep-link, scroll, or focus directly into that section.
+- Adds direct access from the readiness prompt to Case Setup & Status and deep-links to isolation capture.
+- Acknowledges existing current-visit isolation in the parent workflow and offers a revise/add-event action.
 
 Implemented in Phase 3D:
 
@@ -436,10 +433,9 @@ Implemented in Phase 3D:
 - Add quick actions for compromised, removed, and replaced isolation when isolation is currently established.
 - Keep anesthesia as a visible status until minimal anesthesia events and reassessment rules are modeled.
 
-Remaining:
+Deferred follow-up:
 
-- Add the parent workflow prompt that acknowledges existing isolation and allows revision.
-- Refine region vocabulary and clamp recommendation data after the initial module UI is designed.
+- Refine region vocabulary and clamp recommendation data only after source-backed recommendation data is available.
 
 ### Phase 4 - Add Embedded Module UI
 

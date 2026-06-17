@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import type { CanalRecord, ClinicalEvent, EndoCase } from "../types";
+import type { CanalRecord, CaseSetupFocusTarget, ClinicalEvent, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
@@ -108,6 +108,7 @@ export function CaseSetupStatusPanel({
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onRecordIsolationEvent,
+  initialFocusSection,
 }: {
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
@@ -117,11 +118,13 @@ export function CaseSetupStatusPanel({
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
+  const isolationSectionRef = useRef<HTMLElement | null>(null);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const latestIsolationEvent = capabilitySummary.isolation.sourceEvent;
   const latestIsolationEventTime = formatEventTimestamp(latestIsolationEvent?.timestamp);
@@ -155,6 +158,12 @@ export function CaseSetupStatusPanel({
       clampTooth: !prev.clampTooth || prev.clampTooth === previousTooth ? caseData.tooth || "" : prev.clampTooth,
     }));
   }, [caseData.tooth]);
+
+  useEffect(() => {
+    if (initialFocusSection !== "isolation") return;
+    isolationSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    isolationSectionRef.current?.focus({ preventScroll: true });
+  }, [initialFocusSection]);
 
   function updateIsolationForm(updates: Partial<IsolationFormState>) {
     setIsolationForm((prev) => ({ ...prev, ...updates }));
@@ -287,7 +296,7 @@ export function CaseSetupStatusPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 lg:col-span-2">
+      <section ref={isolationSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-brand-navy">Isolation</h3>

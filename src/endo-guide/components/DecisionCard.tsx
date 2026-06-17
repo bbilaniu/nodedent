@@ -1,5 +1,5 @@
 import React from "react";
-import type { CanalContinuationTarget, CanalRecord, DecisionOption, EndoCase, ProtocolNode, ValidationMessage } from "../types";
+import type { CanalContinuationTarget, CanalRecord, CaseSetupFocusTarget, DecisionOption, EndoCase, ProtocolNode, ValidationMessage } from "../types";
 import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
@@ -72,7 +72,7 @@ export function DecisionCard({
   onApplyDecision: (option: DecisionOption) => void;
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
-  onOpenCaseSetupStatus: () => void;
+  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenSavedWorkflow: () => void;
   onOpenPriorVisit: () => void;
 }) {
@@ -82,6 +82,7 @@ export function DecisionCard({
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
+  const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
   const readinessItems = [
     { label: "Diagnosis", status: capabilitySummary.diagnosis },
     { label: "Radiographs", status: capabilitySummary.radiographs },
@@ -113,20 +114,34 @@ export function DecisionCard({
               <div className="grid gap-2 sm:grid-cols-2 lg:w-auto">
                 <button
                   type="button"
-                  onClick={onOpenCaseSetupStatus}
+                  onClick={() => onOpenCaseSetupStatus()}
                   className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
                 >
                   Open Case Setup
                 </button>
                 <button
                   type="button"
-                  onClick={onOpenCaseSetupStatus}
+                  onClick={() => onOpenCaseSetupStatus("isolation")}
                   className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
                 >
-                  Record isolation
+                  {isolationIsEstablished ? "Review isolation" : "Record isolation"}
                 </button>
               </div>
             </div>
+            {isolationIsEstablished ? (
+              <div className="rounded-xl border border-brand-mint/40 bg-white px-3 py-2 text-sm leading-6 text-brand-navy">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p><strong>Isolation already recorded</strong>{caseData.tooth ? ` for tooth ${caseData.tooth}` : ""} this visit.</p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenCaseSetupStatus("isolation")}
+                    className="shrink-0 rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
+                  >
+                    Revise / add event
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
               {readinessItems.map(({ label, status }) => (
                 <div key={label} className={`min-w-0 rounded-xl border px-3 py-2 ${readinessStatusClass(status.satisfied, status.needsReassessment)}`}>
@@ -153,7 +168,7 @@ export function DecisionCard({
           <div className="grid gap-2 sm:grid-cols-3">
             <button
               type="button"
-              onClick={onOpenCaseSetupStatus}
+              onClick={() => onOpenCaseSetupStatus()}
               className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
             >
               Open Case Setup & Status
