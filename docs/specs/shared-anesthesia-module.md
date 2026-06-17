@@ -129,13 +129,15 @@ Runner behavior:
 The capability should be emitted by:
 
 - `anesthesia.adequacyConfirmed`
-- `anesthesia.topUpGiven` when adequacy is explicitly refreshed
+- `anesthesia.topUpGiven` only when `details.response === "adequate"`
 
 The capability should not be emitted by plain `anesthesia.administered` unless an explicit adequacy response is recorded.
 
 `anesthesia.needsReassessment` should make later selectors report that the relevant scope needs reassessment, even if an earlier adequacy event exists.
 
-If a top-up is recorded without a refreshed adequacy response, the event remains useful documentation but should not satisfy `anesthesia.adequate`.
+If a top-up is recorded without `response: "adequate"`, the event remains useful documentation but should not satisfy `anesthesia.adequate`.
+
+Phase 2 should not make every `anesthesia.topUpGiven` event a fallback adequacy event by type. It should use a single capability-output helper that checks event type and response. Selectors may still read explicit `capabilitiesSatisfied` records, but fallback derivation should only treat top-up as satisfying when the same helper says it satisfies adequacy.
 
 No automatic adequacy expiry should be calculated from anesthetic type, dose, vasoconstrictor/adrenaline, timing, or response until source-backed timing rules exist. Until then, adequacy remains valid for the matching scope unless a later matching reassessment event invalidates it, or a future explicit `expiresAt` is recorded from a source-backed rule.
 
@@ -157,6 +159,7 @@ Reasoning levels:
 
 ### Phase 1: Model Contract And Tests
 
+Status: implemented as typed model contract and focused test coverage.
 Reasoning level: medium.
 
 - Keep the typed core small: event types, `route`, scope, and explicit adequacy response.
@@ -165,13 +168,25 @@ Reasoning level: medium.
 - Confirm legacy events without `route` still import and summarize safely.
 - Do not add UI, product catalogs, or route-specific option filtering in Phase 1.
 
+Implemented:
+
+- Added typed `anesthesiaRoutes` values for `injection`, `topical`, and `other`.
+- Added typed `anesthesiaAdequacyResponses` values for `adequate`, `partial`, `notAdequate`, and `notAssessed`.
+- Added route and adequacy-response type guards, including a helper for the satisfying `adequate` response.
+- Extended anesthesia event detail parsing for `route`, `applicationType`, `administeredAt`, and typed `response`.
+- Preserved legacy event compatibility when route or response values are absent or not in the Phase 1 typed vocabulary.
+- Included route, application type, and administered time in anesthesia note context when those values are present.
+- Added focused tests for typed values, parser behavior, custom scope extraction, legacy event handling, and note fragments.
+
 ### Phase 2: Capability Semantics
 
+Status: planned.
 Reasoning level: medium.
 
 - Emit `anesthesia.adequate` from `anesthesia.adequacyConfirmed`.
-- Emit `anesthesia.adequate` from `anesthesia.topUpGiven` only when adequacy is explicitly refreshed.
+- Emit `anesthesia.adequate` from `anesthesia.topUpGiven` only when `details.response === "adequate"`.
 - Do not emit adequacy from administration-only events.
+- Add a single helper for anesthesia adequacy capability output so event generation, fallback selectors, and tests do not drift.
 - Ensure `anesthesia.needsReassessment` invalidates the latest matching adequacy status for the same scope.
 - Add tests for administration-only, adequacy confirmed, top-up without refreshed adequacy, top-up with refreshed adequacy, and reassessment invalidation.
 - Preserve no-automatic-expiry behavior unless an explicit `expiresAt` is already present.
