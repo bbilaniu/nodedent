@@ -5,6 +5,7 @@ import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaAdequacyResponse, AnesthesiaEventDetails, AnesthesiaEventType, AnesthesiaRoute } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment, getAnesthesiaEventDetails } from "../workflow/anesthesia";
+import { getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
 import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
 import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
@@ -259,6 +260,12 @@ export function CaseSetupStatusPanel({
   const anesthesiaRouteIsInjection = anesthesiaMode === "administration" && anesthesiaForm.route === "injection";
   const anesthesiaRouteIsTopical = anesthesiaMode === "administration" && anesthesiaForm.route === "topical";
   const anesthesiaRouteIsOther = anesthesiaMode === "administration" && anesthesiaForm.route === "other";
+  const anesthesiaAgentSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "agents");
+  const anesthesiaTechniqueSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "techniques");
+  const anesthesiaApplicationTypeSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "applicationTypes");
+  const anesthesiaDoseUnitSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "doseUnits");
+  const anesthesiaVasoconstrictorSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "vasoconstrictors");
+  const anesthesiaRouteLabelSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "routeLabels");
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -512,12 +519,24 @@ export function CaseSetupStatusPanel({
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {anesthesiaMode === "administration" ? (
-            <SelectInput
-              label="Entry type"
-              value={anesthesiaAdministrationActionLabels[anesthesiaForm.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered]}
-              onChange={(value) => updateAnesthesiaForm({ action: anesthesiaAdministrationActionFromLabel(value) })}
-              options={anesthesiaAdministrationActionOptions}
-            />
+            <div>
+              <p className="mb-2 text-xs font-medium text-brand-slate">Local anesthesia route</p>
+              <div className="flex flex-wrap gap-2">
+                {anesthesiaRouteOptions.map((routeLabel) => {
+                  const route = anesthesiaRouteFromLabel(routeLabel);
+                  return (
+                    <button
+                      key={route}
+                      type="button"
+                      onClick={() => selectAnesthesiaRoute(route)}
+                      className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaForm.route === route ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+                    >
+                      {route === "injection" ? "Add injection" : route === "topical" ? "Add topical" : "Add other"}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
             <div className="md:col-span-2">
               <p className="mb-2 text-xs font-medium text-brand-slate">Assessment</p>
@@ -536,50 +555,38 @@ export function CaseSetupStatusPanel({
             </div>
           )}
           {anesthesiaMode === "administration" ? (
-            <div>
-              <p className="mb-2 text-xs font-medium text-brand-slate">Local anesthesia entries</p>
-              <div className="flex flex-wrap gap-2">
-                {anesthesiaRouteOptions.map((routeLabel) => {
-                  const route = anesthesiaRouteFromLabel(routeLabel);
-                  return (
-                    <button
-                      key={route}
-                      type="button"
-                      onClick={() => selectAnesthesiaRoute(route)}
-                      className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaForm.route === route ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
-                    >
-                      {route === "injection" ? "Add injection entry" : route === "topical" ? "Add topical entry" : "Add other entry"}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <SelectInput
+              label="Purpose"
+              value={anesthesiaAdministrationActionLabels[anesthesiaForm.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered]}
+              onChange={(value) => updateAnesthesiaForm({ action: anesthesiaAdministrationActionFromLabel(value) })}
+              options={anesthesiaAdministrationActionOptions}
+            />
           ) : null}
           <TextInput label="Target teeth" value={anesthesiaForm.targetTeeth} onChange={(value) => updateAnesthesiaForm({ targetTeeth: value })} placeholder="e.g., 36 or 34 35 36" />
           <TextInput label="Region label" value={anesthesiaForm.regionLabel} onChange={(value) => updateAnesthesiaForm({ regionLabel: value })} placeholder="e.g., Q3, lower left, custom" />
           {anesthesiaRouteIsInjection ? (
             <>
-              <TextInput label="Technique" value={anesthesiaForm.technique} onChange={(value) => updateAnesthesiaForm({ technique: value })} placeholder="optional" />
+              <TextInput label="Technique" value={anesthesiaForm.technique} onChange={(value) => updateAnesthesiaForm({ technique: value })} placeholder="optional" suggestions={anesthesiaTechniqueSuggestions} />
               <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
-              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" />
+              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" suggestions={anesthesiaAgentSuggestions} />
               <TextInput label="Dose" value={anesthesiaForm.dose} onChange={(value) => updateAnesthesiaForm({ dose: value })} placeholder="optional" inputMode="decimal" />
-              <TextInput label="Dose unit" value={anesthesiaForm.doseUnit} onChange={(value) => updateAnesthesiaForm({ doseUnit: value })} placeholder="e.g., mL, carpule" />
-              <TextInput label="Vasoconstrictor" value={anesthesiaForm.vasoconstrictor} onChange={(value) => updateAnesthesiaForm({ vasoconstrictor: value })} placeholder="optional" />
+              <TextInput label="Dose unit" value={anesthesiaForm.doseUnit} onChange={(value) => updateAnesthesiaForm({ doseUnit: value })} placeholder="e.g., mL, carpule" suggestions={anesthesiaDoseUnitSuggestions} />
+              <TextInput label="Vasoconstrictor" value={anesthesiaForm.vasoconstrictor} onChange={(value) => updateAnesthesiaForm({ vasoconstrictor: value })} placeholder="optional" suggestions={anesthesiaVasoconstrictorSuggestions} />
               <TextInput label="Time administered" value={anesthesiaForm.administeredAt} onChange={(value) => updateAnesthesiaForm({ administeredAt: value })} placeholder="e.g., 09:55" />
             </>
           ) : null}
           {anesthesiaRouteIsTopical ? (
             <>
-              <TextInput label="Application type" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" />
+              <TextInput label="Application type" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" suggestions={anesthesiaApplicationTypeSuggestions} />
               <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
-              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" />
+              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" suggestions={anesthesiaAgentSuggestions} />
               <TextInput label="Time administered" value={anesthesiaForm.administeredAt} onChange={(value) => updateAnesthesiaForm({ administeredAt: value })} placeholder="e.g., 09:55" />
             </>
           ) : null}
           {anesthesiaRouteIsOther ? (
             <>
-              <TextInput label="Route / application" value={anesthesiaForm.routeLabel} onChange={(value) => updateAnesthesiaForm({ routeLabel: value })} placeholder="optional" />
-              <TextInput label="Application details" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" />
+              <TextInput label="Route / application" value={anesthesiaForm.routeLabel} onChange={(value) => updateAnesthesiaForm({ routeLabel: value })} placeholder="optional" suggestions={anesthesiaRouteLabelSuggestions} />
+              <TextInput label="Application details" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" suggestions={anesthesiaApplicationTypeSuggestions} />
               <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
             </>
           ) : null}
@@ -599,7 +606,7 @@ export function CaseSetupStatusPanel({
           className={`mt-3 rounded-xl border px-4 py-2 text-sm font-semibold transition ${anesthesiaAssessmentCanSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
         >
           {anesthesiaMode === "administration"
-            ? anesthesiaForm.route === "injection" ? "Add injection entry" : anesthesiaForm.route === "topical" ? "Add topical entry" : "Add other entry"
+            ? anesthesiaForm.route === "injection" ? "Add injection" : anesthesiaForm.route === "topical" ? "Add topical" : "Add other"
             : "Record assessment"}
         </button>
       </section>

@@ -33,6 +33,7 @@ import {
   sharedAnesthesiaWorkflow,
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
+import { anesthesiaCatalogOwnership, getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import {
@@ -1505,6 +1506,24 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
   assert.equal(legacyDetails.response, undefined);
   assert.equal(legacyDetails.tooth, "36");
   assert.equal(isCapabilitySatisfied(baseCase({ tooth: "36", globalEvents: [legacyEvent] }), "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
+});
+
+test("shared anesthesia catalog suggestions are route scoped and non-prescriptive", () => {
+  assert.equal(anesthesiaCatalogOwnership.clinicalUse, "documentationSuggestionsOnly");
+  assert.equal(anesthesiaCatalogOwnership.allowsCustomText, true);
+  assert.equal(anesthesiaCatalogOwnership.hasDoseDefaults, false);
+  assert.equal(anesthesiaCatalogOwnership.hasProductRecommendations, false);
+
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("other", "agents"), []);
+  assert.equal(getAnesthesiaCatalogOptions("injection", "techniques").includes("Infiltration"), true);
+  assert.equal(getAnesthesiaCatalogOptions("topical", "techniques").includes("Infiltration"), false);
+  assert.equal(getAnesthesiaCatalogOptions("topical", "applicationTypes").includes("Topical application"), true);
+  assert.equal(getAnesthesiaCatalogOptions("injection", "applicationTypes").includes("Topical application"), false);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "doseUnits"), ["mL", "carpule(s)"]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "doseUnits"), []);
+  assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
 });
 
 test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {

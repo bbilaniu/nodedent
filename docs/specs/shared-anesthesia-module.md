@@ -123,11 +123,11 @@ type AnesthesiaEntry = {
 
 Runner behavior:
 
-- Label the area `Local anesthesia entries`.
+- Label the route selector area `Local anesthesia route`.
 - Default administration capture to `anesthesia.administered`.
 - Use `anesthesia.topUpGiven` only when the user explicitly selects a top-up action.
 - A future implementation may default to top-up after enough time has elapsed from the most recent injection entry, such as more than 5 minutes, because initial injected doses are typically charted within about a minute of each other. Do not add this heuristic until the UI can make the assumption visible and reversible.
-- Prefer separate `Add injection entry` and `Add topical entry` actions once the UI supports those routes.
+- Prefer separate `Add injection` and `Add topical` route actions once the UI supports those routes.
 - If the first pass uses one `Add entry` action, require a route field before route-specific controls become active.
 - Filter option lists by route only to prevent inconsistent documentation. Do not present filtered products, techniques, or dose values as recommendations.
 - Keep adequacy confirmation as a separate explicit action or field, even when administration details are complete.
@@ -135,6 +135,28 @@ Runner behavior:
 - Offer a reassessment/top-up path that appends a supplemental event and returns the parent workflow to its current node.
 
 Route-specific visibility means the UI shows only fields that fit the selected route. For example, injection entries can show injection technique and vasoconstrictor fields, while topical entries can show application type. This is an information-architecture rule, not clinical decision support: it should not suggest which route, agent, technique, or dose to use.
+
+## Catalog Shape
+
+The first `anesthesiaCatalog` should be a documentation-suggestion layer, not clinical decision support. Catalog values can speed up charting and prevent mismatched fields, but every catalog-backed field must continue to accept custom text.
+
+Potential long-term catalog ownership options:
+
+- NodeDent core: stable documentation vocabulary, such as route labels, field labels, and non-prescriptive technique/application terms.
+- User preferences: clinic-specific products, spelling, abbreviations, favorites, and local note phrasing.
+- Template/config layer: organization-managed product catalogs, market availability, localization, and import/export mappings.
+
+Potential catalog item fields:
+
+- Stable id, user-facing label, route, and target field.
+- Optional synonyms, abbreviations, locale labels, and sort/favorite metadata.
+- Optional market or clinic availability metadata.
+- Optional product metadata, such as active ingredient text, concentration text, vasoconstrictor/adrenaline text, package form, and manufacturer text.
+- Optional documentation constraints, such as which route or field can show the value.
+- Optional source/owner metadata so user-defined, clinic-defined, and app-defined entries can be audited separately.
+- Optional deprecation/replacement metadata for renamed products or templates.
+
+Catalog values must not include dose defaults, timing thresholds, adequacy rules, or agent recommendations unless those rules are source-backed and documented in a future ADR or active spec. Even then, generated rules should be visible and reversible before they affect an event.
 
 ## Capability Rules
 
@@ -253,9 +275,9 @@ Reasoning level: medium.
 - Treat each entry action as one immediate event append; do not build a multi-entry batch editor in Phase 4A.
 - Default route-aware administration entries to `anesthesia.administered`; make `anesthesia.topUpGiven` explicit.
 - Within `Record administration`, replace the generic route-first form with clearer entry actions:
-  - `Add injection entry`
-  - `Add topical entry`
-  - `Add other entry` only if a non-injection, non-topical route must be documented.
+  - `Add injection`
+  - `Add topical`
+  - `Add other` only if a non-injection, non-topical route must be documented.
 - Show route-specific fields only when they apply:
   - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, and time administered.
   - Topical entries: application type, site, agent, time administered, and notes.
@@ -269,7 +291,7 @@ Reasoning level: medium.
 
 Implemented:
 
-- Replaced the generic route selector with `Add injection entry`, `Add topical entry`, and `Add other entry` controls in the Case Setup & Status anesthesia panel.
+- Replaced the generic route selector with `Add injection`, `Add topical`, and `Add other` controls in the Case Setup & Status anesthesia panel.
 - Kept `Record administration` and `Record assessment` as the primary panel modes.
 - Kept the default entry type as initial administration and required explicit selection of `Top-up`.
 - Showed only route-relevant administration fields for injection, topical, and other entries.
@@ -280,12 +302,29 @@ Implemented:
 
 #### Phase 4B: Catalog And Filtering Follow-Up
 
+Status: implemented narrowly as route-scoped documentation suggestions.
 Reasoning level: medium-high.
 
 - Add route-specific product and technique option lists only after catalog ownership is decided.
 - Filter product and technique option lists by route only to prevent inconsistent documentation, not to recommend clinical choices.
 - Decide whether these catalogs belong in NodeDent core, user preferences, or a future template/config layer.
 - Keep all catalog choices non-prescriptive and avoid adding clinical dose recommendations.
+
+Phase 4B ownership decision:
+
+- Use a small app-owned interim catalog for documentation vocabulary only.
+- Keep product/agent lists empty until source, jurisdiction, and ownership are decided.
+- Keep every catalog-backed field free-text through datalist suggestions rather than closed selects.
+- Do not add dose defaults, product recommendations, timing rules, or adequacy inference.
+
+Implemented:
+
+- Added an `anesthesiaCatalog` module with explicit metadata marking it as documentation suggestions only.
+- Added route-scoped suggestions for injection technique, injection dose units, vasoconstrictor documentation text, topical application type, and other-route labels.
+- Kept agent/product suggestions empty in the interim catalog.
+- Added optional datalist suggestions to shared text inputs so clinicians can type custom values.
+- Wired route-filtered suggestions into the Case Setup & Status anesthesia panel.
+- Added tests for route filtering and non-prescriptive catalog guardrails.
 
 ### Phase 5: Embedded Module Runner
 
