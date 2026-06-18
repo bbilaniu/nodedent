@@ -19,6 +19,7 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
   anesthesiaAdequacyResponses,
@@ -1626,6 +1627,95 @@ test("shared isolation catalog merges user items, hides seed rows, and snapshots
   assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
   assert.equal(getIsolationEventDetails(event).reason, "Clinic reason");
   assert.equal(getIsolationEventDetails(event).notes, "Isolation monitored throughout");
+});
+
+test("user isolation catalog persistence loads, validates, and merges local user items", () => {
+  const userClampCode = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "W8A",
+    aliases: ["8A"],
+    favorite: true,
+    sortOrder: 1,
+  });
+  const userReason = createUserIsolationCatalogItem({
+    field: "reasons",
+    label: "User reason",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const hiddenUserNote = createUserIsolationCatalogItem({
+    field: "notes",
+    label: "Hidden note",
+    active: false,
+    sortOrder: 0,
+  });
+  const hiddenSeedReason = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Saliva contamination")!,
+    { active: false, favorite: false }
+  );
+  const favoriteSeedNote = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Isolation monitored throughout")!,
+    { active: true, favorite: true }
+  );
+  const invalidFieldItem: CatalogItem = {
+    ...userReason,
+    id: "user.isolation.invalid-field",
+    appliesTo: { field: "agents" },
+  };
+  const routedItem: CatalogItem = {
+    ...userReason,
+    id: "user.isolation.routed",
+    appliesTo: { route: "injection", field: "reasons" },
+  };
+  const storage = memoryStorage();
+
+  assert.deepEqual(loadUserIsolationCatalogItems(storage), []);
+  assert.deepEqual(loadUserIsolationCatalogItems(memoryStorage({ [USER_ISOLATION_CATALOG_STORAGE_KEY]: "not json" })), []);
+  assert.deepEqual(loadUserIsolationCatalogItems(memoryStorage({ [USER_ISOLATION_CATALOG_STORAGE_KEY]: JSON.stringify({ version: 2, items: [userReason] }) })), []);
+
+  saveUserIsolationCatalogItems([
+    userClampCode,
+    userReason,
+    hiddenUserNote,
+    hiddenSeedReason,
+    favoriteSeedNote,
+    { ...userReason, id: "seed-owned-ignored", owner: "seed" },
+    { ...userReason, id: "wrong-category-ignored", category: "anesthesia" },
+    invalidFieldItem,
+    routedItem,
+  ], storage);
+
+  const loadedItems = loadUserIsolationCatalogItems(storage);
+  const clampCodes = getIsolationCatalogOptions("clampCodes", loadedItems);
+  const reasons = getIsolationCatalogOptions("reasons", loadedItems);
+  const notes = getIsolationCatalogOptions("notes", loadedItems);
+  const event = {
+    id: "evt_isolation_user_catalog_no_inference",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.removed,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: {
+      clampCode: clampCodes[0],
+      reason: reasons[0],
+      notes: notes[0],
+    },
+  };
+  const caseData = baseCase({ tooth: "36", globalEvents: [event] });
+
+  assert.equal(loadedItems.every((item) => item.owner === "user" && item.category === "isolation"), true);
+  assert.equal(loadedItems.some((item) => item.id === "seed-owned-ignored"), false);
+  assert.equal(loadedItems.some((item) => item.id === "wrong-category-ignored"), false);
+  assert.equal(loadedItems.some((item) => item.id === "user.isolation.invalid-field"), false);
+  assert.equal(loadedItems.some((item) => item.id === "user.isolation.routed"), false);
+  assert.deepEqual(clampCodes, ["W8A"]);
+  assert.equal(reasons[0], "User reason");
+  assert.equal(reasons.includes("Saliva contamination"), false);
+  assert.equal(notes[0], "Isolation monitored throughout");
+  assert.equal(notes.includes("Hidden note"), false);
+  assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
+  assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).satisfied, false);
+  assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).needsReassessment, true);
 });
 
 test("shared catalog infrastructure merges customizable documentation catalog layers", () => {

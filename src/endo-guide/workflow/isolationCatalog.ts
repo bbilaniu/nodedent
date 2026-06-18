@@ -1,14 +1,17 @@
 import type { CatalogItem } from "./catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "./catalogs";
 
-export type IsolationCatalogField =
-  | "methodLabels"
-  | "supportTypes"
-  | "supportPhrases"
-  | "regionLabels"
-  | "reasons"
-  | "notes"
-  | "clampCodes";
+export const isolationCatalogFields = [
+  "methodLabels",
+  "supportTypes",
+  "supportPhrases",
+  "regionLabels",
+  "reasons",
+  "notes",
+  "clampCodes",
+] as const;
+
+export type IsolationCatalogField = typeof isolationCatalogFields[number];
 
 export const isolationCatalogOwnership = {
   owner: "seed",

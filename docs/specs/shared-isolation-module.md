@@ -167,6 +167,7 @@ Potential catalog item fields:
 ## Phase 1: Baseline Audit And Tests
 
 Status: implemented as the current `shared.isolation` baseline with focused selector and note-fragment tests.
+Reasoning level: low.
 
 Tasks:
 
@@ -179,6 +180,7 @@ Tasks:
 ## Phase 2: Isolation Catalog Model
 
 Status: implemented as a narrow shared catalog model with non-prescriptive seed suggestions and user-owned clamp-code support.
+Reasoning level: medium.
 
 Add a narrow isolation catalog layer using the shared catalog infrastructure.
 
@@ -193,6 +195,9 @@ Tasks:
 Seed values should be intentionally small and non-prescriptive. Do not seed clamp-code shortcuts in the first isolation catalog pass; allow user-owned entries first and leave clinic-owned clamp-code shortcuts for the later clinic catalog layer.
 
 ## Phase 3: Local User Isolation Catalog Persistence
+
+Status: implemented narrowly for local user-owned isolation catalog storage.
+Reasoning level: medium.
 
 Add local persistence for user-owned isolation shortcuts only.
 
@@ -215,6 +220,8 @@ Deferred from this phase:
 
 ## Phase 4: Narrow Isolation Shortcut UI
 
+Reasoning level: medium-high.
+
 Add a narrow UI surface for saving and maintaining isolation shortcuts without building the full catalog management workspace.
 
 Tasks:
@@ -226,6 +233,8 @@ Tasks:
 - Defer bulk catalog editing, import/export, sync, clinic/template ownership, and global catalog management to a later settings/catalog workspace.
 
 ## Phase 5: Operative Workflow Readiness
+
+Reasoning level: high.
 
 Prepare isolation documentation for the next primary workflow area: operative dentistry.
 
