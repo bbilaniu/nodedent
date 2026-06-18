@@ -2434,6 +2434,18 @@ test("shared isolation replacement re-establishes the isolation capability", () 
   assert.match(eventFragment(caseData.globalEvents[2]), /Clamp W14A on tooth 36/);
 });
 
+test("shared isolation reassessment node exposes recordable actions", () => {
+  const reassessmentNode = sharedIsolationWorkflow.nodes["isolation-needs-reassessment"];
+  const eventTypes = reassessmentNode.options.map((option) => option.noteEvent?.type).filter(Boolean);
+
+  assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-needs-reassessment"), true);
+  assert.deepEqual(eventTypes, [
+    isolationEventTypes.compromised,
+    isolationEventTypes.replaced,
+    isolationEventTypes.removed,
+  ]);
+});
+
 test("capability selectors use explicit capability expiry for reassessment", () => {
   const caseData = baseCase({
     globalEvents: [

@@ -183,6 +183,7 @@ Implemented:
 - Verified the existing `shared.isolation` workflow identity, event vocabulary, supported scopes, completion nodes, event details, capability output, and coverage summary behavior.
 - Added focused tests for rubber dam isolation coverage by exposed tooth, unrelated-tooth non-matching, compromised isolation invalidation, removal invalidation, and replacement re-establishment.
 - Added focused tests confirming alternative isolation establishes `isolation.established` for the recorded region.
+- Kept the isolation reassessment node actionable in the embedded runner so compromised, replacement, and removal events can still be recorded from reassessment/review entry points.
 - Added note-fragment coverage for rubber dam, compromised, removed, replaced, and alternative isolation events, including cases where optional clamp fields or exposed teeth are omitted.
 
 ## Phase 2: Isolation Catalog Model

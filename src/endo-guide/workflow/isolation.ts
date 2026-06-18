@@ -292,6 +292,7 @@ export const sharedIsolationWorkflow: WorkflowDefinition = {
       title: "Isolation needs reassessment",
       chairsideInstruction: "Reassess, replace, or remove isolation before a parent workflow relies on it.",
       options: [
+        { label: "Isolation compromised", nextNodeId: "isolation-needs-reassessment", noteEvent: { type: isolationEventTypes.compromised } },
         { label: "Isolation replaced", nextNodeId: "isolation-complete", noteEvent: { type: isolationEventTypes.replaced } },
         { label: "Isolation removed", nextNodeId: "isolation-needs-reassessment", noteEvent: { type: isolationEventTypes.removed } },
       ],

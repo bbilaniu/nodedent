@@ -149,8 +149,9 @@ export function IsolationWorkflowRunner({
   const defaultEventType = getDefaultEventType(currentNode);
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
   const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, caseData.tooth));
-  const completion = workflow.completionNodeIds.includes(currentNode.id);
   const visibleOptions = useMemo(() => currentNode.options || [], [currentNode.options]);
+  const hasRecordableOptions = visibleOptions.some((option) => option.noteEvent?.type);
+  const completion = workflow.completionNodeIds.includes(currentNode.id) && !hasRecordableOptions;
   const selectedOption = visibleOptions.find((option) => option.noteEvent?.type === selectedEventType) || visibleOptions[0];
   const methodOptions = selectedEventType === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
   const showMethodLabelField = selectedEventType !== isolationEventTypes.compromised && selectedEventType !== isolationEventTypes.removed;
