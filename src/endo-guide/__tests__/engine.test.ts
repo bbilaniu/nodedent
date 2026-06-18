@@ -41,7 +41,7 @@ import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
-import { createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
+import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
@@ -1716,6 +1716,33 @@ test("user isolation catalog persistence loads, validates, and merges local user
   assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
   assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).satisfied, false);
   assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).needsReassessment, true);
+});
+
+test("isolation shortcut saving captures only catalog-backed documentation fields", () => {
+  const placementItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.rubberDamPlaced,
+    regionLabel: "Q3",
+    clampCode: "W8A",
+    note: "Isolation stable",
+  });
+  const reassessmentItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.compromised,
+    regionLabel: "Q3",
+    clampCode: "W8A",
+    note: "Saliva contamination",
+  });
+  const removalItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.removed,
+    regionLabel: "",
+    clampCode: "",
+    note: "Dam removed for assessment",
+  });
+
+  assert.deepEqual(placementItems.map((item) => item.appliesTo?.field), ["regionLabels", "clampCodes", "notes"]);
+  assert.deepEqual(placementItems.map((item) => item.label), ["Q3", "W8A", "Isolation stable"]);
+  assert.deepEqual(reassessmentItems.map((item) => item.appliesTo?.field), ["regionLabels", "clampCodes", "reasons"]);
+  assert.deepEqual(removalItems.map((item) => item.appliesTo?.field), ["reasons"]);
+  assert.equal([...placementItems, ...reassessmentItems, ...removalItems].every((item) => item.owner === "user" && item.favorite === true), true);
 });
 
 test("shared catalog infrastructure merges customizable documentation catalog layers", () => {

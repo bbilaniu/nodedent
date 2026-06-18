@@ -1,5 +1,7 @@
 import type { CatalogItem } from "./catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "./catalogs";
+import type { IsolationEventType } from "./isolation";
+import { isolationEventTypes } from "./isolation";
 
 export const isolationCatalogFields = [
   "methodLabels",
@@ -79,6 +81,30 @@ export function createUserIsolationCatalogOverride(item: CatalogItem, updates: P
     active: updates.active,
     favorite: updates.favorite,
   };
+}
+
+function shortcutItem(field: IsolationCatalogField, label: string) {
+  const trimmed = label.trim();
+  return trimmed ? createUserIsolationCatalogItem({ field, label: trimmed, favorite: true, sortOrder: 1 }) : undefined;
+}
+
+export function buildUserIsolationCatalogItemsFromForm({
+  action,
+  regionLabel = "",
+  clampCode = "",
+  note = "",
+}: {
+  action: IsolationEventType;
+  regionLabel?: string;
+  clampCode?: string;
+  note?: string;
+}): CatalogItem[] {
+  const noteField = action === isolationEventTypes.compromised || action === isolationEventTypes.removed ? "reasons" : "notes";
+  return [
+    shortcutItem("regionLabels", regionLabel),
+    shortcutItem("clampCodes", clampCode),
+    shortcutItem(noteField, note),
+  ].filter(Boolean) as CatalogItem[];
 }
 
 export const seedIsolationCatalogItems: CatalogItem[] = [

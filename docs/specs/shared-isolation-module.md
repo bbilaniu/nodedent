@@ -247,6 +247,7 @@ Deferred from this phase:
 
 ## Phase 4: Narrow Isolation Shortcut UI
 
+Status: implemented narrowly in Case Setup and the embedded isolation runner for user-owned isolation shortcuts.
 Reasoning level: medium-high.
 
 Add a narrow UI surface for saving and maintaining isolation shortcuts without building the full catalog management workspace.
@@ -258,6 +259,16 @@ Tasks:
 - Keep the action language clear that saving a shortcut does not record a clinical event.
 - Keep event-recording actions separate from shortcut-management actions.
 - Defer bulk catalog editing, import/export, sync, clinic/template ownership, and global catalog management to a later settings/catalog workspace.
+
+Implemented:
+
+- Loaded user-owned isolation catalog items at the app root and persisted updates through `nodedent.userCatalog.sharedIsolation.v1`.
+- Passed user isolation catalog items into Case Setup & Status and the embedded isolation workflow runner.
+- Added datalist suggestions for isolation region labels, clamp codes, reason phrases, and note phrases.
+- Added contextual `Save shortcuts` actions in both isolation capture surfaces. Saving shortcuts updates the user catalog only and does not record a clinical event.
+- Added a compact isolation shortcut manager in Case Setup & Status for field-specific add, favorite/unfavorite, hide/unhide, edit, delete, and seed-override reset behavior.
+- Kept shortcut management local to user-owned isolation catalog items. Clinic/template storage, global settings, import/export, and sync remain deferred.
+- Added tests for shortcut item extraction from isolation forms, including note versus reason field routing and exclusion of blank values.
 
 ## Phase 5: Operative Workflow Readiness
 

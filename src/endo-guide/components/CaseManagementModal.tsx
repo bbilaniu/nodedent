@@ -38,6 +38,8 @@ export function CaseManagementModal({
   onOpenIsolationWorkflow,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
+  userIsolationCatalogItems = [],
+  onUserIsolationCatalogItemsChange,
   onDownloadCaseJson,
   initialFocusSection,
 }: {
@@ -55,6 +57,8 @@ export function CaseManagementModal({
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
+  userIsolationCatalogItems?: CatalogItem[];
+  onUserIsolationCatalogItemsChange?: (items: CatalogItem[]) => void;
   onDownloadCaseJson: () => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
@@ -123,6 +127,8 @@ export function CaseManagementModal({
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
+            userIsolationCatalogItems={userIsolationCatalogItems}
+            onUserIsolationCatalogItemsChange={onUserIsolationCatalogItemsChange}
             initialFocusSection={initialFocusSection}
           />
         </div>

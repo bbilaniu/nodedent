@@ -24,6 +24,7 @@ import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
@@ -109,6 +110,7 @@ export default function EndoChairsideGuide() {
     }
   });
   const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
+  const [userIsolationCatalogItems, setUserIsolationCatalogItems] = useState(() => loadUserIsolationCatalogItems());
   const [currentNodeId, setCurrentNodeId] = useState(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -210,6 +212,11 @@ export default function EndoChairsideGuide() {
   function updateUserAnesthesiaCatalogItems(items: typeof userAnesthesiaCatalogItems) {
     setUserAnesthesiaCatalogItems(items);
     saveUserAnesthesiaCatalogItems(items);
+  }
+
+  function updateUserIsolationCatalogItems(items: typeof userIsolationCatalogItems) {
+    setUserIsolationCatalogItems(items);
+    saveUserIsolationCatalogItems(items);
   }
 
   function updatePreOp(field: string, value: string | boolean) {
@@ -951,6 +958,8 @@ export default function EndoChairsideGuide() {
             onOpenIsolationWorkflow={openIsolationWorkflow}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
+            userIsolationCatalogItems={userIsolationCatalogItems}
+            onUserIsolationCatalogItemsChange={updateUserIsolationCatalogItems}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}
           />
@@ -966,6 +975,8 @@ export default function EndoChairsideGuide() {
             latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
+            userIsolationCatalogItems={userIsolationCatalogItems}
+            onUserIsolationCatalogItemsChange={updateUserIsolationCatalogItems}
             onClose={() => setEmbeddedWorkflowLaunch(null)}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
