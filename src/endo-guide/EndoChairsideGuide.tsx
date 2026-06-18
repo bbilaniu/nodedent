@@ -23,7 +23,7 @@ import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
-import { loadUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
@@ -108,7 +108,7 @@ export default function EndoChairsideGuide() {
       return initialCase;
     }
   });
-  const [userAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
+  const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
   const [currentNodeId, setCurrentNodeId] = useState(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -205,6 +205,11 @@ export default function EndoChairsideGuide() {
   function updateCase(updates: Partial<EndoCase>) {
     setCaseData((prev) => ({ ...prev, ...updates }));
     setValidationMessage(null);
+  }
+
+  function updateUserAnesthesiaCatalogItems(items: typeof userAnesthesiaCatalogItems) {
+    setUserAnesthesiaCatalogItems(items);
+    saveUserAnesthesiaCatalogItems(items);
   }
 
   function updatePreOp(field: string, value: string | boolean) {
@@ -945,6 +950,7 @@ export default function EndoChairsideGuide() {
             onRecordIsolationEvent={recordIsolationEvent}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
+            onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}
           />

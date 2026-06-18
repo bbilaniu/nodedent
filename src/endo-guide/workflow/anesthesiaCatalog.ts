@@ -19,6 +19,10 @@ export const anesthesiaCatalogOwnership = {
   hasProductRecommendations: false,
 } as const;
 
+function slugifyCatalogValue(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
 function anesthesiaCatalogItem(
   field: AnesthesiaCatalogField,
   route: AnesthesiaRoute,
@@ -27,7 +31,7 @@ function anesthesiaCatalogItem(
   metadata: Partial<Pick<CatalogItem, "aliases" | "favorite" | "source" | "version">> = {}
 ): CatalogItem {
   return {
-    id: `anesthesia.${route}.${field}.${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+    id: `anesthesia.${route}.${field}.${slugifyCatalogValue(label)}`,
     owner: "seed",
     category: "anesthesia",
     label,
@@ -35,6 +39,45 @@ function anesthesiaCatalogItem(
     active: true,
     sortOrder,
     ...metadata,
+  };
+}
+
+export function createUserAnesthesiaCatalogItem({
+  route,
+  field,
+  label,
+  aliases,
+  favorite,
+  active = true,
+  sortOrder,
+}: {
+  route: AnesthesiaRoute;
+  field: AnesthesiaCatalogField;
+  label: string;
+  aliases?: string[];
+  favorite?: boolean;
+  active?: boolean;
+  sortOrder?: number;
+}): CatalogItem {
+  return {
+    id: `user.anesthesia.${route}.${field}.${slugifyCatalogValue(label)}`,
+    owner: "user",
+    category: "anesthesia",
+    label,
+    aliases,
+    appliesTo: { route, field },
+    active,
+    favorite,
+    sortOrder,
+  };
+}
+
+export function createUserAnesthesiaCatalogOverride(item: CatalogItem, updates: Pick<CatalogItem, "active" | "favorite">): CatalogItem {
+  return {
+    ...item,
+    owner: "user",
+    active: updates.active,
+    favorite: updates.favorite,
   };
 }
 

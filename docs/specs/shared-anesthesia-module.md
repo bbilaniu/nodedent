@@ -466,12 +466,31 @@ Deferred:
 
 #### Phase 6D: Catalog Management UI
 
-Status: deferred.
+Status: implemented narrowly in Case Setup for user-owned anesthesia shortcuts.
 Reasoning level: medium-high.
 
 - Add UI for adding, hiding, favoriting, sorting, and editing user-owned catalog items.
 - Keep every catalog-backed field editable/free-text.
 - Keep source-backed rules and clinical recommendations out of catalog management.
+
+Implemented:
+
+- Added a compact anesthesia shortcut manager inside the Case Setup anesthesia section.
+- Supports route and field selection for anesthesia shortcut context.
+- Supports adding user-owned anesthesia shortcuts.
+- Supports favoriting and hiding catalog rows through user-owned overrides, including seed-item overrides.
+- Supports editing and deleting user-owned shortcuts.
+- Explains that favorites appear first in the selected field's suggestions.
+- Persists changes through the Phase 6C local user anesthesia catalog storage helper.
+- Keeps seed catalog entries read-only; user changes are stored as user-owned entries or overrides.
+- Preserves free-text datalist entry behavior and non-prescriptive catalog behavior.
+
+Deferred:
+
+- Full settings screen or global catalog management workspace.
+- Editing clinic/template catalog layers.
+- Import/export or sync of catalogs.
+- Source-backed timing, expiry, safety, or treatment recommendation rules.
 
 ## Later Runner Acceptance Criteria
 

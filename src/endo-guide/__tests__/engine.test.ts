@@ -34,7 +34,7 @@ import {
   sharedAnesthesiaWorkflow,
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
-import { anesthesiaCatalogOwnership, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
+import { anesthesiaCatalogOwnership, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
 import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
@@ -1685,6 +1685,29 @@ test("user anesthesia catalog persistence loads, validates, and merges local use
   assert.equal(administrationRecord?.details.doseUnit, undefined);
   assert.equal(administrationRecord?.options?.expiresAt, undefined);
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
+});
+
+test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {
+  const userDoseShortcut = createUserAnesthesiaCatalogItem({
+    route: "injection",
+    field: "vasoconstrictorDoses",
+    label: "1:50K epinephrine/adrenaline",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const seedBlock = seedAnesthesiaCatalogItems.find((item) => item.label === "Block")!;
+  const hiddenBlock = createUserAnesthesiaCatalogOverride(seedBlock, { active: false, favorite: seedBlock.favorite });
+  const seedInfiltration = seedAnesthesiaCatalogItems.find((item) => item.label === "Infiltration")!;
+  const favoriteInfiltration = createUserAnesthesiaCatalogOverride(seedInfiltration, { active: true, favorite: true });
+  const techniqueLabels = getAnesthesiaCatalogOptions("injection", "techniques", [hiddenBlock, favoriteInfiltration]);
+  const doseLabels = getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses", [userDoseShortcut]);
+
+  assert.equal(userDoseShortcut.owner, "user");
+  assert.equal(userDoseShortcut.category, "anesthesia");
+  assert.deepEqual(userDoseShortcut.appliesTo, { route: "injection", field: "vasoconstrictorDoses" });
+  assert.equal(techniqueLabels[0], "Infiltration");
+  assert.equal(techniqueLabels.includes("Block"), false);
+  assert.equal(doseLabels[0], "1:50K epinephrine/adrenaline");
 });
 
 test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {
