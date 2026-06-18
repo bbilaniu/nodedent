@@ -11,7 +11,7 @@ export type AnesthesiaCatalogField =
 export type AnesthesiaRouteCatalog = Record<AnesthesiaCatalogField, string[]>;
 
 export const anesthesiaCatalogOwnership = {
-  owner: "appInterim",
+  owner: "seed",
   clinicalUse: "documentationSuggestionsOnly",
   allowsCustomText: true,
   hasDoseDefaults: false,

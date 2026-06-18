@@ -34,6 +34,7 @@ import {
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
 import { anesthesiaCatalogOwnership, getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
+import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import {
@@ -1509,6 +1510,7 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
 });
 
 test("shared anesthesia catalog suggestions are route scoped and non-prescriptive", () => {
+  assert.equal(anesthesiaCatalogOwnership.owner, "seed");
   assert.equal(anesthesiaCatalogOwnership.clinicalUse, "documentationSuggestionsOnly");
   assert.equal(anesthesiaCatalogOwnership.allowsCustomText, true);
   assert.equal(anesthesiaCatalogOwnership.hasDoseDefaults, false);
@@ -1524,6 +1526,73 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "doseUnits"), ["mL", "carpule(s)"]);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "doseUnits"), []);
   assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
+});
+
+test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {
+  const assessmentForm = {
+    ...defaultAnesthesiaFormState("36"),
+    response: "adequate" as const,
+    targetTeeth: "36",
+    expiresAt: "2026-01-01T10:30",
+  };
+  const assessmentRecord = buildAnesthesiaEventFromForm("assessment", assessmentForm);
+
+  assert.equal(assessmentRecord?.eventType, anesthesiaEventTypes.adequacyConfirmed);
+  assert.equal(assessmentRecord?.options?.expiresAt, "2026-01-01T10:30");
+
+  const adequacyEvent = {
+    id: "evt_anesthesia_explicit_reassess_after",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: assessmentRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    expiresAt: assessmentRecord!.options?.expiresAt,
+    details: assessmentRecord!.details,
+  };
+  const capability = getAnesthesiaAdequateCapabilityOutput(adequacyEvent);
+  const expiredCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...adequacyEvent,
+        capabilitiesSatisfied: capability ? [capability] : [],
+      },
+    ],
+  });
+  const expiredStatus = getCapabilityStatus(expiredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31"));
+
+  assert.equal(capability?.expiresAt, "2026-01-01T10:30");
+  assert.equal(expiredStatus.satisfied, false);
+  assert.equal(expiredStatus.needsReassessment, true);
+  assert.match(eventFragment(adequacyEvent), /Reassess after: 2026-01-01T10:30/);
+
+  const administrationForm = {
+    ...defaultAnesthesiaFormState("36"),
+    technique: getAnesthesiaCatalogOptions("injection", "techniques")[0],
+    dose: "1.7",
+    doseUnit: getAnesthesiaCatalogOptions("injection", "doseUnits")[0],
+    administeredAt: "09:55",
+    vasoconstrictor: getAnesthesiaCatalogOptions("injection", "vasoconstrictors")[0],
+  };
+  const administrationRecord = buildAnesthesiaEventFromForm("administration", administrationForm);
+  const administrationEvent = {
+    id: "evt_anesthesia_admin_no_expiry",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: administrationRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: administrationRecord!.details,
+  };
+  const administrationCase = baseCase({ tooth: "36", globalEvents: [administrationEvent] });
+  const administrationStatus = getCapabilityStatus(administrationCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31"));
+
+  assert.equal(administrationRecord?.options, undefined);
+  assert.equal(administrationRecord?.details.technique, "Infiltration");
+  assert.equal(administrationRecord?.details.doseUnit, "mL");
+  assert.equal(administrationRecord?.details.vasoconstrictor, "With vasoconstrictor");
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
+  assert.equal(administrationStatus.satisfied, false);
+  assert.equal(administrationStatus.needsReassessment, false);
 });
 
 test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {

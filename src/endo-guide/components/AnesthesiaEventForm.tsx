@@ -19,6 +19,7 @@ import {
   isAnesthesiaAssessmentReassessment,
 } from "../workflow/anesthesiaForm";
 import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMode } from "../workflow/anesthesiaForm";
+import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { SelectInput, TextInput } from "./FormControls";
 
 export function AnesthesiaEventForm({
@@ -30,7 +31,7 @@ export function AnesthesiaEventForm({
   tooth: string;
   latestEvent?: ClinicalEvent;
   defaultAction?: AnesthesiaAdministrationAction;
-  onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails) => void;
+  onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
   const [mode, setMode] = useState<AnesthesiaMode>("administration");
   const [form, setForm] = useState<AnesthesiaFormState>(() => defaultAnesthesiaFormState(tooth, defaultAction));
@@ -38,6 +39,7 @@ export function AnesthesiaEventForm({
   const modeIsAssessment = mode === "assessment";
   const assessmentNeedsReassessment = isAnesthesiaAssessmentReassessment(mode, form);
   const canSubmit = canSubmitAnesthesiaForm(mode, form);
+  const showReassessAfter = mode === "assessment" && form.response === "adequate";
   const routeIsInjection = mode === "administration" && form.route === "injection";
   const routeIsTopical = mode === "administration" && form.route === "topical";
   const routeIsOther = mode === "administration" && form.route === "other";
@@ -86,7 +88,7 @@ export function AnesthesiaEventForm({
   function submitEvent() {
     const event = buildAnesthesiaEventFromForm(mode, form);
     if (!event) return;
-    onRecordEvent(event.eventType, event.details);
+    onRecordEvent(event.eventType, event.details, event.options);
     resetForm();
   }
 
@@ -189,6 +191,15 @@ export function AnesthesiaEventForm({
             value={form.note}
             onChange={(value) => updateForm({ note: value })}
             placeholder={assessmentNeedsReassessment ? "e.g., sensitivity returned" : "optional"}
+          />
+        ) : null}
+        {showReassessAfter ? (
+          <TextInput
+            label="Reassess after"
+            value={form.expiresAt}
+            onChange={(value) => updateForm({ expiresAt: value })}
+            type="datetime-local"
+            helperText="Optional clinician-entered documentation only. NodeDent does not calculate this from anesthetic details."
           />
         ) : null}
       </div>

@@ -7,6 +7,7 @@ export function TextInput({
   placeholder,
   invalid = false,
   inputMode,
+  type = "text",
   helperText,
   rightLabel,
   suggestions = [],
@@ -17,6 +18,7 @@ export function TextInput({
   placeholder?: string;
   invalid?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  type?: React.HTMLInputTypeAttribute;
   helperText?: React.ReactNode;
   rightLabel?: React.ReactNode;
   suggestions?: string[];
@@ -45,6 +47,7 @@ export function TextInput({
         }}
         placeholder={placeholder}
         inputMode={inputMode}
+        type={type}
         list={hasSuggestions ? suggestionListId : undefined}
         className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       />

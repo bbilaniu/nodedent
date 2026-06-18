@@ -174,7 +174,7 @@ function radiographStatus(caseData: EndoCase): CapabilityStatus {
   };
 }
 
-function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEvent[], queryScope: WorkflowScope | undefined): CapabilityStatus | undefined {
+function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEvent[], queryScope: WorkflowScope | undefined, now: Date): CapabilityStatus | undefined {
   if (name !== "isolation.established" && name !== "anesthesia.adequate") return undefined;
   const invalidatingEvents = name === "anesthesia.adequate" ? anesthesiaInvalidatingEvents : isolationInvalidatingEvents;
 
@@ -189,21 +189,23 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
   if (!latest) return undefined;
 
   const invalidated = invalidatingEvents.has(latest.type);
+  const fallbackCapability = !invalidated && name === "anesthesia.adequate" ? getAnesthesiaAdequateCapabilityOutput(latest) : undefined;
+  const expired = fallbackCapability ? isExpired(fallbackCapability.expiresAt || latest.expiresAt, now) : false;
   const summary = name === "anesthesia.adequate"
-    ? invalidated ? "Anesthesia needs reassessment" : "Anesthesia adequate"
+    ? invalidated || expired ? "Anesthesia needs reassessment" : "Anesthesia adequate"
     : invalidated ? "Isolation needs reassessment" : "Isolation established";
   const reason = name === "anesthesia.adequate"
-    ? "The latest matching anesthesia event indicates reassessment is needed."
+    ? expired ? "Recorded anesthesia adequacy has expired." : "The latest matching anesthesia event indicates reassessment is needed."
     : "The latest matching isolation event indicates compromised or removed isolation.";
   return {
     name,
-    satisfied: !invalidated,
-    needsReassessment: invalidated,
+    satisfied: !invalidated && !expired,
+    needsReassessment: invalidated || expired,
     source: "event",
     sourceEvent: latest,
     scope: getEventScope(latest),
     summary,
-    reason: invalidated ? reason : undefined,
+    reason: invalidated || expired ? reason : undefined,
   };
 }
 
@@ -220,9 +222,9 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
     })
     .at(-1);
 
-  const fallbackStatus = fallbackStatusFromEvents(name, events, queryScope);
+  const fallbackStatus = fallbackStatusFromEvents(name, events, queryScope, now);
   if (explicitStatus && fallbackStatus && (name === "isolation.established" || name === "anesthesia.adequate")) {
-    return eventTime(fallbackStatus.sourceEvent) >= eventTime(explicitStatus.sourceEvent) ? fallbackStatus : explicitStatus;
+    return eventTime(fallbackStatus.sourceEvent) > eventTime(explicitStatus.sourceEvent) ? fallbackStatus : explicitStatus;
   }
   if (explicitStatus) return explicitStatus;
   if (fallbackStatus) return fallbackStatus;

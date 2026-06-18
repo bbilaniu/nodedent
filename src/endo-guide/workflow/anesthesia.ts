@@ -153,20 +153,25 @@ function formatAnesthesiaContext(details: AnesthesiaEventDetails) {
   ].filter(Boolean).join("; ");
 }
 
+function formatReassessAfter(event: ClinicalEvent) {
+  return event.expiresAt ? ` Reassess after: ${event.expiresAt}.` : "";
+}
+
 export function formatAnesthesiaEventFragment(event: ClinicalEvent) {
   const details = getAnesthesiaEventDetails(event);
   const context = formatAnesthesiaContext(details);
   const suffix = context ? ` (${context})` : "";
   const response = details.response ? ` Response: ${details.response}.` : "";
+  const reassessAfter = formatReassessAfter(event);
 
   if (event.type === anesthesiaEventTypes.administered) {
-    return `Anesthesia administered${suffix}.${response}`;
+    return `Anesthesia administered${suffix}.${response}${reassessAfter}`;
   }
   if (event.type === anesthesiaEventTypes.adequacyConfirmed) {
-    return `Anesthesia adequacy confirmed${suffix}.${response}`;
+    return `Anesthesia adequacy confirmed${suffix}.${response}${reassessAfter}`;
   }
   if (event.type === anesthesiaEventTypes.topUpGiven) {
-    return `Anesthesia top-up recorded${suffix}.${response}`;
+    return `Anesthesia top-up recorded${suffix}.${response}${reassessAfter}`;
   }
   if (event.type === anesthesiaEventTypes.needsReassessment) {
     return `Anesthesia needs reassessment${details.reason ? `: ${details.reason}` : ""}.`;

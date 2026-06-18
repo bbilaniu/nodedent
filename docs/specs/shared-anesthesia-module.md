@@ -195,7 +195,7 @@ If a top-up is recorded without `response: "adequate"`, the event remains useful
 
 Phase 2 should not make every `anesthesia.topUpGiven` event a fallback adequacy event by type. It should use a single capability-output helper that checks event type and response. Selectors may still read explicit `capabilitiesSatisfied` records, but fallback derivation should only treat top-up as satisfying when the same helper says it satisfies adequacy.
 
-No automatic adequacy expiry should be calculated from anesthetic type, dose, vasoconstrictor/adrenaline, timing, or response until source-backed timing rules exist. Until then, adequacy remains valid for the matching scope unless a later matching reassessment event invalidates it, or a future explicit `expiresAt` is recorded from a source-backed rule.
+No automatic adequacy expiry should be calculated from anesthetic type, dose, vasoconstrictor/adrenaline, timing, or response until source-backed timing rules exist. Until then, adequacy remains valid for the matching scope unless a later matching reassessment event invalidates it, or an explicit clinician-entered `expiresAt` is recorded.
 
 ## Initial Implementation
 
@@ -384,6 +384,7 @@ Reasoning level: high.
 
 #### Phase 6A: Explicit Reassessment Time And Seeded Anesthesia Catalog
 
+Status: implemented as explicit clinician-entered `Reassess after` capture and seeded documentation-suggestion metadata.
 Reasoning level: medium-high.
 
 - Add optional `expiresAt` / `Reassess after` capture.
@@ -393,6 +394,16 @@ Reasoning level: medium-high.
 - Do not add automatic dose or amount defaults.
 - Snapshot selected catalog labels into event details.
 - Add tests that separate explicit reassessment timing from administration timing context.
+
+Implemented:
+
+- Added optional `Reassess after` capture to explicit adequate anesthesia assessment.
+- Stored `Reassess after` as top-level event `expiresAt` so existing capability selectors can treat the adequacy capability as needing reassessment after that clinician-entered time.
+- Kept `expiresAt` clinician-entered only; no value is calculated from agent, dose, vasoconstrictor/adrenaline, technique, route, response, or administered time.
+- Kept dose and amount fields free-text without automatic defaults.
+- Marked the anesthesia catalog metadata as seeded documentation suggestions.
+- Preserved selected or typed catalog labels in anesthesia event details.
+- Added tests for explicit reassessment expiry, non-expiring administration timing, and catalog-label snapshotting.
 
 #### Phase 6B: Source-Backed Rules And Broader Catalogs
 

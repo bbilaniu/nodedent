@@ -32,6 +32,7 @@ import {
   sharedAnesthesiaWorkflowId,
   sharedAnesthesiaWorkflowVersion,
 } from "./workflow/anesthesia";
+import type { AnesthesiaEventOptions } from "./workflow/anesthesiaForm";
 import type { IsolationEventDetails, IsolationEventType } from "./workflow/isolation";
 import {
   buildIsolationEstablishedCapability,
@@ -221,7 +222,7 @@ export default function EndoChairsideGuide() {
   function recordAnesthesiaEvent(
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
-    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null } & AnesthesiaEventOptions
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
@@ -237,6 +238,7 @@ export default function EndoChairsideGuide() {
       workflowRunId: context?.workflowRunId,
       parentWorkflowRunId: context?.parentWorkflowRunId,
       scope,
+      expiresAt: context?.expiresAt,
     });
     event.details = { ...event.details, ...details };
     if (context?.nodeId) event.details.parentNodeId = currentNode.id;

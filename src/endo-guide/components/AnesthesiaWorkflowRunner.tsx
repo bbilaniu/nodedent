@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase } from "../types";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, sharedAnesthesiaWorkflow } from "../workflow/anesthesia";
+import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getAnesthesiaEventLabel } from "../workflow/anesthesiaForm";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 
@@ -27,7 +28,7 @@ export function AnesthesiaWorkflowRunner({
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
-    context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string }
+    context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string } & AnesthesiaEventOptions
   ) => void;
 }) {
   const workflow = sharedAnesthesiaWorkflow;
@@ -37,13 +38,14 @@ export function AnesthesiaWorkflowRunner({
   const completion = workflow.completionNodeIds.includes(currentNode.id);
   const defaultAction = currentNode.id === "anesthesia-needs-reassessment" ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered;
 
-  function recordEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails) {
+  function recordEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) {
     const label = getAnesthesiaEventLabel(eventType);
     onRecordAnesthesiaEvent(eventType, details, {
       nodeId: currentNode.id,
       label,
       workflowRunId: launch.workflowRunId,
       parentWorkflowRunId,
+      expiresAt: options?.expiresAt,
     });
     setRecordedLabel(label);
     setModuleNodeId(getNextAnesthesiaNodeId(eventType));

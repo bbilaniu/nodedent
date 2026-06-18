@@ -22,7 +22,12 @@ export type AnesthesiaFormState = {
   response: AnesthesiaAdequacyResponse;
   targetTeeth: string;
   regionLabel: string;
+  expiresAt: string;
   note: string;
+};
+
+export type AnesthesiaEventOptions = {
+  expiresAt?: string;
 };
 
 export const anesthesiaAdministrationActionLabels = {
@@ -74,6 +79,7 @@ export function defaultAnesthesiaFormState(
     response: "notAssessed",
     targetTeeth: tooth || "",
     regionLabel: "",
+    expiresAt: "",
     note: "",
   };
 }
@@ -102,6 +108,7 @@ export function buildAnesthesiaFormState(
     response: details.response || "notAssessed",
     targetTeeth: details.teeth?.join(" ") || details.tooth || tooth || "",
     regionLabel: details.regionLabel || "",
+    expiresAt: sourceEvent.expiresAt || "",
     note: details.notes || details.reason || "",
   };
 }
@@ -117,7 +124,7 @@ export function canSubmitAnesthesiaForm(mode: AnesthesiaMode, form: AnesthesiaFo
 export function buildAnesthesiaEventFromForm(
   mode: AnesthesiaMode,
   form: AnesthesiaFormState
-): { eventType: AnesthesiaEventType; details: AnesthesiaEventDetails } | undefined {
+): { eventType: AnesthesiaEventType; details: AnesthesiaEventDetails; options?: AnesthesiaEventOptions } | undefined {
   if (!canSubmitAnesthesiaForm(mode, form)) return undefined;
 
   const teeth = form.targetTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
@@ -129,9 +136,11 @@ export function buildAnesthesiaEventFromForm(
   const routeIsTopical = isAdministration && form.route === "topical";
   const routeIsOther = isAdministration && form.route === "other";
   const assessmentNeedsReassessment = isAnesthesiaAssessmentReassessment(mode, form);
+  const expiresAt = mode === "assessment" && form.response === "adequate" ? form.expiresAt.trim() || undefined : undefined;
 
   return {
     eventType,
+    options: expiresAt ? { expiresAt } : undefined,
     details: {
       route: isAdministration ? form.route : undefined,
       routeLabel: routeIsOther ? form.routeLabel.trim() || undefined : undefined,

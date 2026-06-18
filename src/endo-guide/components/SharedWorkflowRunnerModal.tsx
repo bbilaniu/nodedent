@@ -2,6 +2,7 @@ import React from "react";
 import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase, WorkflowDefinition } from "../types";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { sharedAnesthesiaWorkflow, sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
+import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { AnesthesiaWorkflowRunner } from "./AnesthesiaWorkflowRunner";
@@ -34,7 +35,7 @@ export function SharedWorkflowRunnerModal({
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
-    context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string }
+    context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string } & AnesthesiaEventOptions
   ) => void;
   onRecordIsolationEvent: (
     eventType: IsolationEventType,
