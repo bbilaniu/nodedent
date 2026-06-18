@@ -127,7 +127,7 @@ Runner behavior:
 - Default administration capture to `anesthesia.administered`.
 - Use `anesthesia.topUpGiven` only when the user explicitly selects a top-up action.
 - A future implementation may default to top-up after enough time has elapsed from the most recent injection entry, such as more than 5 minutes, because initial injected doses are typically charted within about a minute of each other. Do not add this heuristic until the UI can make the assumption visible and reversible.
-- Prefer separate `Add injection` and `Add topical` route actions once the UI supports those routes.
+- Prefer separate `Injection` and `Topical` route controls once the UI supports those routes.
 - If the first pass uses one `Add entry` action, require a route field before route-specific controls become active.
 - Filter option lists by route only to prevent inconsistent documentation. Do not present filtered products, techniques, or dose values as recommendations.
 - Keep adequacy confirmation as a separate explicit action or field, even when administration details are complete.
@@ -275,9 +275,9 @@ Reasoning level: medium.
 - Treat each entry action as one immediate event append; do not build a multi-entry batch editor in Phase 4A.
 - Default route-aware administration entries to `anesthesia.administered`; make `anesthesia.topUpGiven` explicit.
 - Within `Record administration`, replace the generic route-first form with clearer entry actions:
-  - `Add injection`
-  - `Add topical`
-  - `Add other` only if a non-injection, non-topical route must be documented.
+  - `Injection`
+  - `Topical`
+  - `Other` only if a non-injection, non-topical route must be documented.
 - Show route-specific fields only when they apply:
   - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, and time administered.
   - Topical entries: application type, site, agent, time administered, and notes.
@@ -291,7 +291,7 @@ Reasoning level: medium.
 
 Implemented:
 
-- Replaced the generic route selector with `Add injection`, `Add topical`, and `Add other` controls in the Case Setup & Status anesthesia panel.
+- Replaced the generic route selector with `Injection`, `Topical`, and `Other` controls in the Case Setup & Status anesthesia panel.
 - Kept `Record administration` and `Record assessment` as the primary panel modes.
 - Kept the default entry type as initial administration and required explicit selection of `Top-up`.
 - Showed only route-relevant administration fields for injection, topical, and other entries.

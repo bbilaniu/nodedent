@@ -158,6 +158,12 @@ export function getAnesthesiaRouteActionLabel(route: AnesthesiaRoute) {
   return "Add injection";
 }
 
+export function getAnesthesiaRouteSelectionLabel(route: AnesthesiaRoute) {
+  if (route === "topical") return "Topical";
+  if (route === "other") return "Other";
+  return "Injection";
+}
+
 export function getAnesthesiaEventLabel(eventType: AnesthesiaEventType) {
   if (eventType === anesthesiaEventTypes.administered) return "Anesthesia administered";
   if (eventType === anesthesiaEventTypes.topUpGiven) return "Top-up recorded";

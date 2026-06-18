@@ -15,6 +15,7 @@ import {
   canSubmitAnesthesiaForm,
   defaultAnesthesiaFormState,
   getAnesthesiaRouteActionLabel,
+  getAnesthesiaRouteSelectionLabel,
   isAnesthesiaAssessmentReassessment,
 } from "../workflow/anesthesiaForm";
 import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMode } from "../workflow/anesthesiaForm";
@@ -123,7 +124,7 @@ export function AnesthesiaEventForm({
                     onClick={() => selectRoute(route)}
                     className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${form.route === route ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
                   >
-                    {getAnesthesiaRouteActionLabel(route)}
+                    {getAnesthesiaRouteSelectionLabel(route)}
                   </button>
                 );
               })}
