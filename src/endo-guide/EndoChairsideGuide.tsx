@@ -26,6 +26,7 @@ import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPrio
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
+  anesthesiaEventTypes,
   getAnesthesiaAdequateCapabilityOutput,
   getAnesthesiaScopeFromDetails,
   sharedAnesthesiaWorkflowId,
@@ -141,6 +142,10 @@ export default function EndoChairsideGuide() {
   );
   const activeCanalStatus = getCanalStatus(activeCanal);
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
+  const latestAnesthesiaEvent = useMemo(
+    () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
+    [caseData.globalEvents]
+  );
   const canResumeActiveCanalFromPriorVisit = Boolean(
     caseData.priorVisit?.continuedFromPriorVisit ||
     caseData.globalEvents.some((event) => event.type === "case.continuedFromPriorVisit") ||
@@ -213,21 +218,28 @@ export default function EndoChairsideGuide() {
     updateCase({ caseStatus: "" });
   }
 
-  function recordAnesthesiaEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails) {
+  function recordAnesthesiaEvent(
+    eventType: AnesthesiaEventType,
+    details: AnesthesiaEventDetails,
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
+  ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
     const event = makeRuntimeEvent({
       type: eventType,
       tooth: caseData.tooth,
       canal: "All",
-      nodeId: currentNode.id,
-      label: eventType,
+      nodeId: context?.nodeId || currentNode.id,
+      label: context?.label || eventType,
       activeCanal,
       workflowId: sharedAnesthesiaWorkflowId,
       workflowVersion: sharedAnesthesiaWorkflowVersion,
+      workflowRunId: context?.workflowRunId,
+      parentWorkflowRunId: context?.parentWorkflowRunId,
       scope,
     });
     event.details = { ...event.details, ...details };
+    if (context?.nodeId) event.details.parentNodeId = currentNode.id;
     const capability = getAnesthesiaAdequateCapabilityOutput(event);
     if (capability) event.capabilitiesSatisfied = [capability];
 
@@ -334,6 +346,17 @@ export default function EndoChairsideGuide() {
       workflowId: sharedIsolationWorkflowId,
       entryNodeId,
       workflowRunId: makeWorkflowRunId("shared_isolation"),
+    });
+  }
+
+  function openAnesthesiaWorkflow(entryNodeId?: string) {
+    setIsWorkflowLauncherOpen(false);
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch({
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId,
+      workflowRunId: makeWorkflowRunId("shared_anesthesia"),
     });
   }
 
@@ -855,6 +878,7 @@ export default function EndoChairsideGuide() {
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
               onOpenCaseSetupStatus={openCasePanel}
+              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
               onOpenIsolationWorkflow={openIsolationWorkflow}
               onOpenSavedWorkflow={openSavedCases}
               onOpenPriorVisit={openPriorVisit}
@@ -894,6 +918,7 @@ export default function EndoChairsideGuide() {
             onOpenSavedCases={openSavedCases}
             onOpenPriorVisit={openPriorVisit}
             onOpenNewCaseConfirm={openNewCaseConfirm}
+            onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
             onOpenIsolationWorkflow={() => openIsolationWorkflow()}
           />
         ) : null}
@@ -926,8 +951,10 @@ export default function EndoChairsideGuide() {
             caseData={caseData}
             parentNodeTitle={currentNode.title}
             parentWorkflowRunId={rootWorkflowRunId}
+            latestAnesthesiaEvent={latestAnesthesiaEvent}
             latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
             onClose={() => setEmbeddedWorkflowLaunch(null)}
+            onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
           />
         ) : null}

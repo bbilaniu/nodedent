@@ -328,6 +328,7 @@ Implemented:
 
 ### Phase 5: Embedded Module Runner
 
+Status: implemented as a shared modal shell with module-specific runners.
 Reasoning level: high.
 
 - Add an embedded sidecar or modal runner only after the Case Setup & Status form and capability selectors are stable.
@@ -335,6 +336,26 @@ Reasoning level: high.
 - Return to the parent node after recording supplemental events.
 - Preserve parent and child workflow context, including `workflowRunId`, `parentWorkflowRunId`, node ID, and scope.
 - Reuse the same event contract as the Case Setup & Status form.
+
+Implementation path:
+
+- Do not force `SharedWorkflowRunnerModal` to become a fully generic form renderer in this phase.
+- Keep a shared modal shell and dispatch to module-specific runners by `workflowId`.
+- Move the existing isolation-specific runner behavior behind an `IsolationWorkflowRunner`.
+- Add an `AnesthesiaWorkflowRunner` that reuses the same anesthesia event contract as Case Setup & Status.
+- Extract shared anesthesia form helpers before enabling the embedded runner so Case Setup and the runner cannot drift on route fields, purpose, assessment behavior, or event detail construction.
+- Keep module runners responsible for their own clinical form state; keep the shared shell responsible only for launch context, modal framing, and return-to-parent behavior.
+- Enable the launcher only after embedded anesthesia events preserve `workflowRunId`, `parentWorkflowRunId`, module node ID, parent node ID, and scoped capability output.
+
+Implemented:
+
+- Replaced the isolation-specific `SharedWorkflowRunnerModal` internals with a shared modal shell that dispatches by `workflowId`.
+- Moved existing embedded isolation behavior behind an `IsolationWorkflowRunner`.
+- Added an `AnesthesiaWorkflowRunner` for `shared.anesthesia`.
+- Extracted shared anesthesia form helpers and a reusable `AnesthesiaEventForm` so Case Setup & Status and the embedded runner share route, purpose, assessment, catalog-suggestion, and event-detail behavior.
+- Extended anesthesia event recording to preserve embedded `workflowRunId`, `parentWorkflowRunId`, module node ID, parent node ID, and scoped capability output.
+- Enabled the anesthesia module as `Ready` in the launcher.
+- Added direct anesthesia launch paths from NodeDent Home and pre-access readiness prompts without moving the parent workflow node.
 
 ### Phase 6: Source-Backed Expiry And Catalog Refinement
 
@@ -362,10 +383,10 @@ Reasoning level: high.
 - Typed core now: event types, `route`, scope, and adequacy response. Other anesthesia details stay free text or catalog-backed strings until product needs justify typed enums.
 - No automatic expiry until source-backed timing rules exist.
 - The first UI should be a Case Setup & Status panel form. An embedded runner can follow after the event contract and selectors are stable.
+- Case Setup & Status and the embedded anesthesia runner should share form helpers and the reusable `AnesthesiaEventForm` so event construction does not drift.
 - Post-administration assessment should remain event-detail text initially. Add separate event types beyond adequacy and reassessment only when they affect status, alerts, follow-up, or note generation.
 
 ## Open Decisions
 
 - Whether additional route or adequacy-response values are needed after the first typed UI is tested.
 - Whether route-specific product catalogs belong in NodeDent core, user preferences, or a future template/config layer.
-- Whether the Case Setup & Status form and future embedded runner should share a single component or use separate wrappers around shared event helpers.

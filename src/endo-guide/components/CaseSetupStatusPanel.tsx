@@ -3,12 +3,12 @@ import type { CanalRecord, CaseSetupFocusTarget, ClinicalEvent, EndoCase } from 
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
-import type { AnesthesiaAdequacyResponse, AnesthesiaEventDetails, AnesthesiaEventType, AnesthesiaRoute } from "../workflow/anesthesia";
-import { anesthesiaEventTypes, formatAnesthesiaEventFragment, getAnesthesiaEventDetails } from "../workflow/anesthesia";
-import { getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
+import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
+import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
 import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
+import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { SelectInput, TextInput } from "./FormControls";
 
 function statusClass(satisfied: boolean, needsReassessment: boolean) {
@@ -37,64 +37,14 @@ const isolationSubmitLabels = {
   [isolationEventTypes.replaced]: "Record isolation replacement",
 } as const satisfies Record<IsolationEventType, string>;
 
-type AnesthesiaMode = "administration" | "assessment";
-
-const anesthesiaAdministrationActionLabels = {
-  [anesthesiaEventTypes.administered]: "Initial administration",
-  [anesthesiaEventTypes.topUpGiven]: "Top-up",
-} as const satisfies Record<typeof anesthesiaEventTypes.administered | typeof anesthesiaEventTypes.topUpGiven, string>;
-
-const anesthesiaAdministrationActionOptions = Object.values(anesthesiaAdministrationActionLabels);
-
-const anesthesiaAssessmentLabels = {
-  adequate: "Adequate",
-  notAdequate: "Not adequate",
-} as const satisfies Record<Extract<AnesthesiaAdequacyResponse, "adequate" | "notAdequate">, string>;
-
-const anesthesiaRouteLabels = {
-  injection: "Injection",
-  topical: "Topical",
-  other: "Other",
-} as const satisfies Record<AnesthesiaRoute, string>;
-
-const anesthesiaRouteOptions = Object.values(anesthesiaRouteLabels);
-
 function eventTypeFromLabel(label: string): IsolationEventType {
   const entry = Object.entries(isolationActionLabels).find(([, actionLabel]) => actionLabel === label);
   return (entry?.[0] as IsolationEventType | undefined) || isolationEventTypes.rubberDamPlaced;
 }
 
-function anesthesiaAdministrationActionFromLabel(label: string): typeof anesthesiaEventTypes.administered | typeof anesthesiaEventTypes.topUpGiven {
-  const entry = Object.entries(anesthesiaAdministrationActionLabels).find(([, actionLabel]) => actionLabel === label);
-  return (entry?.[0] as typeof anesthesiaEventTypes.administered | typeof anesthesiaEventTypes.topUpGiven | undefined) || anesthesiaEventTypes.administered;
-}
-
-function anesthesiaRouteFromLabel(label: string): AnesthesiaRoute {
-  const entry = Object.entries(anesthesiaRouteLabels).find(([, routeLabel]) => routeLabel === label);
-  return (entry?.[0] as AnesthesiaRoute | undefined) || "injection";
-}
-
 function defaultIsolationMethod(action: IsolationEventType): IsolationMethod {
   return action === isolationEventTypes.alternativeIsolationUsed ? "splitDam" : "rubberDam";
 }
-
-type AnesthesiaFormState = {
-  action: AnesthesiaEventType;
-  route: AnesthesiaRoute;
-  routeLabel: string;
-  agentLabel: string;
-  technique: string;
-  applicationType: string;
-  site: string;
-  dose: string;
-  doseUnit: string;
-  administeredAt: string;
-  vasoconstrictor: string;
-  response: AnesthesiaAdequacyResponse;
-  targetTeeth: string;
-  regionLabel: string;
-  note: string;
-};
 
 type IsolationFormState = {
   action: IsolationEventType;
@@ -107,26 +57,6 @@ type IsolationFormState = {
   note: string;
 };
 
-function defaultAnesthesiaFormState(tooth: string, action: AnesthesiaEventType = anesthesiaEventTypes.administered): AnesthesiaFormState {
-  return {
-    action,
-    route: "injection",
-    routeLabel: "",
-    agentLabel: "",
-    technique: "",
-    applicationType: "",
-    site: "",
-    dose: "",
-    doseUnit: "",
-    administeredAt: "",
-    vasoconstrictor: "",
-    response: "notAssessed",
-    targetTeeth: tooth || "",
-    regionLabel: "",
-    note: "",
-  };
-}
-
 function defaultIsolationFormState(tooth: string, action: IsolationEventType = isolationEventTypes.rubberDamPlaced): IsolationFormState {
   return {
     action,
@@ -137,29 +67,6 @@ function defaultIsolationFormState(tooth: string, action: IsolationEventType = i
     clampCode: "",
     clampTooth: tooth || "",
     note: "",
-  };
-}
-
-function buildAnesthesiaFormState(tooth: string, action: AnesthesiaEventType, sourceEvent?: ClinicalEvent): AnesthesiaFormState {
-  if (!sourceEvent) return defaultAnesthesiaFormState(tooth, action);
-
-  const details = getAnesthesiaEventDetails(sourceEvent);
-  return {
-    ...defaultAnesthesiaFormState(tooth, action),
-    route: details.route || "injection",
-    routeLabel: details.routeLabel || "",
-    agentLabel: details.agentLabel || "",
-    technique: details.technique || "",
-    applicationType: details.applicationType || "",
-    site: details.site || "",
-    dose: details.dose || "",
-    doseUnit: details.doseUnit || "",
-    administeredAt: details.administeredAt || "",
-    vasoconstrictor: details.vasoconstrictor || "",
-    response: details.response || defaultAnesthesiaFormState(tooth, action).response,
-    targetTeeth: details.teeth?.join(" ") || details.tooth || tooth || "",
-    regionLabel: details.regionLabel || "",
-    note: details.notes || details.reason || "",
   };
 }
 
@@ -222,8 +129,6 @@ export function CaseSetupStatusPanel({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
-  const [anesthesiaMode, setAnesthesiaMode] = useState<AnesthesiaMode>("administration");
-  const [anesthesiaForm, setAnesthesiaForm] = useState<AnesthesiaFormState>(() => defaultAnesthesiaFormState(caseData.tooth));
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
@@ -254,26 +159,10 @@ export function CaseSetupStatusPanel({
     isolationForm.action === isolationEventTypes.rubberDamPlaced ||
     (isolationForm.action === isolationEventTypes.replaced && isolationForm.method === "rubberDam");
   const actionIsReassessment = isolationForm.action === isolationEventTypes.compromised || isolationForm.action === isolationEventTypes.removed;
-  const anesthesiaModeIsAssessment = anesthesiaMode === "assessment";
-  const anesthesiaAssessmentNeedsReassessment = anesthesiaModeIsAssessment && anesthesiaForm.response === "notAdequate";
-  const anesthesiaAssessmentCanSubmit = !anesthesiaModeIsAssessment || anesthesiaForm.response === "adequate" || anesthesiaForm.response === "notAdequate";
-  const anesthesiaRouteIsInjection = anesthesiaMode === "administration" && anesthesiaForm.route === "injection";
-  const anesthesiaRouteIsTopical = anesthesiaMode === "administration" && anesthesiaForm.route === "topical";
-  const anesthesiaRouteIsOther = anesthesiaMode === "administration" && anesthesiaForm.route === "other";
-  const anesthesiaAgentSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "agents");
-  const anesthesiaTechniqueSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "techniques");
-  const anesthesiaApplicationTypeSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "applicationTypes");
-  const anesthesiaDoseUnitSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "doseUnits");
-  const anesthesiaVasoconstrictorSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "vasoconstrictors");
-  const anesthesiaRouteLabelSuggestions = getAnesthesiaCatalogOptions(anesthesiaForm.route, "routeLabels");
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
     previousToothRef.current = caseData.tooth;
-    setAnesthesiaForm((prev) => ({
-      ...prev,
-      targetTeeth: !prev.targetTeeth || prev.targetTeeth === previousTooth ? caseData.tooth || "" : prev.targetTeeth,
-    }));
     setIsolationForm((prev) => ({
       ...prev,
       exposedTeeth: !prev.exposedTeeth || prev.exposedTeeth === previousTooth ? caseData.tooth || "" : prev.exposedTeeth,
@@ -291,32 +180,6 @@ export function CaseSetupStatusPanel({
     isolationSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     isolationSectionRef.current?.focus({ preventScroll: true });
   }, [initialFocusSection]);
-
-  function updateAnesthesiaForm(updates: Partial<AnesthesiaFormState>) {
-    setAnesthesiaForm((prev) => ({ ...prev, ...updates }));
-  }
-
-  function resetAnesthesiaForm(action: AnesthesiaEventType = anesthesiaEventTypes.administered) {
-    setAnesthesiaMode("administration");
-    setAnesthesiaForm(defaultAnesthesiaFormState(caseData.tooth, action));
-  }
-
-  function selectAnesthesiaRoute(route: AnesthesiaRoute) {
-    setAnesthesiaMode("administration");
-    setAnesthesiaForm((prev) => ({
-      ...prev,
-      route,
-      action: prev.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered,
-      response: "notAssessed",
-    }));
-  }
-
-  function prepareAnesthesiaMode(mode: AnesthesiaMode) {
-    setAnesthesiaMode(mode);
-    const action = mode === "administration" ? anesthesiaEventTypes.administered : anesthesiaEventTypes.adequacyConfirmed;
-    const nextForm = buildAnesthesiaFormState(caseData.tooth, action, latestAnesthesiaEvent);
-    setAnesthesiaForm(mode === "assessment" ? { ...nextForm, action, response: "notAssessed", note: "" } : nextForm);
-  }
 
   function updateIsolationForm(updates: Partial<IsolationFormState>) {
     setIsolationForm((prev) => ({ ...prev, ...updates }));
@@ -336,39 +199,6 @@ export function CaseSetupStatusPanel({
 
   function prepareIsolationAction(action: IsolationEventType) {
     setIsolationForm(buildIsolationFormState(caseData.tooth, action, latestIsolationEvent));
-  }
-
-  function submitAnesthesiaEvent() {
-    if (!anesthesiaAssessmentCanSubmit) return;
-
-    const teeth = anesthesiaForm.targetTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
-    const eventType: AnesthesiaEventType = anesthesiaMode === "administration"
-      ? anesthesiaForm.action
-      : anesthesiaForm.response === "adequate" ? anesthesiaEventTypes.adequacyConfirmed : anesthesiaEventTypes.needsReassessment;
-    const isAdministration = anesthesiaMode === "administration";
-    const routeIsInjection = isAdministration && anesthesiaForm.route === "injection";
-    const routeIsTopical = isAdministration && anesthesiaForm.route === "topical";
-    const routeIsOther = isAdministration && anesthesiaForm.route === "other";
-    const details: AnesthesiaEventDetails = {
-      route: isAdministration ? anesthesiaForm.route : undefined,
-      routeLabel: routeIsOther ? anesthesiaForm.routeLabel.trim() || undefined : undefined,
-      agentLabel: routeIsInjection || routeIsTopical ? anesthesiaForm.agentLabel.trim() || undefined : undefined,
-      technique: routeIsInjection ? anesthesiaForm.technique.trim() || undefined : undefined,
-      applicationType: routeIsTopical || routeIsOther ? anesthesiaForm.applicationType.trim() || undefined : undefined,
-      site: isAdministration ? anesthesiaForm.site.trim() || undefined : undefined,
-      dose: routeIsInjection ? anesthesiaForm.dose.trim() || undefined : undefined,
-      doseUnit: routeIsInjection ? anesthesiaForm.doseUnit.trim() || undefined : undefined,
-      administeredAt: routeIsInjection || routeIsTopical ? anesthesiaForm.administeredAt.trim() || undefined : undefined,
-      vasoconstrictor: routeIsInjection ? anesthesiaForm.vasoconstrictor.trim() || undefined : undefined,
-      response: anesthesiaMode === "assessment" ? anesthesiaForm.response : undefined,
-      teeth: teeth.length ? teeth : undefined,
-      regionLabel: anesthesiaForm.regionLabel.trim() || undefined,
-      reason: anesthesiaMode === "assessment" && anesthesiaAssessmentNeedsReassessment ? anesthesiaForm.note.trim() || undefined : undefined,
-      notes: (routeIsTopical || routeIsOther || (anesthesiaMode === "assessment" && !anesthesiaAssessmentNeedsReassessment)) ? anesthesiaForm.note.trim() || undefined : undefined,
-    };
-
-    onRecordAnesthesiaEvent(eventType, details);
-    resetAnesthesiaForm();
   }
 
   function submitIsolationEvent() {
@@ -499,116 +329,7 @@ export function CaseSetupStatusPanel({
             {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
           </div>
         ) : null}
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            aria-label="Record anesthesia administration"
-            onClick={() => prepareAnesthesiaMode("administration")}
-            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaMode === "administration" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
-          >
-            Record administration
-          </button>
-          <button
-            type="button"
-            aria-label="Record anesthesia assessment"
-            onClick={() => prepareAnesthesiaMode("assessment")}
-            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaMode === "assessment" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy hover:bg-brand-mint/20"}`}
-          >
-            Record assessment
-          </button>
-        </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          {anesthesiaMode === "administration" ? (
-            <div>
-              <p className="mb-2 text-xs font-medium text-brand-slate">Local anesthesia route</p>
-              <div className="flex flex-wrap gap-2">
-                {anesthesiaRouteOptions.map((routeLabel) => {
-                  const route = anesthesiaRouteFromLabel(routeLabel);
-                  return (
-                    <button
-                      key={route}
-                      type="button"
-                      onClick={() => selectAnesthesiaRoute(route)}
-                      className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaForm.route === route ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
-                    >
-                      {route === "injection" ? "Add injection" : route === "topical" ? "Add topical" : "Add other"}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="md:col-span-2">
-              <p className="mb-2 text-xs font-medium text-brand-slate">Assessment</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(anesthesiaAssessmentLabels).map(([response, label]) => (
-                  <button
-                    key={response}
-                    type="button"
-                    onClick={() => updateAnesthesiaForm({ response: response as AnesthesiaAdequacyResponse })}
-                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaForm.response === response ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {anesthesiaMode === "administration" ? (
-            <SelectInput
-              label="Purpose"
-              value={anesthesiaAdministrationActionLabels[anesthesiaForm.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered]}
-              onChange={(value) => updateAnesthesiaForm({ action: anesthesiaAdministrationActionFromLabel(value) })}
-              options={anesthesiaAdministrationActionOptions}
-            />
-          ) : null}
-          <TextInput label="Target teeth" value={anesthesiaForm.targetTeeth} onChange={(value) => updateAnesthesiaForm({ targetTeeth: value })} placeholder="e.g., 36 or 34 35 36" />
-          <TextInput label="Region label" value={anesthesiaForm.regionLabel} onChange={(value) => updateAnesthesiaForm({ regionLabel: value })} placeholder="e.g., Q3, lower left, custom" />
-          {anesthesiaRouteIsInjection ? (
-            <>
-              <TextInput label="Technique" value={anesthesiaForm.technique} onChange={(value) => updateAnesthesiaForm({ technique: value })} placeholder="optional" suggestions={anesthesiaTechniqueSuggestions} />
-              <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
-              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" suggestions={anesthesiaAgentSuggestions} />
-              <TextInput label="Dose" value={anesthesiaForm.dose} onChange={(value) => updateAnesthesiaForm({ dose: value })} placeholder="optional" inputMode="decimal" />
-              <TextInput label="Dose unit" value={anesthesiaForm.doseUnit} onChange={(value) => updateAnesthesiaForm({ doseUnit: value })} placeholder="e.g., mL, carpule" suggestions={anesthesiaDoseUnitSuggestions} />
-              <TextInput label="Vasoconstrictor" value={anesthesiaForm.vasoconstrictor} onChange={(value) => updateAnesthesiaForm({ vasoconstrictor: value })} placeholder="optional" suggestions={anesthesiaVasoconstrictorSuggestions} />
-              <TextInput label="Time administered" value={anesthesiaForm.administeredAt} onChange={(value) => updateAnesthesiaForm({ administeredAt: value })} placeholder="e.g., 09:55" />
-            </>
-          ) : null}
-          {anesthesiaRouteIsTopical ? (
-            <>
-              <TextInput label="Application type" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" suggestions={anesthesiaApplicationTypeSuggestions} />
-              <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
-              <TextInput label="Agent" value={anesthesiaForm.agentLabel} onChange={(value) => updateAnesthesiaForm({ agentLabel: value })} placeholder="optional" suggestions={anesthesiaAgentSuggestions} />
-              <TextInput label="Time administered" value={anesthesiaForm.administeredAt} onChange={(value) => updateAnesthesiaForm({ administeredAt: value })} placeholder="e.g., 09:55" />
-            </>
-          ) : null}
-          {anesthesiaRouteIsOther ? (
-            <>
-              <TextInput label="Route / application" value={anesthesiaForm.routeLabel} onChange={(value) => updateAnesthesiaForm({ routeLabel: value })} placeholder="optional" suggestions={anesthesiaRouteLabelSuggestions} />
-              <TextInput label="Application details" value={anesthesiaForm.applicationType} onChange={(value) => updateAnesthesiaForm({ applicationType: value })} placeholder="optional" suggestions={anesthesiaApplicationTypeSuggestions} />
-              <TextInput label="Site" value={anesthesiaForm.site} onChange={(value) => updateAnesthesiaForm({ site: value })} placeholder="optional" />
-            </>
-          ) : null}
-          {anesthesiaRouteIsTopical || anesthesiaRouteIsOther || anesthesiaModeIsAssessment ? (
-            <TextInput
-              label={anesthesiaAssessmentNeedsReassessment ? "Reason" : "Notes"}
-              value={anesthesiaForm.note}
-              onChange={(value) => updateAnesthesiaForm({ note: value })}
-              placeholder={anesthesiaAssessmentNeedsReassessment ? "e.g., sensitivity returned" : "optional"}
-            />
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={submitAnesthesiaEvent}
-          disabled={!anesthesiaAssessmentCanSubmit}
-          className={`mt-3 rounded-xl border px-4 py-2 text-sm font-semibold transition ${anesthesiaAssessmentCanSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
-        >
-          {anesthesiaMode === "administration"
-            ? anesthesiaForm.route === "injection" ? "Add injection" : anesthesiaForm.route === "topical" ? "Add topical" : "Add other"
-            : "Record assessment"}
-        </button>
+        <AnesthesiaEventForm tooth={caseData.tooth} latestEvent={latestAnesthesiaEvent} onRecordEvent={onRecordAnesthesiaEvent} />
       </section>
 
       <section ref={isolationSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">

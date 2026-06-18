@@ -9,6 +9,7 @@ import {
   workflowLauncherEntries,
 } from "../workflow/registry";
 import { sharedIsolationWorkflowId } from "../workflow/isolation";
+import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
@@ -37,6 +38,7 @@ export function WorkflowLauncher({
   onOpenSavedCases,
   onOpenPriorVisit,
   onOpenNewCaseConfirm,
+  onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
 }: {
   caseData: EndoCase;
@@ -49,11 +51,13 @@ export function WorkflowLauncher({
   onOpenSavedCases: () => void;
   onOpenPriorVisit: () => void;
   onOpenNewCaseConfirm: () => void;
+  onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const anesthesiaStatus = capabilitySummary.anesthesia.needsReassessment ? "Review" : capabilitySummary.anesthesia.satisfied ? "Ready" : "Pending";
   const isolationStatus = capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending";
   const activeCaseFacts = [
     `Patient ${caseData.patientNumber || "not set"}`,
@@ -144,9 +148,9 @@ export function WorkflowLauncher({
                 <p className="text-xs font-bold uppercase tracking-wide">Radiographs</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.radiographs.summary}</p>
               </div>
-              <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-brand-slate">
+              <div className={`rounded-xl border px-3 py-2 ${availabilityClass(capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment ? "ready" : "modelOnly")}`}>
                 <p className="text-xs font-bold uppercase tracking-wide">Anesthesia</p>
-                <p className="mt-1 text-sm font-semibold">{capabilitySummary.anesthesia.summary}</p>
+                <p className="mt-1 text-sm font-semibold">{anesthesiaStatus}</p>
               </div>
               <div className={`rounded-xl border px-3 py-2 ${availabilityClass(capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment ? "ready" : "modelOnly")}`}>
                 <p className="text-xs font-bold uppercase tracking-wide">Isolation</p>
@@ -193,7 +197,8 @@ export function WorkflowLauncher({
             <div className="mt-3 grid gap-3">
               {sharedModuleEntries.map((entry) => {
                 const isIsolation = entry.workflowId === sharedIsolationWorkflowId;
-                const canLaunch = entry.availability === "ready" && isIsolation;
+                const isAnesthesia = entry.workflowId === sharedAnesthesiaWorkflowId;
+                const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia);
                 return (
                   <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -208,7 +213,7 @@ export function WorkflowLauncher({
                     </div>
                     <button
                       type="button"
-                      onClick={canLaunch ? onOpenIsolationWorkflow : undefined}
+                      onClick={canLaunch ? isIsolation ? onOpenIsolationWorkflow : onOpenAnesthesiaWorkflow : undefined}
                       disabled={!canLaunch}
                       className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >

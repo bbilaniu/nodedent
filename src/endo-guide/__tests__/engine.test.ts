@@ -1420,10 +1420,10 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.equal(endoEntry?.availability, "ready");
   assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
-  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), false);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
   assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
-  assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "modelOnly");
+  assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
   assert.equal(operativeEntry?.availability, "modelOnly");
 });
 
@@ -1657,6 +1657,33 @@ test("clinical event schema accepts optional workflow context without requiring 
         satisfiedAt: "2026-01-01T00:00:00.000Z",
       },
     ],
+  }).success, true);
+
+  const embeddedAnesthesiaEvent = {
+    id: "evt_anesthesia_embedded",
+    timestamp: "2026-01-01T00:05:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    workflowVersion: sharedAnesthesiaWorkflow.version,
+    workflowRunId: "run_anesthesia_1",
+    parentWorkflowRunId: "run_endo_1",
+    nodeId: "anesthesia-record",
+    tooth: "36",
+    scope: {
+      kind: "tooth" as const,
+      tooth: "36",
+    },
+    details: {
+      response: "adequate",
+      parentNodeId: "preop",
+    },
+  };
+  const embeddedAnesthesiaCapability = buildAnesthesiaAdequateCapability(embeddedAnesthesiaEvent);
+
+  assert.equal(embeddedAnesthesiaCapability.workflowRunId, "run_anesthesia_1");
+  assert.equal(ClinicalEventSchema.safeParse({
+    ...embeddedAnesthesiaEvent,
+    capabilitiesSatisfied: [embeddedAnesthesiaCapability],
   }).success, true);
 });
 

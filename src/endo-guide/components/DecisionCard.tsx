@@ -58,6 +58,7 @@ export function DecisionCard({
   onContinueCanal,
   onCreateNewCanal,
   onOpenCaseSetupStatus,
+  onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenSavedWorkflow,
   onOpenPriorVisit,
@@ -74,6 +75,7 @@ export function DecisionCard({
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenSavedWorkflow: () => void;
   onOpenPriorVisit: () => void;
@@ -84,6 +86,7 @@ export function DecisionCard({
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
+  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
   const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
   const readinessItems = [
     { label: "Diagnosis", status: capabilitySummary.diagnosis },
@@ -119,13 +122,20 @@ export function DecisionCard({
           <div className="grid gap-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <h4 className="text-sm font-bold text-brand-navy">Pre-access readiness</h4>
-              <div className="grid gap-2 sm:grid-cols-2 lg:w-auto">
+              <div className="grid gap-2 sm:grid-cols-3 lg:w-auto">
                 <button
                   type="button"
                   onClick={() => onOpenCaseSetupStatus()}
                   className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
                 >
                   Open Case Setup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAnesthesiaWorkflow(capabilitySummary.anesthesia.needsReassessment ? "anesthesia-needs-reassessment" : undefined)}
+                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+                >
+                  {anesthesiaIsEstablished ? "Add anesthesia event" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Run anesthesia"}
                 </button>
                 <button
                   type="button"
