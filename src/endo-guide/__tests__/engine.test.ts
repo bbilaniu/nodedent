@@ -2054,6 +2054,41 @@ test("capability selectors match isolation events by exposed tooth and invalidat
   assert.match(eventFragment(compromisedCase.globalEvents[1]), /Isolation compromised: saliva contamination/);
 });
 
+test("alternative isolation establishes capability and formats without optional clamp or exposed teeth", () => {
+  const alternativeIsolationEvent = {
+    id: "evt_alt_iso",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.alternativeIsolationUsed,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    details: {
+      method: "cottonRoll",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+    },
+  };
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [alternativeIsolationEvent],
+  });
+  const status = getCapabilityStatus(caseData, "isolation.established", { kind: "quadrant", regionLabel: "Q3" });
+  const fragment = eventFragment(alternativeIsolationEvent);
+
+  assert.equal(status.satisfied, true);
+  assert.equal(status.needsReassessment, false);
+  assert.equal(isCapabilitySatisfied(caseData, "isolation.established", { kind: "quadrant", regionLabel: "Q3" }), true);
+  assert.deepEqual(getIsolationCoverageSummary(alternativeIsolationEvent), {
+    method: "Cotton roll",
+    region: "Quadrant: Q3",
+    exposedTeeth: "not recorded",
+    clampCode: "not recorded",
+    clampTooth: "not recorded",
+  });
+  assert.equal(fragment, "Alternative isolation used (cottonRoll) (Q3).");
+  assert.doesNotMatch(fragment, /Clamp/);
+  assert.doesNotMatch(fragment, /isolated teeth/);
+});
+
 test("shared isolation replacement re-establishes the isolation capability", () => {
   const caseData = baseCase({
     tooth: "36",
@@ -2078,10 +2113,18 @@ test("shared isolation replacement re-establishes the isolation capability", () 
       },
     ],
   });
+  const removedCase = baseCase({
+    tooth: "36",
+    globalEvents: caseData.globalEvents.slice(0, 2),
+  });
+  const removedStatus = getCapabilityStatus(removedCase, "isolation.established", { kind: "tooth", tooth: "36" });
   const status = getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" });
 
   assert.equal(sharedIsolationWorkflow.workflowId, "shared.isolation");
   assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-complete"), true);
+  assert.equal(removedStatus.satisfied, false);
+  assert.equal(removedStatus.needsReassessment, true);
+  assert.match(eventFragment(removedCase.globalEvents[1]), /Isolation removed/);
   assert.equal(status.satisfied, true);
   assert.equal(status.needsReassessment, false);
   assert.match(eventFragment(caseData.globalEvents[2]), /Isolation replaced/);

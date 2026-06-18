@@ -166,7 +166,7 @@ Potential catalog item fields:
 
 ## Phase 1: Baseline Audit And Tests
 
-Status: mostly implemented as the current `shared.isolation` baseline.
+Status: implemented as the current `shared.isolation` baseline with focused selector and note-fragment tests.
 
 Tasks:
 
