@@ -1459,6 +1459,19 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
       response: "assessment pending",
     },
   };
+  const otherRouteEvent = {
+    id: "evt_anesthesia_other_route",
+    timestamp: "2026-01-01T09:57:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "other",
+      routeLabel: "documented non-injection route",
+      applicationType: "documented application",
+      site: "documented site",
+      notes: "free text note",
+    },
+  };
 
   assert.deepEqual([...anesthesiaRoutes], ["injection", "topical", "other"]);
   assert.deepEqual([...anesthesiaAdequacyResponses], ["adequate", "partial", "notAdequate", "notAssessed"]);
@@ -1480,6 +1493,12 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
   assert.match(eventFragment(event), /documented application/);
   assert.match(eventFragment(event), /time: 09:55/);
   assert.match(eventFragment(event), /Response: partial/);
+
+  const otherDetails = getAnesthesiaEventDetails(otherRouteEvent);
+  assert.equal(otherDetails.route, "other");
+  assert.equal(otherDetails.routeLabel, "documented non-injection route");
+  assert.match(eventFragment(otherRouteEvent), /route: documented non-injection route/);
+  assert.doesNotMatch(eventFragment(otherRouteEvent), /route: other/);
 
   const legacyDetails = getAnesthesiaEventDetails(legacyEvent);
   assert.equal(legacyDetails.route, undefined);

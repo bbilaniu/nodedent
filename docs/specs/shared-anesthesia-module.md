@@ -49,6 +49,7 @@ Initial event types:
 Initial event details:
 
 - `route`
+- `routeLabel`
 - `agentLabel`
 - `technique`
 - `applicationType`
@@ -70,6 +71,8 @@ The app may record route, agent, technique, application type, dose, timing, and 
 
 `response` should distinguish explicit adequacy documentation from other assessment text. An adequacy response is the only response type that can satisfy `anesthesia.adequate`.
 
+Assessment capture should be silent by default. The app should not append a neutral assessment event simply because the user opened the anesthesia panel or recorded administration. It should append an assessment event only when the clinician explicitly records an assessment state, especially adequate or inadequate.
+
 ## Phase 1 Typed Values
 
 Initial `route` values:
@@ -79,6 +82,8 @@ Initial `route` values:
 - `other`
 
 `route` may be absent on legacy imports and early model-only events. New typed UI should require a route before showing route-specific fields.
+
+When `route === "other"`, the UI should provide a free-text route/application field. This keeps the model open for less common routes, including routes that may not be available in the current market.
 
 Initial adequacy `response` values:
 
@@ -95,11 +100,14 @@ These values are machine values, not user-facing labels. UI copy may render them
 
 The first UI should use repeatable local-anesthesia entries rather than a single flat anesthesia form.
 
+An anesthesia entry means one structured administration or top-up event. Each entry action should create one event immediately. Batching multiple entries into a draft list and submitting them together is deferred.
+
 Recommended entry shape:
 
 ```ts
 type AnesthesiaEntry = {
   route?: string;
+  routeLabel?: string;
   agentLabel?: string;
   technique?: string;
   applicationType?: string;
@@ -116,11 +124,17 @@ type AnesthesiaEntry = {
 Runner behavior:
 
 - Label the area `Local anesthesia entries`.
+- Default administration capture to `anesthesia.administered`.
+- Use `anesthesia.topUpGiven` only when the user explicitly selects a top-up action.
+- A future implementation may default to top-up after enough time has elapsed from the most recent injection entry, such as more than 5 minutes, because initial injected doses are typically charted within about a minute of each other. Do not add this heuristic until the UI can make the assumption visible and reversible.
 - Prefer separate `Add injection entry` and `Add topical entry` actions once the UI supports those routes.
 - If the first pass uses one `Add entry` action, require a route field before route-specific controls become active.
 - Filter option lists by route only to prevent inconsistent documentation. Do not present filtered products, techniques, or dose values as recommendations.
 - Keep adequacy confirmation as a separate explicit action or field, even when administration details are complete.
+- Do not default assessment to `notAssessed`; absence of an assessment event is enough to represent no explicit assessment.
 - Offer a reassessment/top-up path that appends a supplemental event and returns the parent workflow to its current node.
+
+Route-specific visibility means the UI shows only fields that fit the selected route. For example, injection entries can show injection technique and vasoconstrictor fields, while topical entries can show application type. This is an information-architecture rule, not clinical decision support: it should not suggest which route, agent, technique, or dose to use.
 
 ## Capability Rules
 
@@ -231,10 +245,13 @@ Reasoning level: medium.
 
 #### Phase 4A: Route-Aware Case Setup Entries
 
+Status: implemented as route-aware Case Setup & Status entries.
 Reasoning level: medium.
 
 - Refine the existing Case Setup & Status anesthesia panel rather than adding the embedded runner.
 - Keep the two primary user-facing actions from Phase 3: `Record administration` and `Record assessment`.
+- Treat each entry action as one immediate event append; do not build a multi-entry batch editor in Phase 4A.
+- Default route-aware administration entries to `anesthesia.administered`; make `anesthesia.topUpGiven` explicit.
 - Within `Record administration`, replace the generic route-first form with clearer entry actions:
   - `Add injection entry`
   - `Add topical entry`
@@ -242,10 +259,24 @@ Reasoning level: medium.
 - Show route-specific fields only when they apply:
   - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, and time administered.
   - Topical entries: application type, site, agent, time administered, and notes.
-  - Other entries: generic route/application/site/notes fields without forcing injection terminology.
+  - Other entries: free-text route/application/site/notes fields without forcing injection terminology.
 - Keep time administered editable and clearable.
 - Keep adequacy confirmation separate from administration entry completion.
+- Keep assessment silent unless the clinician explicitly records adequate or inadequate.
 - Continue appending structured events to the global event ledger.
+- Preserve a future path for deep-linking directly to the anesthesia section from the launcher, readiness prompts, or chart-note cleanup workflows.
+- Keep broader workspace-shell changes out of Phase 4A. When operative dentistry workflows become usable, revisit the status banner and canal selector so the workspace can show treated teeth and surfaces instead of endodontic-only canal context.
+
+Implemented:
+
+- Replaced the generic route selector with `Add injection entry`, `Add topical entry`, and `Add other entry` controls in the Case Setup & Status anesthesia panel.
+- Kept `Record administration` and `Record assessment` as the primary panel modes.
+- Kept the default entry type as initial administration and required explicit selection of `Top-up`.
+- Showed only route-relevant administration fields for injection, topical, and other entries.
+- Added free-text `routeLabel` storage for `other` entries so non-injection and non-topical routes do not have to use injection terminology.
+- Kept time administered editable and clearable for injection and topical entries.
+- Kept assessment silent until the clinician explicitly selects `Adequate` or `Not adequate`.
+- Continued appending one structured anesthesia event per recorded entry or assessment without moving the parent workflow node.
 
 #### Phase 4B: Catalog And Filtering Follow-Up
 

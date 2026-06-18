@@ -27,6 +27,7 @@ export type AnesthesiaAdequacyResponse = typeof anesthesiaAdequacyResponses[numb
 
 export type AnesthesiaEventDetails = {
   route?: AnesthesiaRoute;
+  routeLabel?: string;
   agentLabel?: string;
   technique?: string;
   applicationType?: string;
@@ -72,6 +73,7 @@ export function getAnesthesiaEventDetails(event: ClinicalEvent): AnesthesiaEvent
   const details = event.details && typeof event.details === "object" ? event.details : {};
   return {
     route: normalizeEnum(details.route, anesthesiaRoutes),
+    routeLabel: normalizeString(details.routeLabel),
     agentLabel: normalizeString(details.agentLabel),
     technique: normalizeString(details.technique),
     applicationType: normalizeString(details.applicationType),
@@ -133,9 +135,14 @@ function formatDose(details: AnesthesiaEventDetails) {
   return details.dose || details.doseUnit || "";
 }
 
+function formatRoute(details: AnesthesiaEventDetails) {
+  if (details.route === "other" && details.routeLabel) return `route: ${details.routeLabel}`;
+  return details.route ? `route: ${details.route}` : null;
+}
+
 function formatAnesthesiaContext(details: AnesthesiaEventDetails) {
   return [
-    details.route ? `route: ${details.route}` : null,
+    formatRoute(details),
     details.agentLabel,
     details.technique,
     details.applicationType,

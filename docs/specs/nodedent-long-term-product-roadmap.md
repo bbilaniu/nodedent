@@ -97,6 +97,8 @@ When this launcher becomes the real entry point, declutter the endodontic pre-op
 
 Move resume, prior-visit setup, broad case identity, shared module launch, and timeline/history entry points out of the pre-op decision card once equivalent surfaces exist elsewhere.
 
+When operative dentistry workflows become usable, revisit the main workspace shell. The current status banner and canal selector are endodontic-first surfaces. They should be removed or modified so the workspace can show procedure-appropriate treatment targets, such as teeth and surfaces being treated, without forcing operative workflows through canal-oriented UI.
+
 ### Localization And Internationalization
 
 NodeDent should eventually support localization.
