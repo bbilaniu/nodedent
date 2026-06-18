@@ -33,8 +33,10 @@ import {
   sharedAnesthesiaWorkflow,
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
-import { anesthesiaCatalogOwnership, getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
+import { anesthesiaCatalogOwnership, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
 import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
+import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import {
@@ -1516,6 +1518,9 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.equal(anesthesiaCatalogOwnership.hasDoseDefaults, false);
   assert.equal(anesthesiaCatalogOwnership.hasProductRecommendations, false);
 
+  assert.equal(seedAnesthesiaCatalogItems.every((item) => item.owner === "seed"), true);
+  assert.equal(seedAnesthesiaCatalogItems.every((item) => item.category === "anesthesia"), true);
+  assert.equal(seedAnesthesiaCatalogItems.some((item) => item.label === "Infiltration" && item.appliesTo?.route === "injection" && item.appliesTo.field === "techniques"), true);
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), []);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), []);
   assert.deepEqual(getAnesthesiaCatalogOptions("other", "agents"), []);
@@ -1526,6 +1531,49 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "doseUnits"), ["mL", "carpule(s)"]);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "doseUnits"), []);
   assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
+});
+
+test("shared catalog infrastructure merges customizable documentation catalog layers", () => {
+  const userTechnique: CatalogItem = {
+    id: "anesthesia.injection.techniques.clinic-shortcut",
+    owner: "user",
+    category: "anesthesia",
+    label: "Clinic shortcut",
+    aliases: ["CS"],
+    appliesTo: { route: "injection", field: "techniques" },
+    active: true,
+    favorite: true,
+    sortOrder: 5,
+  };
+  const hiddenSeedTechnique: CatalogItem = {
+    ...seedAnesthesiaCatalogItems.find((item) => item.label === "Block")!,
+    owner: "user",
+    active: false,
+  };
+  const replacementSeedTechnique: CatalogItem = {
+    ...seedAnesthesiaCatalogItems.find((item) => item.label === "Infiltration")!,
+    owner: "clinic",
+    label: "Clinic infiltration phrasing",
+  };
+  const merged = mergeCatalogItems(seedAnesthesiaCatalogItems, [userTechnique, hiddenSeedTechnique, replacementSeedTechnique]);
+  const injectionTechniqueLabels = getCatalogLabels(merged, {
+    category: "anesthesia",
+    route: "injection",
+    field: "techniques",
+    includeAliases: true,
+  });
+  const topicalTechniqueLabels = getCatalogLabels(merged, {
+    category: "anesthesia",
+    route: "topical",
+    field: "techniques",
+  });
+
+  assert.deepEqual(injectionTechniqueLabels.slice(0, 2), ["Clinic shortcut", "CS"]);
+  assert.equal(injectionTechniqueLabels.includes("Clinic infiltration phrasing"), true);
+  assert.equal(injectionTechniqueLabels.includes("Infiltration"), false);
+  assert.equal(injectionTechniqueLabels.includes("Block"), false);
+  assert.deepEqual(topicalTechniqueLabels, []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "techniques", [userTechnique]).slice(0, 1), ["Clinic shortcut"]);
 });
 
 test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {

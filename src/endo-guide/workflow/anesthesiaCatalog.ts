@@ -1,4 +1,6 @@
 import type { AnesthesiaRoute } from "./anesthesia";
+import type { CatalogItem } from "./catalogs";
+import { getCatalogLabels, mergeCatalogItems } from "./catalogs";
 
 export type AnesthesiaCatalogField =
   | "agents"
@@ -8,8 +10,6 @@ export type AnesthesiaCatalogField =
   | "vasoconstrictors"
   | "routeLabels";
 
-export type AnesthesiaRouteCatalog = Record<AnesthesiaCatalogField, string[]>;
-
 export const anesthesiaCatalogOwnership = {
   owner: "seed",
   clinicalUse: "documentationSuggestionsOnly",
@@ -18,40 +18,59 @@ export const anesthesiaCatalogOwnership = {
   hasProductRecommendations: false,
 } as const;
 
-export const anesthesiaCatalog = {
-  injection: {
-    agents: [],
-    techniques: [
-      "Infiltration",
-      "Block",
-      "Intraligamentary / PDL",
-      "Intraosseous",
-      "Intrapulpal",
-      "Other injection technique",
-    ],
-    applicationTypes: [],
-    doseUnits: ["mL", "carpule(s)"],
-    vasoconstrictors: ["With vasoconstrictor", "Without vasoconstrictor", "None documented"],
-    routeLabels: [],
-  },
-  topical: {
-    agents: [],
-    techniques: [],
-    applicationTypes: ["Topical application", "Gel", "Liquid", "Spray", "Other topical application"],
-    doseUnits: [],
-    vasoconstrictors: [],
-    routeLabels: [],
-  },
-  other: {
-    agents: [],
-    techniques: [],
-    applicationTypes: ["Other application"],
-    doseUnits: [],
-    vasoconstrictors: [],
-    routeLabels: ["Inhaled", "Other"],
-  },
-} as const satisfies Record<AnesthesiaRoute, AnesthesiaRouteCatalog>;
+function anesthesiaCatalogItem(
+  field: AnesthesiaCatalogField,
+  route: AnesthesiaRoute,
+  label: string,
+  sortOrder: number,
+  metadata: Partial<Pick<CatalogItem, "aliases" | "favorite" | "source" | "version">> = {}
+): CatalogItem {
+  return {
+    id: `anesthesia.${route}.${field}.${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
+    owner: "seed",
+    category: "anesthesia",
+    label,
+    appliesTo: { route, field },
+    active: true,
+    sortOrder,
+    ...metadata,
+  };
+}
 
-export function getAnesthesiaCatalogOptions(route: AnesthesiaRoute, field: AnesthesiaCatalogField): string[] {
-  return [...anesthesiaCatalog[route][field]];
+export const seedAnesthesiaCatalogItems: CatalogItem[] = [
+  anesthesiaCatalogItem("techniques", "injection", "Infiltration", 10),
+  anesthesiaCatalogItem("techniques", "injection", "Block", 20),
+  anesthesiaCatalogItem("techniques", "injection", "Intraligamentary / PDL", 30, { aliases: ["PDL"] }),
+  anesthesiaCatalogItem("techniques", "injection", "Intraosseous", 40),
+  anesthesiaCatalogItem("techniques", "injection", "Intrapulpal", 50),
+  anesthesiaCatalogItem("techniques", "injection", "Other injection technique", 60),
+  anesthesiaCatalogItem("doseUnits", "injection", "mL", 10),
+  anesthesiaCatalogItem("doseUnits", "injection", "carpule(s)", 20, { aliases: ["carpule", "carpules"] }),
+  anesthesiaCatalogItem("vasoconstrictors", "injection", "With vasoconstrictor", 10),
+  anesthesiaCatalogItem("vasoconstrictors", "injection", "Without vasoconstrictor", 20),
+  anesthesiaCatalogItem("vasoconstrictors", "injection", "None documented", 30),
+  anesthesiaCatalogItem("applicationTypes", "topical", "Topical application", 10),
+  anesthesiaCatalogItem("applicationTypes", "topical", "Gel", 20),
+  anesthesiaCatalogItem("applicationTypes", "topical", "Liquid", 30),
+  anesthesiaCatalogItem("applicationTypes", "topical", "Spray", 40),
+  anesthesiaCatalogItem("applicationTypes", "topical", "Other topical application", 50),
+  anesthesiaCatalogItem("applicationTypes", "other", "Other application", 10),
+  anesthesiaCatalogItem("routeLabels", "other", "Inhaled", 10),
+  anesthesiaCatalogItem("routeLabels", "other", "Other", 20),
+];
+
+export function getAnesthesiaCatalogItems(customItems: CatalogItem[] = []): CatalogItem[] {
+  return mergeCatalogItems(seedAnesthesiaCatalogItems, customItems);
+}
+
+export function getAnesthesiaCatalogOptions(
+  route: AnesthesiaRoute,
+  field: AnesthesiaCatalogField,
+  customItems: CatalogItem[] = []
+): string[] {
+  return getCatalogLabels(getAnesthesiaCatalogItems(customItems), {
+    category: "anesthesia",
+    route,
+    field,
+  });
 }

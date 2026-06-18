@@ -407,6 +407,7 @@ Implemented:
 
 #### Phase 6B: Source-Backed Rules And Broader Catalogs
 
+Status: partially implemented for shared catalog item/query/merge infrastructure; source-backed timing rules remain deferred.
 Reasoning level: high.
 
 - Add automatic timing or expiry rules only after source-backed ADR/spec review.
@@ -414,6 +415,21 @@ Reasoning level: high.
 - Generalize seeded customizable catalogs across burs, files, materials, brands, shades, cements, and other product vocabularies.
 - Keep source-backed rules separate from seed/user/clinic/template documentation shortcuts.
 - Add tests that separate explicit reassessment, source-backed expiry, and non-rule catalog fields.
+
+Implemented catalog infrastructure:
+
+- Added a shared catalog item model with `appCore`, `seed`, `user`, `clinic`, and `template` owner layers.
+- Added catalog applicability metadata for route and field filtering.
+- Added shared catalog merge, filter, alias, favorite, active/hidden, and sort-order helpers.
+- Converted the anesthesia catalog from route-specific string arrays to seeded catalog items consumed through the shared helper layer.
+- Preserved the existing anesthesia form behavior and free-text datalist suggestions.
+- Added tests for owner precedence, route/field filtering, active/hidden overrides, aliases, favorites, sort order, and non-prescriptive anesthesia guardrails.
+
+Deferred:
+
+- Durable user/clinic/template catalog storage and management UI.
+- Import/export or synchronization of user/clinic/template catalog layers.
+- Source-backed timing or expiry rules.
 
 ## Later Runner Acceptance Criteria
 
