@@ -955,6 +955,7 @@ export default function EndoChairsideGuide() {
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
+            onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}

@@ -35,6 +35,7 @@ export function CaseManagementModal({
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
@@ -54,6 +55,7 @@ export function CaseManagementModal({
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
@@ -124,6 +126,7 @@ export function CaseManagementModal({
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
             onRecordIsolationEvent={onRecordIsolationEvent}
+            onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}

@@ -495,6 +495,7 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
@@ -511,6 +512,7 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
@@ -543,6 +545,10 @@ export function CaseSetupStatusPanel({
     { label: "Anesthesia", status: capabilitySummary.anesthesia },
     { label: "Isolation", status: capabilitySummary.isolation },
   ];
+  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
+  const anesthesiaWorkflowEntryNodeId = anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment
+    ? "anesthesia-needs-reassessment"
+    : undefined;
   const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
   const showMethodField = isolationForm.action === isolationEventTypes.alternativeIsolationUsed || isolationForm.action === isolationEventTypes.replaced;
   const methodOptions = isolationForm.action === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
@@ -764,6 +770,16 @@ export function CaseSetupStatusPanel({
             {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
           </div>
         ) : null}
+        <div className="mt-3">
+          <button
+            type="button"
+            aria-label="Open embedded anesthesia workflow"
+            onClick={() => onOpenAnesthesiaWorkflow(anesthesiaWorkflowEntryNodeId)}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaIsEstablished ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+          >
+            {anesthesiaIsEstablished ? "Open workflow" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
+          </button>
+        </div>
         <AnesthesiaEventForm
           tooth={caseData.tooth}
           latestEvent={latestAnesthesiaEvent}
