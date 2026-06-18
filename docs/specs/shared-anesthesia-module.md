@@ -138,13 +138,31 @@ Route-specific visibility means the UI shows only fields that fit the selected r
 
 ## Catalog Shape
 
-The first `anesthesiaCatalog` should be a documentation-suggestion layer, not clinical decision support. Catalog values can speed up charting and prevent mismatched fields, but every catalog-backed field must continue to accept custom text.
+The first `anesthesiaCatalog` should follow [ADR 0005: Support Seeded Customizable Clinical Documentation Catalogs](../adr/0005-support-seeded-customizable-documentation-catalogs.md). It is a documentation-suggestion layer, not clinical decision support. Catalog values can speed up charting and prevent mismatched fields, but every catalog-backed field must continue to accept custom text.
 
 Potential long-term catalog ownership options:
 
 - NodeDent core: stable documentation vocabulary, such as route labels, field labels, and non-prescriptive technique/application terms.
 - User preferences: clinic-specific products, spelling, abbreviations, favorites, and local note phrasing.
 - Template/config layer: organization-managed product catalogs, market availability, localization, and import/export mappings.
+
+For anesthesia, app core may own stable non-prescriptive values such as route values, event types, field names, and broad categories. Product names, brands, systems, agent labels, concentration text, vasoconstrictor/adrenaline phrasing, and clinic-specific shortcuts should be seed/user/clinic/template-owned.
+
+### Seeded Customizable Catalog Decision
+
+The anesthesia catalog is the anesthesia-specific slice of ADR 0005. It may ship seeded documentation suggestions for anesthesia charting, but those suggestions are editable shortcuts rather than clinical recommendations.
+
+Ownership should follow the shared catalog layers:
+
+- `appCore`: stable non-prescriptive anesthesia vocabulary, such as route values, event types, field names, and broad field categories.
+- `seed`: starter anesthesia documentation shortcuts shipped by NodeDent.
+- `user`: user-owned anesthesia shortcuts, aliases, and favorites.
+- `clinic`: clinic-owned anesthetic/product labels, phrasing, and preferred documentation vocabulary.
+- `template`: template-owned anesthesia configuration, localization, or import/export mappings.
+
+Catalog-backed anesthesia fields must stay editable/free-text through datalist or autocomplete behavior. Selecting a catalog suggestion must snapshot the selected label/text into the anesthesia event details so historical notes do not depend on live catalog item names.
+
+Seeded anesthesia suggestions must not infer adequacy, dose, timing, expiry, safety, or treatment recommendations. They also must not add automatic dose or amount defaults.
 
 Potential catalog item fields:
 
@@ -156,7 +174,9 @@ Potential catalog item fields:
 - Optional source/owner metadata so user-defined, clinic-defined, and app-defined entries can be audited separately.
 - Optional deprecation/replacement metadata for renamed products or templates.
 
-Catalog values must not include dose defaults, timing thresholds, adequacy rules, or agent recommendations unless those rules are source-backed and documented in a future ADR or active spec. Even then, generated rules should be visible and reversible before they affect an event.
+Catalog values must not include dose defaults, timing thresholds, adequacy rules, expiry rules, safety rules, treatment recommendations, or agent recommendations unless those rules are source-backed and documented in a future ADR or active spec. Even then, generated rules should be visible and reversible before they affect an event.
+
+When recording anesthesia events, snapshot selected or typed catalog labels into event details. Historical notes must not depend on live catalog item names.
 
 ## Capability Rules
 
@@ -316,6 +336,7 @@ Phase 4B ownership decision:
 - Keep product/agent lists empty until source, jurisdiction, and ownership are decided.
 - Keep every catalog-backed field free-text through datalist suggestions rather than closed selects.
 - Do not add dose defaults, product recommendations, timing rules, or adequacy inference.
+- Treat future product and phrase catalogs as seeded customizable documentation catalogs under ADR 0005.
 
 Implemented:
 
@@ -357,14 +378,31 @@ Implemented:
 - Enabled the anesthesia module as `Ready` in the launcher.
 - Added direct anesthesia launch paths from NodeDent Home and pre-access readiness prompts without moving the parent workflow node.
 
-### Phase 6: Source-Backed Expiry And Catalog Refinement
+### Phase 6: Explicit Reassessment And Catalog Refinement
 
 Reasoning level: high.
 
-- Add automatic expiry only after source-backed timing rules are documented in active specs or ADRs.
-- Decide whether agent, vasoconstrictor/adrenaline, technique, and dose should become typed catalogs based on real product needs and source material.
-- If expiry rules are added, record an explicit `expiresAt` and keep the rule traceable to the source-backed decision.
-- Add tests that separate explicit reassessment, explicit expiry, and administration timing context.
+#### Phase 6A: Explicit Reassessment Time And Seeded Anesthesia Catalog
+
+Reasoning level: medium-high.
+
+- Add optional `expiresAt` / `Reassess after` capture.
+- Treat it as clinician-entered documentation only.
+- Add seeded anesthesia catalog suggestions as editable documentation shortcuts.
+- Do not calculate expiry from agent, dose, vasoconstrictor/adrenaline, technique, route, response, or administered time.
+- Do not add automatic dose or amount defaults.
+- Snapshot selected catalog labels into event details.
+- Add tests that separate explicit reassessment timing from administration timing context.
+
+#### Phase 6B: Source-Backed Rules And Broader Catalogs
+
+Reasoning level: high.
+
+- Add automatic timing or expiry rules only after source-backed ADR/spec review.
+- If source-backed expiry rules are added, record an explicit `expiresAt` and keep the rule traceable to the source-backed decision.
+- Generalize seeded customizable catalogs across burs, files, materials, brands, shades, cements, and other product vocabularies.
+- Keep source-backed rules separate from seed/user/clinic/template documentation shortcuts.
+- Add tests that separate explicit reassessment, source-backed expiry, and non-rule catalog fields.
 
 ## Later Runner Acceptance Criteria
 
@@ -382,6 +420,8 @@ Reasoning level: high.
 
 - Typed core now: event types, `route`, scope, and adequacy response. Other anesthesia details stay free text or catalog-backed strings until product needs justify typed enums.
 - No automatic expiry until source-backed timing rules exist.
+- Explicit `expiresAt` / `Reassess after` documentation may be captured only as clinician-entered event detail unless source-backed expiry rules are approved later.
+- Catalog ownership is resolved conceptually by ADR 0005: `appCore` owns stable non-prescriptive vocabulary, while product names, brands, systems, agent labels, phrases, aliases, and favorites belong to `seed`, `user`, `clinic`, or `template` catalogs.
 - The first UI should be a Case Setup & Status panel form. An embedded runner can follow after the event contract and selectors are stable.
 - Case Setup & Status and the embedded anesthesia runner should share form helpers and the reusable `AnesthesiaEventForm` so event construction does not drift.
 - Post-administration assessment should remain event-detail text initially. Add separate event types beyond adequacy and reassessment only when they affect status, alerts, follow-up, or note generation.
@@ -389,4 +429,4 @@ Reasoning level: high.
 ## Open Decisions
 
 - Whether additional route or adequacy-response values are needed after the first typed UI is tested.
-- Whether route-specific product catalogs belong in NodeDent core, user preferences, or a future template/config layer.
+- How seeded, user, clinic, and template catalogs will be stored, synchronized, imported, exported, and managed across clinical modules.

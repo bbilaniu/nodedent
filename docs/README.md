@@ -28,6 +28,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0002: Apply the NodeDent Color System Without Losing Clinical Semantics](adr/0002-apply-nodedent-color-system.md)
 - [ADR 0003: Adopt NodeDent Brand Identity](adr/0003-adopt-nodedent-brand-identity.md)
 - [ADR 0004: Generalize Clinical Workflow Nodes Through Reusable Workflow Modules](adr/0004-generalize-clinical-workflow-nodes.md)
+- [ADR 0005: Support Seeded Customizable Clinical Documentation Catalogs](adr/0005-support-seeded-customizable-documentation-catalogs.md)
 
 ## Archived Implemented Specs
 
