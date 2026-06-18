@@ -39,7 +39,8 @@ import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../wor
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
-import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
@@ -1547,6 +1548,84 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses"), ["1:100K epinephrine/adrenaline", "1:200K epinephrine/adrenaline"]);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "vasoconstrictorDoses"), []);
   assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
+});
+
+test("shared isolation catalog suggestions are narrow and non-prescriptive", () => {
+  assert.equal(isolationCatalogOwnership.owner, "seed");
+  assert.equal(isolationCatalogOwnership.clinicalUse, "documentationSuggestionsOnly");
+  assert.equal(isolationCatalogOwnership.allowsCustomText, true);
+  assert.equal(isolationCatalogOwnership.hasClampRecommendations, false);
+  assert.equal(isolationCatalogOwnership.hasMethodRecommendations, false);
+  assert.equal(isolationCatalogOwnership.hasOperativeReadinessRules, false);
+
+  assert.equal(seedIsolationCatalogItems.every((item) => item.owner === "seed"), true);
+  assert.equal(seedIsolationCatalogItems.every((item) => item.category === "isolation"), true);
+  assert.equal(seedIsolationCatalogItems.some((item) => item.label === "Rubber dam" && item.appliesTo?.field === "methodLabels"), true);
+  assert.equal(seedIsolationCatalogItems.some((item) => item.appliesTo?.field === "supportTypes" && item.label === "Clamp"), true);
+  assert.deepEqual(getIsolationCatalogOptions("clampCodes"), []);
+  assert.equal(getIsolationCatalogOptions("methodLabels").includes("Rubber dam"), true);
+  assert.equal(getIsolationCatalogOptions("supportTypes").includes("Clamp"), true);
+  assert.equal(getIsolationCatalogOptions("reasons").includes("Saliva contamination"), true);
+  assert.equal(getIsolationCatalogOptions("notes").includes("Isolation stable"), true);
+});
+
+test("shared isolation catalog merges user items, hides seed rows, and snapshots event labels", () => {
+  const userClampCode = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "W8A",
+    aliases: ["8A"],
+    favorite: true,
+    sortOrder: 1,
+  });
+  const userReason = createUserIsolationCatalogItem({
+    field: "reasons",
+    label: "Clinic reason",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const hiddenSeedReason = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Saliva contamination")!,
+    { active: false, favorite: false }
+  );
+  const favoriteSeedNote = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Isolation monitored throughout")!,
+    { active: true, favorite: true }
+  );
+  const customItems = [userClampCode, userReason, hiddenSeedReason, favoriteSeedNote];
+  const clampCodes = getIsolationCatalogOptions("clampCodes", customItems);
+  const reasons = getIsolationCatalogOptions("reasons", customItems);
+  const notes = getIsolationCatalogOptions("notes", customItems);
+  const reasonAliases = getCatalogLabels(mergeCatalogItems(seedIsolationCatalogItems, customItems), {
+    category: "isolation",
+    field: "clampCodes",
+    includeAliases: true,
+  });
+  const event = {
+    id: "evt_isolation_catalog_snapshot",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    details: {
+      method: "rubberDam",
+      clampCode: clampCodes[0],
+      reason: reasons[0],
+      notes: notes[0],
+    },
+  };
+  const hiddenAfterRecording = [
+    createUserIsolationCatalogOverride(userClampCode, { active: false, favorite: userClampCode.favorite }),
+    createUserIsolationCatalogOverride(userReason, { active: false, favorite: userReason.favorite }),
+    createUserIsolationCatalogOverride(favoriteSeedNote, { active: false, favorite: favoriteSeedNote.favorite }),
+  ];
+
+  assert.deepEqual(clampCodes, ["W8A"]);
+  assert.deepEqual(reasonAliases, ["W8A", "8A"]);
+  assert.equal(reasons[0], "Clinic reason");
+  assert.equal(reasons.includes("Saliva contamination"), false);
+  assert.equal(notes[0], "Isolation monitored throughout");
+  assert.deepEqual(getIsolationCatalogOptions("clampCodes", hiddenAfterRecording), []);
+  assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
+  assert.equal(getIsolationEventDetails(event).reason, "Clinic reason");
+  assert.equal(getIsolationEventDetails(event).notes, "Isolation monitored throughout");
 });
 
 test("shared catalog infrastructure merges customizable documentation catalog layers", () => {

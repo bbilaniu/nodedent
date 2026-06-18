@@ -178,6 +178,8 @@ Tasks:
 
 ## Phase 2: Isolation Catalog Model
 
+Status: implemented as a narrow shared catalog model with non-prescriptive seed suggestions and user-owned clamp-code support.
+
 Add a narrow isolation catalog layer using the shared catalog infrastructure.
 
 Tasks:
