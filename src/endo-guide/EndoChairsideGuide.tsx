@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { CanalContinuationTarget, DecisionOption, DifficultyFlag, EndoCase, ValidationMessage } from "./types";
+import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
 import { CanalSelector } from "./components/CanalSelector";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
@@ -8,6 +8,8 @@ import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
+import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
+import { WorkflowLauncher } from "./components/WorkflowLauncher";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
@@ -21,7 +23,26 @@ import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
+import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
+import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
+import {
+  anesthesiaEventTypes,
+  getAnesthesiaAdequateCapabilityOutput,
+  getAnesthesiaScopeFromDetails,
+  sharedAnesthesiaWorkflowId,
+  sharedAnesthesiaWorkflowVersion,
+} from "./workflow/anesthesia";
+import type { AnesthesiaEventOptions } from "./workflow/anesthesiaForm";
+import type { IsolationEventDetails, IsolationEventType } from "./workflow/isolation";
+import {
+  buildIsolationEstablishedCapability,
+  getIsolationScopeFromDetails,
+  isolationEventTypes,
+  sharedIsolationWorkflowId,
+  sharedIsolationWorkflowVersion,
+} from "./workflow/isolation";
+import { getCaseCapabilitySummary } from "./workflow/selectors";
 
 type HistoryEntry = {
   caseData: EndoCase;
@@ -44,6 +65,10 @@ type ThemeMode = "light" | "dark";
 const THEME_STORAGE_KEY = "nodedent-theme";
 const LIGHT_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference.svg";
 const DARK_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference_inverted_dark_bg.svg";
+
+function makeWorkflowRunId(prefix: string) {
+  return `run_${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
 
 function getSavedCaseIndex(): SavedCaseSummary[] {
   try {
@@ -83,6 +108,7 @@ export default function EndoChairsideGuide() {
       return initialCase;
     }
   });
+  const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
   const [currentNodeId, setCurrentNodeId] = useState(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -100,6 +126,10 @@ export default function EndoChairsideGuide() {
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
+  const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
+  const [rootWorkflowRunId, setRootWorkflowRunId] = useState(() => makeWorkflowRunId("endo_root"));
+  const [isWorkflowLauncherOpen, setIsWorkflowLauncherOpen] = useState(false);
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
@@ -114,6 +144,11 @@ export default function EndoChairsideGuide() {
     [caseData.canals, caseData.currentCanal]
   );
   const activeCanalStatus = getCanalStatus(activeCanal);
+  const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
+  const latestAnesthesiaEvent = useMemo(
+    () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
+    [caseData.globalEvents]
+  );
   const canResumeActiveCanalFromPriorVisit = Boolean(
     caseData.priorVisit?.continuedFromPriorVisit ||
     caseData.globalEvents.some((event) => event.type === "case.continuedFromPriorVisit") ||
@@ -172,6 +207,11 @@ export default function EndoChairsideGuide() {
     setValidationMessage(null);
   }
 
+  function updateUserAnesthesiaCatalogItems(items: typeof userAnesthesiaCatalogItems) {
+    setUserAnesthesiaCatalogItems(items);
+    saveUserAnesthesiaCatalogItems(items);
+  }
+
   function updatePreOp(field: string, value: string | boolean) {
     setCaseData((prev) => ({ ...prev, preOp: { ...prev.preOp, [field]: value } }));
     setValidationMessage(null);
@@ -184,6 +224,78 @@ export default function EndoChairsideGuide() {
 
   function applySuggestedCaseStatus() {
     updateCase({ caseStatus: "" });
+  }
+
+  function recordAnesthesiaEvent(
+    eventType: AnesthesiaEventType,
+    details: AnesthesiaEventDetails,
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null } & AnesthesiaEventOptions
+  ) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
+    const event = makeRuntimeEvent({
+      type: eventType,
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: context?.nodeId || currentNode.id,
+      label: context?.label || eventType,
+      activeCanal,
+      workflowId: sharedAnesthesiaWorkflowId,
+      workflowVersion: sharedAnesthesiaWorkflowVersion,
+      workflowRunId: context?.workflowRunId,
+      parentWorkflowRunId: context?.parentWorkflowRunId,
+      scope,
+      expiresAt: context?.expiresAt,
+    });
+    event.details = { ...event.details, ...details };
+    if (context?.nodeId) event.details.parentNodeId = currentNode.id;
+    const capability = getAnesthesiaAdequateCapabilityOutput(event);
+    if (capability) event.capabilitiesSatisfied = [capability];
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
+  }
+
+  function recordIsolationEvent(
+    eventType: IsolationEventType,
+    details: IsolationEventDetails,
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
+  ) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const scope = getIsolationScopeFromDetails(details, caseData.tooth);
+    const event = makeRuntimeEvent({
+      type: eventType,
+      tooth: caseData.tooth,
+      canal: "All",
+      nodeId: context?.nodeId || currentNode.id,
+      label: context?.label || eventType,
+      activeCanal,
+      workflowId: sharedIsolationWorkflowId,
+      workflowVersion: sharedIsolationWorkflowVersion,
+      workflowRunId: context?.workflowRunId,
+      parentWorkflowRunId: context?.parentWorkflowRunId,
+      scope,
+    });
+    event.details = { ...event.details, ...details };
+    if (context?.nodeId) event.details.parentNodeId = currentNode.id;
+    if (
+      eventType === isolationEventTypes.rubberDamPlaced ||
+      eventType === isolationEventTypes.alternativeIsolationUsed ||
+      eventType === isolationEventTypes.replaced
+    ) {
+      event.capabilitiesSatisfied = [buildIsolationEstablishedCapability(event)];
+    }
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
   }
 
   function updateActiveCanal(field: string, value: string) {
@@ -221,8 +333,40 @@ export default function EndoChairsideGuide() {
     setCopied(false);
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch(null);
+    setIsWorkflowLauncherOpen(false);
+    setRootWorkflowRunId(makeWorkflowRunId("endo_root"));
     setIsSavedCasesOpen(false);
     setIsPriorVisitOpen(false);
+  }
+
+  function openCasePanel(focusTarget?: CaseSetupFocusTarget) {
+    setIsWorkflowLauncherOpen(false);
+    setCasePanelFocusTarget(focusTarget || null);
+    setIsCasePanelOpen(true);
+  }
+
+  function openIsolationWorkflow(entryNodeId?: string) {
+    setIsWorkflowLauncherOpen(false);
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch({
+      workflowId: sharedIsolationWorkflowId,
+      entryNodeId,
+      workflowRunId: makeWorkflowRunId("shared_isolation"),
+    });
+  }
+
+  function openAnesthesiaWorkflow(entryNodeId?: string) {
+    setIsWorkflowLauncherOpen(false);
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch({
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId,
+      workflowRunId: makeWorkflowRunId("shared_anesthesia"),
+    });
   }
 
   function continueFromPriorVisit() {
@@ -308,6 +452,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(normalized));
       setHistory([]);
       setValidationMessage(null);
+      setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
     } catch {
       setValidationMessage({ optionLabel: "Load saved case", missing: ["Could not load saved case from local storage"] });
@@ -360,6 +505,7 @@ export default function EndoChairsideGuide() {
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
       setShowImportBox(false);
+      setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
       setImportText("");
       setValidationMessage(null);
@@ -602,6 +748,21 @@ export default function EndoChairsideGuide() {
     setValidationMessage(null);
   }
 
+  function openSavedCases() {
+    setIsWorkflowLauncherOpen(false);
+    setIsSavedCasesOpen(true);
+  }
+
+  function openPriorVisit() {
+    setIsWorkflowLauncherOpen(false);
+    setIsPriorVisitOpen(true);
+  }
+
+  function openNewCaseConfirm() {
+    setIsWorkflowLauncherOpen(false);
+    setIsNewCaseConfirmOpen(true);
+  }
+
   const compactNote = buildCompactNote(caseData);
   const fullNote = buildFullNote(caseData);
   const patientSummary = buildPatientSummary(caseData);
@@ -638,6 +799,13 @@ export default function EndoChairsideGuide() {
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
               <button
                 type="button"
+                onClick={() => setIsWorkflowLauncherOpen(true)}
+                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-mint/50 bg-brand-mint/15 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-mint/25"
+              >
+                NodeDent Home
+              </button>
+              <button
+                type="button"
                 aria-pressed={themeMode === "dark"}
                 onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
                 className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-brand-light-node bg-white px-3 py-1.5 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
@@ -647,28 +815,28 @@ export default function EndoChairsideGuide() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsCasePanelOpen(true)}
+                onClick={() => openCasePanel()}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-brand-navy-deep"
               >
-                Case panel
+                Case Setup & Status
               </button>
               <button
                 type="button"
-                onClick={() => setIsSavedCasesOpen(true)}
+                onClick={openSavedCases}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-blue-light bg-brand-blue-light/20 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-blue-light/30"
               >
                 Resume saved workflow
               </button>
               <button
                 type="button"
-                onClick={() => setIsPriorVisitOpen(true)}
+                onClick={openPriorVisit}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold leading-none text-amber-950 transition hover:bg-amber-100"
               >
                 Prior visit
               </button>
               <button
                 type="button"
-                onClick={() => setIsNewCaseConfirmOpen(true)}
+                onClick={openNewCaseConfirm}
                 className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
               >
                 New case
@@ -718,12 +886,11 @@ export default function EndoChairsideGuide() {
               onApplyDecision={applyDecision}
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
-              onOpenSavedWorkflow={() => setIsSavedCasesOpen(true)}
-              onOpenPriorVisit={() => setIsPriorVisitOpen(true)}
-              onUpdateCase={updateCase}
-              onUpdateDiagnosis={updateDiagnosis}
-              onUpdatePreOp={updatePreOp}
-              onUpdateActiveCanal={updateActiveCanal}
+              onOpenCaseSetupStatus={openCasePanel}
+              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+              onOpenIsolationWorkflow={openIsolationWorkflow}
+              onOpenSavedWorkflow={openSavedCases}
+              onOpenPriorVisit={openPriorVisit}
             />
           </section>
 
@@ -748,15 +915,60 @@ export default function EndoChairsideGuide() {
           </aside>
         </main>
 
+        {isWorkflowLauncherOpen ? (
+          <WorkflowLauncher
+            caseData={caseData}
+            currentNodeTitle={currentNode.title}
+            currentNodePhase={currentNode.phase}
+            savedCaseCount={savedCases.length}
+            onClose={() => setIsWorkflowLauncherOpen(false)}
+            onContinueEndodonticWorkflow={() => setIsWorkflowLauncherOpen(false)}
+            onOpenCaseSetupStatus={() => openCasePanel()}
+            onOpenSavedCases={openSavedCases}
+            onOpenPriorVisit={openPriorVisit}
+            onOpenNewCaseConfirm={openNewCaseConfirm}
+            onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
+            onOpenIsolationWorkflow={() => openIsolationWorkflow()}
+          />
+        ) : null}
+
         {isCasePanelOpen ? (
           <CaseManagementModal
             caseData={caseData}
+            activeCanal={activeCanal}
             currentNodeId={currentNodeId}
-            onClose={() => setIsCasePanelOpen(false)}
+            onClose={() => {
+              setIsCasePanelOpen(false);
+              setCasePanelFocusTarget(null);
+            }}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}
+            onUpdatePreOp={updatePreOp}
+            onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
+            onRecordAnesthesiaEvent={recordAnesthesiaEvent}
+            onRecordIsolationEvent={recordIsolationEvent}
+            onOpenIsolationWorkflow={openIsolationWorkflow}
+            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
+            onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             onDownloadCaseJson={downloadCaseJson}
+            initialFocusSection={casePanelFocusTarget}
+          />
+        ) : null}
+
+        {embeddedWorkflowLaunch ? (
+          <SharedWorkflowRunnerModal
+            launch={embeddedWorkflowLaunch}
+            caseData={caseData}
+            parentNodeTitle={currentNode.title}
+            parentWorkflowRunId={rootWorkflowRunId}
+            latestAnesthesiaEvent={latestAnesthesiaEvent}
+            latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
+            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
+            onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
+            onClose={() => setEmbeddedWorkflowLaunch(null)}
+            onRecordAnesthesiaEvent={recordAnesthesiaEvent}
+            onRecordIsolationEvent={recordIsolationEvent}
           />
         ) : null}
 

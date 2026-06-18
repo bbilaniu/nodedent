@@ -16,8 +16,48 @@ import { getManualResumeNodeForCanal } from "../engine/resume";
 import { getNextRecommendedNodeForCanal, getPhaseAwareCanalTargets } from "../protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
+import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
+import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
+import {
+  anesthesiaAdequacyResponses,
+  anesthesiaEventTypes,
+  anesthesiaRoutes,
+  buildAnesthesiaAdequateCapability,
+  getAnesthesiaAdequateCapabilityOutput,
+  getAnesthesiaEventDetails,
+  getAnesthesiaScopeFromEvent,
+  isAdequateAnesthesiaResponse,
+  isAnesthesiaAdequacyResponse,
+  isAnesthesiaRoute,
+  sharedAnesthesiaWorkflow,
+  sharedAnesthesiaWorkflowId,
+} from "../workflow/anesthesia";
+import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
+import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
+import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
+import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
+import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import {
+  createOperativeSurfaceScope,
+  isEndodonticCanalScope,
+  isOperativeSurfaceScope,
+  operativeDirectRestorationWorkflow,
+  operativeReadinessCapabilityRequirements,
+  operativeRestorationOutputCapabilities,
+  scopesTargetDifferentToothSubstructures,
+  sharedDiagnosisWorkflowId,
+} from "../workflow/operative";
+import {
+  endodonticRootWorkflow,
+  endodonticRootWorkflowId,
+  getReadyWorkflowLauncherEntries,
+  getSharedModuleLauncherEntries,
+  workflowLauncherEntries,
+} from "../workflow/registry";
+import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -43,6 +83,16 @@ function listFiles(directory: string): string[] {
     const path = join(directory, entry);
     return statSync(path).isDirectory() ? listFiles(path) : [path];
   });
+}
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
 }
 
 function applyFirstOption(caseData: EndoCase, currentNodeId: string) {
@@ -1301,6 +1351,764 @@ test("schema allows valid radiograph statuses plus blank and undefined before en
     assert.equal(RadiographStatusSchema.safeParse(status).success, true);
   });
   assert.equal(RadiographStatusSchema.safeParse("missing").success, false);
+});
+
+test("shared workflow capability vocabulary has scope rules", () => {
+  knownCapabilityNames.forEach((capability) => {
+    const rule = capabilityScopeRules[capability];
+    assert.ok(rule);
+    assert.ok(rule.acceptedScopes.some((scope) => scope === rule.defaultScope));
+  });
+});
+
+test("operative direct restoration workflow reuses shared context and owns restoration output", () => {
+  const workflow = operativeDirectRestorationWorkflow;
+  const readinessNode = workflow.nodes["operative-readiness"];
+  const restorationNode = workflow.nodes["operative-restoration-record"];
+  const completionNode = workflow.nodes["operative-restoration-complete"];
+
+  assert.equal(workflow.discipline, "operative");
+  assert.equal(workflow.supportedScopes.includes("surface"), true);
+  assert.equal(workflow.supportedScopes.includes("canal"), false);
+  assert.deepEqual(
+    operativeReadinessCapabilityRequirements.map((requirement) => requirement.name),
+    ["diagnosis.recorded", "radiographs.reviewed", "anesthesia.adequate", "isolation.established"]
+  );
+  assert.deepEqual(
+    readinessNode.moduleCalls?.map((call) => call.workflowId),
+    [sharedDiagnosisWorkflowId, sharedAnesthesiaWorkflowId, sharedIsolationWorkflow.workflowId]
+  );
+  assert.equal(readinessNode.capabilityRequirements, undefined);
+  assert.equal(restorationNode.moduleCalls, undefined);
+  assert.deepEqual(operativeRestorationOutputCapabilities, ["finalRestoration.placed"]);
+  assert.deepEqual(completionNode.capabilityRequirements?.map((requirement) => requirement.name), ["finalRestoration.placed"]);
+});
+
+test("operative surface scope stays separate from endodontic canal scope", () => {
+  const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
+  const canalScope = { kind: "canal" as const, tooth: "36", canal: "MB" };
+
+  assert.deepEqual(surfaceScope, {
+    kind: "surface",
+    tooth: "36",
+    procedureId: "op_36_mo",
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+  assert.equal(isOperativeSurfaceScope(surfaceScope), true);
+  assert.equal(isEndodonticCanalScope(surfaceScope), false);
+  assert.equal(isEndodonticCanalScope(canalScope), true);
+  assert.equal(isOperativeSurfaceScope(canalScope), false);
+  assert.equal(scopesTargetDifferentToothSubstructures(surfaceScope, canalScope), true);
+
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_canal_only",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "endo.canalProgress",
+        capabilitiesSatisfied: [
+          {
+            name: "finalRestoration.placed",
+            scope: canalScope,
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", surfaceScope), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+});
+
+test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {
+  const readyEntries = getReadyWorkflowLauncherEntries();
+  const sharedEntries = getSharedModuleLauncherEntries();
+  const endoEntry = workflowLauncherEntries.find((entry) => entry.workflowId === endodonticRootWorkflowId);
+  const operativeEntry = workflowLauncherEntries.find((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId);
+
+  assert.equal(endodonticRootWorkflow.entryNodeIds[0], "preop");
+  assert.equal(endodonticRootWorkflow.completionNodeIds.includes("endodontic-pathway-complete"), true);
+  assert.equal(endoEntry?.availability, "ready");
+  assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
+  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
+  assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
+  assert.equal(operativeEntry?.availability, "modelOnly");
+});
+
+test("shared anesthesia phase 1 model parses typed details and preserves legacy events", () => {
+  const event = {
+    id: "evt_anesthesia_details",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "topical",
+      agentLabel: "documented anesthetic",
+      technique: "documented technique",
+      applicationType: "documented application",
+      site: "documented site",
+      dose: "1.7",
+      doseUnit: "mL",
+      administeredAt: "09:55",
+      vasoconstrictor: "none documented",
+      vasoconstrictorDose: "1:200K epinephrine/adrenaline",
+      response: "partial",
+      notes: "assessment note",
+      reason: "documented reason",
+      teeth: ["36", " 37 ", ""],
+      regionLabel: "Q3",
+    },
+  };
+  const legacyEvent = {
+    id: "evt_anesthesia_legacy",
+    timestamp: "2026-01-01T09:56:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "legacy route",
+      response: "assessment pending",
+    },
+  };
+  const otherRouteEvent = {
+    id: "evt_anesthesia_other_route",
+    timestamp: "2026-01-01T09:57:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    tooth: "36",
+    details: {
+      route: "other",
+      routeLabel: "documented non-injection route",
+      applicationType: "documented application",
+      site: "documented site",
+      notes: "free text note",
+    },
+  };
+
+  assert.deepEqual([...anesthesiaRoutes], ["injection", "topical", "other"]);
+  assert.deepEqual([...anesthesiaAdequacyResponses], ["adequate", "partial", "notAdequate", "notAssessed"]);
+  assert.equal(isAnesthesiaRoute("topical"), true);
+  assert.equal(isAnesthesiaRoute("legacy route"), false);
+  assert.equal(isAnesthesiaAdequacyResponse("partial"), true);
+  assert.equal(isAnesthesiaAdequacyResponse("assessment pending"), false);
+  assert.equal(isAdequateAnesthesiaResponse("adequate"), true);
+  assert.equal(isAdequateAnesthesiaResponse("partial"), false);
+
+  const details = getAnesthesiaEventDetails(event);
+  assert.equal(details.route, "topical");
+  assert.equal(details.applicationType, "documented application");
+  assert.equal(details.administeredAt, "09:55");
+  assert.equal(details.vasoconstrictorDose, "1:200K epinephrine/adrenaline");
+  assert.equal(details.response, "partial");
+  assert.deepEqual(details.teeth, ["36", "37"]);
+  assert.deepEqual(getAnesthesiaScopeFromEvent(event), { kind: "custom", teeth: ["36", "37"], regionLabel: "Q3" });
+  assert.match(eventFragment(event), /route: topical/);
+  assert.match(eventFragment(event), /documented application/);
+  assert.match(eventFragment(event), /time: 09:55/);
+  assert.match(eventFragment(event), /vasoconstrictor dose: 1:200K epinephrine\/adrenaline/);
+  assert.match(eventFragment(event), /Response: partial/);
+
+  const otherDetails = getAnesthesiaEventDetails(otherRouteEvent);
+  assert.equal(otherDetails.route, "other");
+  assert.equal(otherDetails.routeLabel, "documented non-injection route");
+  assert.match(eventFragment(otherRouteEvent), /route: documented non-injection route/);
+  assert.doesNotMatch(eventFragment(otherRouteEvent), /route: other/);
+
+  const legacyDetails = getAnesthesiaEventDetails(legacyEvent);
+  assert.equal(legacyDetails.route, undefined);
+  assert.equal(legacyDetails.response, undefined);
+  assert.equal(legacyDetails.tooth, "36");
+  assert.equal(isCapabilitySatisfied(baseCase({ tooth: "36", globalEvents: [legacyEvent] }), "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
+});
+
+test("shared anesthesia catalog suggestions are route scoped and non-prescriptive", () => {
+  assert.equal(anesthesiaCatalogOwnership.owner, "seed");
+  assert.equal(anesthesiaCatalogOwnership.clinicalUse, "documentationSuggestionsOnly");
+  assert.equal(anesthesiaCatalogOwnership.allowsCustomText, true);
+  assert.equal(anesthesiaCatalogOwnership.hasDoseDefaults, false);
+  assert.equal(anesthesiaCatalogOwnership.hasProductRecommendations, false);
+
+  assert.equal(seedAnesthesiaCatalogItems.every((item) => item.owner === "seed"), true);
+  assert.equal(seedAnesthesiaCatalogItems.every((item) => item.category === "anesthesia"), true);
+  assert.equal(seedAnesthesiaCatalogItems.some((item) => item.label === "Infiltration" && item.appliesTo?.route === "injection" && item.appliesTo.field === "techniques"), true);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("other", "agents"), []);
+  assert.equal(getAnesthesiaCatalogOptions("injection", "techniques").includes("Infiltration"), true);
+  assert.equal(getAnesthesiaCatalogOptions("topical", "techniques").includes("Infiltration"), false);
+  assert.equal(getAnesthesiaCatalogOptions("topical", "applicationTypes").includes("Topical application"), true);
+  assert.equal(getAnesthesiaCatalogOptions("injection", "applicationTypes").includes("Topical application"), false);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "doseUnits"), ["mL", "carpule(s)"]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "doseUnits"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses"), ["1:100K epinephrine/adrenaline", "1:200K epinephrine/adrenaline"]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "vasoconstrictorDoses"), []);
+  assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
+});
+
+test("shared catalog infrastructure merges customizable documentation catalog layers", () => {
+  const userTechnique: CatalogItem = {
+    id: "anesthesia.injection.techniques.clinic-shortcut",
+    owner: "user",
+    category: "anesthesia",
+    label: "Clinic shortcut",
+    aliases: ["CS"],
+    appliesTo: { route: "injection", field: "techniques" },
+    active: true,
+    favorite: true,
+    sortOrder: 5,
+  };
+  const hiddenSeedTechnique: CatalogItem = {
+    ...seedAnesthesiaCatalogItems.find((item) => item.label === "Block")!,
+    owner: "user",
+    active: false,
+  };
+  const replacementSeedTechnique: CatalogItem = {
+    ...seedAnesthesiaCatalogItems.find((item) => item.label === "Infiltration")!,
+    owner: "clinic",
+    label: "Clinic infiltration phrasing",
+  };
+  const merged = mergeCatalogItems(seedAnesthesiaCatalogItems, [userTechnique, hiddenSeedTechnique, replacementSeedTechnique]);
+  const injectionTechniqueLabels = getCatalogLabels(merged, {
+    category: "anesthesia",
+    route: "injection",
+    field: "techniques",
+    includeAliases: true,
+  });
+  const topicalTechniqueLabels = getCatalogLabels(merged, {
+    category: "anesthesia",
+    route: "topical",
+    field: "techniques",
+  });
+
+  assert.deepEqual(injectionTechniqueLabels.slice(0, 2), ["Clinic shortcut", "CS"]);
+  assert.equal(injectionTechniqueLabels.includes("Clinic infiltration phrasing"), true);
+  assert.equal(injectionTechniqueLabels.includes("Infiltration"), false);
+  assert.equal(injectionTechniqueLabels.includes("Block"), false);
+  assert.deepEqual(topicalTechniqueLabels, []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "techniques", [userTechnique]).slice(0, 1), ["Clinic shortcut"]);
+});
+
+test("user anesthesia catalog persistence loads, validates, and merges local user items", () => {
+  const userAgent: CatalogItem = {
+    id: "user.anesthesia.injection.agents.documented-agent",
+    owner: "user",
+    category: "anesthesia",
+    label: "Documented user agent",
+    appliesTo: { route: "injection", field: "agents" },
+    active: true,
+    favorite: true,
+    sortOrder: 1,
+  };
+  const userTechnique: CatalogItem = {
+    id: "user.anesthesia.injection.techniques.custom",
+    owner: "user",
+    category: "anesthesia",
+    label: "User favorite technique",
+    aliases: ["UFT"],
+    appliesTo: { route: "injection", field: "techniques" },
+    active: true,
+    favorite: true,
+    sortOrder: 1,
+  };
+  const hiddenUserTechnique: CatalogItem = {
+    id: "user.anesthesia.injection.techniques.hidden",
+    owner: "user",
+    category: "anesthesia",
+    label: "Hidden technique",
+    appliesTo: { route: "injection", field: "techniques" },
+    active: false,
+    sortOrder: 0,
+  };
+  const userVasoconstrictorDose: CatalogItem = {
+    id: "user.anesthesia.injection.vasoconstrictor-doses.custom",
+    owner: "user",
+    category: "anesthesia",
+    label: "1:80K epinephrine/adrenaline",
+    appliesTo: { route: "injection", field: "vasoconstrictorDoses" },
+    active: true,
+    sortOrder: 1,
+  };
+  const storage = memoryStorage();
+
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(storage), []);
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(memoryStorage({ [USER_ANESTHESIA_CATALOG_STORAGE_KEY]: "not json" })), []);
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(memoryStorage({ [USER_ANESTHESIA_CATALOG_STORAGE_KEY]: JSON.stringify({ version: 2, items: [userTechnique] }) })), []);
+
+  saveUserAnesthesiaCatalogItems([
+    userAgent,
+    userTechnique,
+    userVasoconstrictorDose,
+    hiddenUserTechnique,
+    { ...userTechnique, id: "seed-owned-ignored", owner: "seed" },
+    { ...userTechnique, id: "wrong-category-ignored", category: "operative" },
+  ], storage);
+
+  const loadedItems = loadUserAnesthesiaCatalogItems(storage);
+  const injectionAgents = getAnesthesiaCatalogOptions("injection", "agents", loadedItems);
+  const injectionTechniques = getAnesthesiaCatalogOptions("injection", "techniques", loadedItems);
+  const injectionVasoconstrictorDoses = getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses", loadedItems);
+  const topicalTechniques = getAnesthesiaCatalogOptions("topical", "techniques", loadedItems);
+
+  assert.deepEqual(loadedItems.map((item) => item.owner), ["user", "user", "user", "user"]);
+  assert.equal(injectionAgents.includes("Documented user agent"), true);
+  assert.equal(injectionTechniques[0], "User favorite technique");
+  assert.equal(injectionVasoconstrictorDoses[0], "1:80K epinephrine/adrenaline");
+  assert.equal(injectionTechniques.includes("Hidden technique"), false);
+  assert.equal(injectionTechniques.includes("Infiltration"), true);
+  assert.deepEqual(topicalTechniques, []);
+
+  const administrationRecord = buildAnesthesiaEventFromForm("administration", {
+    ...defaultAnesthesiaFormState("36"),
+    agentLabel: injectionAgents[0],
+    dose: "",
+    doseUnit: "",
+    vasoconstrictor: "With vasoconstrictor",
+    vasoconstrictorDose: injectionVasoconstrictorDoses[0],
+    administeredAt: "09:55",
+  });
+  const administrationEvent = {
+    id: "evt_user_catalog_agent_no_inference",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: administrationRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: administrationRecord!.details,
+  };
+
+  assert.equal(administrationRecord?.details.agentLabel, "Documented user agent");
+  assert.equal(administrationRecord?.details.vasoconstrictorDose, "1:80K epinephrine/adrenaline");
+  assert.equal(administrationRecord?.details.dose, undefined);
+  assert.equal(administrationRecord?.details.doseUnit, undefined);
+  assert.equal(administrationRecord?.options?.expiresAt, undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
+});
+
+test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {
+  const userDoseShortcut = createUserAnesthesiaCatalogItem({
+    route: "injection",
+    field: "vasoconstrictorDoses",
+    label: "1:50K epinephrine/adrenaline",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const seedBlock = seedAnesthesiaCatalogItems.find((item) => item.label === "Block")!;
+  const hiddenBlock = createUserAnesthesiaCatalogOverride(seedBlock, { active: false, favorite: seedBlock.favorite });
+  const seedInfiltration = seedAnesthesiaCatalogItems.find((item) => item.label === "Infiltration")!;
+  const favoriteInfiltration = createUserAnesthesiaCatalogOverride(seedInfiltration, { active: true, favorite: true });
+  const techniqueLabels = getAnesthesiaCatalogOptions("injection", "techniques", [hiddenBlock, favoriteInfiltration]);
+  const doseLabels = getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses", [userDoseShortcut]);
+
+  assert.equal(userDoseShortcut.owner, "user");
+  assert.equal(userDoseShortcut.category, "anesthesia");
+  assert.deepEqual(userDoseShortcut.appliesTo, { route: "injection", field: "vasoconstrictorDoses" });
+  assert.equal(techniqueLabels[0], "Infiltration");
+  assert.equal(techniqueLabels.includes("Block"), false);
+  assert.equal(doseLabels[0], "1:50K epinephrine/adrenaline");
+});
+
+test("anesthesia entry shortcut saving captures only catalog-backed documentation fields", () => {
+  const injectionItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "injection",
+    agentLabel: "Custom agent",
+    technique: "Custom technique",
+    dose: "1.7",
+    doseUnit: "Custom dose unit",
+    administeredAt: "09:55",
+    vasoconstrictor: "Custom vasoconstrictor",
+    vasoconstrictorDose: "1:80K epinephrine/adrenaline",
+    targetTeeth: "36 37",
+    regionLabel: "Q3",
+    expiresAt: "2026-01-01T10:30",
+    note: "do not save",
+  });
+  const topicalItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "topical",
+    agentLabel: "Topical agent",
+    applicationType: "Cotton roll topical",
+    administeredAt: "09:56",
+    note: "do not save",
+  });
+  const otherItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "other",
+    routeLabel: "Inhaled",
+    applicationType: "Other custom application",
+    site: "do not save",
+  });
+
+  assert.deepEqual(injectionItems.map((item) => item.appliesTo?.field), ["agents", "techniques", "doseUnits", "vasoconstrictors", "vasoconstrictorDoses"]);
+  assert.deepEqual(injectionItems.map((item) => item.label), ["Custom agent", "Custom technique", "Custom dose unit", "Custom vasoconstrictor", "1:80K epinephrine/adrenaline"]);
+  assert.equal(injectionItems.some((item) => ["1.7", "09:55", "36 37", "Q3", "2026-01-01T10:30", "do not save"].includes(item.label)), false);
+  assert.deepEqual(topicalItems.map((item) => item.appliesTo?.field), ["agents", "applicationTypes"]);
+  assert.deepEqual(otherItems.map((item) => item.appliesTo?.field), ["routeLabels", "applicationTypes"]);
+  assert.equal(injectionItems.every((item) => item.owner === "user" && item.favorite === true), true);
+});
+
+test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {
+  const assessmentForm = {
+    ...defaultAnesthesiaFormState("36"),
+    response: "adequate" as const,
+    targetTeeth: "36",
+    expiresAt: "2026-01-01T10:30",
+  };
+  const assessmentRecord = buildAnesthesiaEventFromForm("assessment", assessmentForm);
+
+  assert.equal(assessmentRecord?.eventType, anesthesiaEventTypes.adequacyConfirmed);
+  assert.equal(assessmentRecord?.options?.expiresAt, "2026-01-01T10:30");
+
+  const adequacyEvent = {
+    id: "evt_anesthesia_explicit_reassess_after",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: assessmentRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    expiresAt: assessmentRecord!.options?.expiresAt,
+    details: assessmentRecord!.details,
+  };
+  const capability = getAnesthesiaAdequateCapabilityOutput(adequacyEvent);
+  const expiredCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...adequacyEvent,
+        capabilitiesSatisfied: capability ? [capability] : [],
+      },
+    ],
+  });
+  const expiredStatus = getCapabilityStatus(expiredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31"));
+
+  assert.equal(capability?.expiresAt, "2026-01-01T10:30");
+  assert.equal(expiredStatus.satisfied, false);
+  assert.equal(expiredStatus.needsReassessment, true);
+  assert.match(eventFragment(adequacyEvent), /Reassess after: 2026-01-01T10:30/);
+
+  const administrationForm = {
+    ...defaultAnesthesiaFormState("36"),
+    technique: getAnesthesiaCatalogOptions("injection", "techniques")[0],
+    dose: "1.7",
+    doseUnit: getAnesthesiaCatalogOptions("injection", "doseUnits")[0],
+    administeredAt: "09:55",
+    vasoconstrictor: getAnesthesiaCatalogOptions("injection", "vasoconstrictors")[0],
+    vasoconstrictorDose: getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses")[0],
+  };
+  const administrationRecord = buildAnesthesiaEventFromForm("administration", administrationForm);
+  const administrationEvent = {
+    id: "evt_anesthesia_admin_no_expiry",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: administrationRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: administrationRecord!.details,
+  };
+  const administrationCase = baseCase({ tooth: "36", globalEvents: [administrationEvent] });
+  const administrationStatus = getCapabilityStatus(administrationCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31"));
+
+  assert.equal(administrationRecord?.options, undefined);
+  assert.equal(administrationRecord?.details.technique, "Infiltration");
+  assert.equal(administrationRecord?.details.doseUnit, "mL");
+  assert.equal(administrationRecord?.details.vasoconstrictor, "With vasoconstrictor");
+  assert.equal(administrationRecord?.details.vasoconstrictorDose, "1:100K epinephrine/adrenaline");
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
+  assert.equal(administrationStatus.satisfied, false);
+  assert.equal(administrationStatus.needsReassessment, false);
+});
+
+test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {
+  const administeredEvent = {
+    id: "evt_anesthesia_admin",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    workflowId: sharedAnesthesiaWorkflow.workflowId,
+    workflowVersion: sharedAnesthesiaWorkflow.version,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: {
+      agentLabel: "documented anesthetic",
+      technique: "documented technique",
+      dose: "1",
+      doseUnit: "unit",
+      response: "assessment pending",
+    },
+  };
+  const adequacyEvent = {
+    ...administeredEvent,
+    id: "evt_anesthesia_adequate",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+  };
+  const administeredCase = baseCase({ tooth: "36", globalEvents: [administeredEvent] });
+  const adequateCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...adequacyEvent,
+        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(adequacyEvent)],
+      },
+    ],
+  });
+
+  assert.equal(sharedAnesthesiaWorkflow.entryNodeIds[0], "anesthesia-record");
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administeredEvent), undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(adequacyEvent)?.name, "anesthesia.adequate");
+  assert.equal(isCapabilitySatisfied(administeredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
+  assert.equal(isCapabilitySatisfied(adequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), true);
+  assert.match(eventFragment(administeredEvent), /Anesthesia administered/);
+  assert.match(buildFullNote(adequateCase), /Anesthesia adequacy confirmed/);
+});
+
+test("shared anesthesia capability fallback requires explicit top-up adequacy and reassessment invalidates it", () => {
+  const topUpWithoutAdequacyEvent = {
+    id: "evt_anesthesia_topup_partial",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.topUpGiven,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { response: "partial" },
+  };
+  const topUpAdequateEvent = {
+    id: "evt_anesthesia_topup_adequate",
+    timestamp: "2026-01-01T10:05:00.000Z",
+    type: anesthesiaEventTypes.topUpGiven,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { response: "adequate" },
+  };
+  const reassessmentEvent = {
+    id: "evt_anesthesia_reassess",
+    timestamp: "2026-01-01T10:10:00.000Z",
+    type: anesthesiaEventTypes.needsReassessment,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { reason: "clinician reassessment requested" },
+  };
+  const topUpWithoutAdequacyCase = baseCase({
+    tooth: "36",
+    globalEvents: [topUpWithoutAdequacyEvent],
+  });
+  const topUpAdequateCase = baseCase({
+    tooth: "36",
+    globalEvents: [topUpAdequateEvent],
+  });
+  const reassessmentCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      topUpAdequateEvent,
+      reassessmentEvent,
+    ],
+  });
+  const partialTopUpStatus = getCapabilityStatus(topUpWithoutAdequacyCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+  const adequateTopUpStatus = getCapabilityStatus(topUpAdequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+  const reassessmentStatus = getCapabilityStatus(reassessmentCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" });
+
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(topUpWithoutAdequacyEvent), undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(topUpAdequateEvent)?.name, "anesthesia.adequate");
+  assert.equal(partialTopUpStatus.satisfied, false);
+  assert.equal(partialTopUpStatus.needsReassessment, false);
+  assert.equal(adequateTopUpStatus.satisfied, true);
+  assert.equal(adequateTopUpStatus.needsReassessment, false);
+  assert.equal(reassessmentStatus.satisfied, false);
+  assert.equal(reassessmentStatus.needsReassessment, true);
+  assert.match(eventFragment(reassessmentEvent), /Anesthesia needs reassessment: clinician reassessment requested/);
+});
+
+test("clinical event schema accepts optional workflow context without requiring it", () => {
+  assert.equal(ClinicalEventSchema.safeParse({
+    id: "evt_legacy",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "preop.reviewCompleted",
+  }).success, true);
+
+  assert.equal(ClinicalEventSchema.safeParse({
+    id: "evt_isolation",
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "isolation.rubberDamPlaced",
+    workflowId: "shared.isolation",
+    workflowVersion: "1.0.0",
+    workflowRunId: "run_isolation_1",
+    parentWorkflowRunId: "run_endo_1",
+    nodeId: "rubber-dam-placement",
+    scope: {
+      kind: "custom",
+      teeth: ["34", "35", "36", "37"],
+      regionLabel: "Q3",
+    },
+    capabilitiesSatisfied: [
+      {
+        name: "isolation.established",
+        scope: {
+          kind: "tooth",
+          tooth: "36",
+        },
+        workflowId: "shared.isolation",
+        workflowRunId: "run_isolation_1",
+        satisfiedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ],
+  }).success, true);
+
+  const embeddedAnesthesiaEvent = {
+    id: "evt_anesthesia_embedded",
+    timestamp: "2026-01-01T00:05:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    workflowVersion: sharedAnesthesiaWorkflow.version,
+    workflowRunId: "run_anesthesia_1",
+    parentWorkflowRunId: "run_endo_1",
+    nodeId: "anesthesia-record",
+    tooth: "36",
+    scope: {
+      kind: "tooth" as const,
+      tooth: "36",
+    },
+    details: {
+      response: "adequate",
+      parentNodeId: "preop",
+    },
+  };
+  const embeddedAnesthesiaCapability = buildAnesthesiaAdequateCapability(embeddedAnesthesiaEvent);
+
+  assert.equal(embeddedAnesthesiaCapability.workflowRunId, "run_anesthesia_1");
+  assert.equal(ClinicalEventSchema.safeParse({
+    ...embeddedAnesthesiaEvent,
+    capabilitiesSatisfied: [embeddedAnesthesiaCapability],
+  }).success, true);
+});
+
+test("capability selectors derive diagnosis and radiograph status from case fields", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "Necrotic pulp", apical: "" },
+    preOp: { radiographsReviewed: false, paReviewed: true, cbctReviewed: false, estimatedChamberDepth: "5" },
+  });
+  const summary = getCaseCapabilitySummary(caseData);
+
+  assert.equal(summary.diagnosis.satisfied, true);
+  assert.equal(summary.diagnosis.source, "caseField");
+  assert.equal(summary.radiographs.satisfied, true);
+  assert.equal(summary.radiographs.source, "caseField");
+  assert.equal(summary.anesthesia.satisfied, false);
+  assert.equal(summary.isolation.satisfied, false);
+});
+
+test("capability selectors match isolation events by exposed tooth and invalidate after compromise", () => {
+  const rubberDamEvent = {
+    id: "evt_rd",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    scope: { kind: "custom" as const, teeth: ["34", "35", "36", "37"], regionLabel: "Q3" },
+    details: {
+      method: "rubberDam",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+      exposedTeeth: ["34", "35", "36", "37"],
+      supports: [{ type: "clamp", tooth: "37", clampCode: "W8A" }],
+    },
+  };
+  const isolatedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...rubberDamEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(rubberDamEvent)],
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "36" }), true);
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", { kind: "tooth", tooth: "46" }), false);
+  assert.deepEqual(getIsolationCoverageSummary(rubberDamEvent), {
+    method: "Rubber dam",
+    region: "Quadrant: Q3",
+    exposedTeeth: "34, 35, 36, 37",
+    clampCode: "W8A",
+    clampTooth: "37",
+  });
+  assert.match(eventFragment(rubberDamEvent), /Rubber dam isolation placed/);
+  assert.match(eventFragment(rubberDamEvent), /Clamp W8A on tooth 37/);
+  assert.match(buildFullNote(isolatedCase), /Rubber dam isolation placed/);
+
+  const compromisedCase: EndoCase = {
+    ...isolatedCase,
+    globalEvents: [
+      ...isolatedCase.globalEvents,
+      {
+        id: "evt_rd_compromised",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: isolationEventTypes.compromised,
+        scope: { kind: "tooth", tooth: "36" },
+        details: { reason: "saliva contamination" },
+      },
+    ],
+  };
+  const status = getCapabilityStatus(compromisedCase, "isolation.established", { kind: "tooth", tooth: "36" });
+
+  assert.equal(status.satisfied, false);
+  assert.equal(status.needsReassessment, true);
+  assert.match(eventFragment(compromisedCase.globalEvents[1]), /Isolation compromised: saliva contamination/);
+});
+
+test("shared isolation replacement re-establishes the isolation capability", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_rd",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: isolationEventTypes.rubberDamPlaced,
+        details: { exposedTeeth: ["36"], clampCode: "W8A", clampTooth: "37" },
+      },
+      {
+        id: "evt_rd_removed",
+        timestamp: "2026-01-01T10:10:00.000Z",
+        type: isolationEventTypes.removed,
+        scope: { kind: "tooth", tooth: "36" },
+      },
+      {
+        id: "evt_rd_replaced",
+        timestamp: "2026-01-01T10:15:00.000Z",
+        type: isolationEventTypes.replaced,
+        details: { exposedTeeth: ["36"], clampCode: "W14A", clampTooth: "36" },
+      },
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" });
+
+  assert.equal(sharedIsolationWorkflow.workflowId, "shared.isolation");
+  assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-complete"), true);
+  assert.equal(status.satisfied, true);
+  assert.equal(status.needsReassessment, false);
+  assert.match(eventFragment(caseData.globalEvents[2]), /Isolation replaced/);
+  assert.match(eventFragment(caseData.globalEvents[2]), /Clamp W14A on tooth 36/);
+});
+
+test("capability selectors use explicit capability expiry for reassessment", () => {
+  const caseData = baseCase({
+    globalEvents: [
+      {
+        id: "evt_anesthesia",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "anesthesia.localDelivered",
+        capabilitiesSatisfied: [
+          {
+            name: "anesthesia.adequate",
+            scope: { kind: "tooth", tooth: "36" },
+            expiresAt: "2026-01-01T10:30:00.000Z",
+          },
+        ],
+      },
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "anesthesia.adequate", { kind: "tooth", tooth: "36" }, new Date("2026-01-01T10:31:00.000Z"));
+
+  assert.equal(status.satisfied, false);
+  assert.equal(status.needsReassessment, true);
 });
 
 test("normalized JSON import preserves exported case data", () => {

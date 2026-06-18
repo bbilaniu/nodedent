@@ -1,10 +1,12 @@
 import React from "react";
-import type { CanalContinuationTarget, CanalRecord, DecisionOption, EndoCase, ProtocolNode, ValidationMessage } from "../types";
+import type { CanalContinuationTarget, CanalRecord, CaseSetupFocusTarget, DecisionOption, EndoCase, ProtocolNode, ValidationMessage } from "../types";
 import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
-import { compactList, isBlank, isPositiveMeasurement } from "../engine/measurements";
+import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
-import { SelectInput, TextInput } from "./FormControls";
+import { getCaseCapabilitySummary } from "../workflow/selectors";
+
+const sharedReadinessNodeIds = new Set(["preop", "access-chamber", "confirm-chamber"]);
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -28,6 +30,21 @@ function getRecentNodeFeedback(currentNode: ProtocolNode, activeCanal?: CanalRec
   return "";
 }
 
+function formatMm(value?: string) {
+  return value ? `${value} mm` : "not set";
+}
+
+function compactStatusLabel(satisfied: boolean, needsReassessment: boolean) {
+  if (needsReassessment) return "review";
+  return satisfied ? "ready" : "pending";
+}
+
+function readinessStatusClass(satisfied: boolean, needsReassessment: boolean) {
+  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
+  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
+  return "border-brand-light-node bg-white text-brand-slate";
+}
+
 export function DecisionCard({
   currentNode,
   caseData,
@@ -40,12 +57,11 @@ export function DecisionCard({
   onApplyDecision,
   onContinueCanal,
   onCreateNewCanal,
+  onOpenCaseSetupStatus,
+  onOpenAnesthesiaWorkflow,
+  onOpenIsolationWorkflow,
   onOpenSavedWorkflow,
   onOpenPriorVisit,
-  onUpdateCase,
-  onUpdateDiagnosis,
-  onUpdatePreOp,
-  onUpdateActiveCanal,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -58,18 +74,31 @@ export function DecisionCard({
   onApplyDecision: (option: DecisionOption) => void;
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
+  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenSavedWorkflow: () => void;
   onOpenPriorVisit: () => void;
-  onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdateDiagnosis: (field: string, value: string) => void;
-  onUpdatePreOp: (field: string, value: string | boolean) => void;
-  onUpdateActiveCanal: (field: string, value: string) => void;
 }) {
-  const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
-  const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
+  const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
+  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
+  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
+  const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
+  const readinessItems = [
+    { label: "Diagnosis", status: capabilitySummary.diagnosis },
+    { label: "Radiographs", status: capabilitySummary.radiographs },
+    { label: "Anesthesia", status: capabilitySummary.anesthesia },
+    { label: "Isolation", status: capabilitySummary.isolation },
+  ];
+  const radiographLabels = [
+    caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ? "PA" : null,
+    caseData.preOp?.bwReviewed ? "BW" : null,
+    caseData.preOp?.cbctReviewed ? "CBCT" : null,
+  ].filter(Boolean);
 
   return (
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
@@ -82,6 +111,71 @@ export function DecisionCard({
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
+      {currentNode.safetyNotes?.length ? (
+        <div className="mt-3 border-l-4 border-amber-300 bg-amber-50/70 px-3 py-2 text-sm leading-6 text-amber-950">
+          <strong className="font-semibold">Safety / stop rule:</strong>{" "}
+          <span>{currentNode.safetyNotes.join(" ")}</span>
+        </div>
+      ) : null}
+      {showSharedReadiness ? (
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+          <div className="grid gap-3">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <h4 className="text-sm font-bold text-brand-navy">Pre-access readiness</h4>
+              <div className="grid gap-2 sm:grid-cols-3 lg:w-auto">
+                <button
+                  type="button"
+                  onClick={() => onOpenCaseSetupStatus()}
+                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+                >
+                  Open Case Setup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenAnesthesiaWorkflow(capabilitySummary.anesthesia.needsReassessment ? "anesthesia-needs-reassessment" : undefined)}
+                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+                >
+                  {anesthesiaIsEstablished ? "Add anesthesia event" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Run anesthesia"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenIsolationWorkflow(isolationIsEstablished ? "isolation-needs-reassessment" : undefined)}
+                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+                >
+                  {isolationIsEstablished ? "Review isolation" : "Run isolation"}
+                </button>
+              </div>
+            </div>
+            {isolationIsEstablished ? (
+              <div className="rounded-xl border border-brand-mint/40 bg-white px-3 py-2 text-sm leading-6 text-brand-navy">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p><strong>Isolation already recorded</strong>{caseData.tooth ? ` for tooth ${caseData.tooth}` : ""} this visit.</p>
+                  <button
+                    type="button"
+                    onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
+                    className="shrink-0 rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
+                  >
+                    Revise / add event
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
+              {readinessItems.map(({ label, status }) => (
+                <div key={label} className={`min-w-0 rounded-xl border px-3 py-2 ${readinessStatusClass(status.satisfied, status.needsReassessment)}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
+                    <span className="text-xs font-bold">{label}</span>
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
+                      {compactStatusLabel(status.satisfied, status.needsReassessment)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-5 opacity-80">{status.summary}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {recentNodeFeedback ? (
         <div className="mt-4 rounded-2xl border border-brand-blue-light bg-brand-blue-light/20 p-4 text-sm font-semibold text-brand-navy">
           {recentNodeFeedback}
@@ -89,7 +183,14 @@ export function DecisionCard({
       ) : null}
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={() => onOpenCaseSetupStatus()}
+              className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+            >
+              Open Case Setup & Status
+            </button>
             <button
               type="button"
               onClick={onOpenSavedWorkflow}
@@ -105,42 +206,29 @@ export function DecisionCard({
               Set up prior visit
             </button>
           </div>
-          <h4 className="text-sm font-bold text-brand-navy">Case setup</h4>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
-            <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
-            <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
-            <TextInput label="Estimated chamber depth" value={caseData.preOp?.estimatedChamberDepth} onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)} placeholder="mm" inputMode="decimal" invalid={!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)} />
-            <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
-            <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
-          </div>
-          <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>
-            <div className="grid gap-2 sm:grid-cols-3">
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-                <input type="checkbox" checked={paReviewed} onChange={(event) => onUpdatePreOp("paReviewed", event.target.checked)} />
-                PA
-              </label>
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-                <input type="checkbox" checked={bwReviewed} onChange={(event) => onUpdatePreOp("bwReviewed", event.target.checked)} />
-                BW
-              </label>
-              <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-                <input type="checkbox" checked={Boolean(caseData.preOp?.cbctReviewed)} onChange={(event) => onUpdatePreOp("cbctReviewed", event.target.checked)} />
-                CBCT
-              </label>
+          <div className="mt-4 rounded-xl border border-brand-light-node bg-white p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-brand-navy">Case setup summary</h4>
+                <p className="mt-1 text-sm leading-6 text-brand-slate">
+                  Tooth <strong>{caseData.tooth || "not set"}</strong> · {caseData.procedureType || "Procedure not set"} · Active canal <strong>{activeCanal?.name || "not set"}</strong>
+                </p>
+                <p className="mt-1 text-xs leading-5 text-brand-slate">
+                  Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographLabels.length ? radiographLabels.join(", ") : "not recorded"}
+                </p>
+                <p className="mt-1 text-xs leading-5 text-brand-slate">
+                  Shared status: diagnosis {compactStatusLabel(capabilitySummary.diagnosis.satisfied, capabilitySummary.diagnosis.needsReassessment)} · radiographs {compactStatusLabel(capabilitySummary.radiographs.satisfied, capabilitySummary.radiographs.needsReassessment)} · anesthesia {compactStatusLabel(capabilitySummary.anesthesia.satisfied, capabilitySummary.anesthesia.needsReassessment)} · isolation {compactStatusLabel(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}
+                </p>
+              </div>
+              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${preOpMissing.length ? "border-red-200 bg-red-50 text-red-800" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
+                {preOpMissing.length ? `${preOpMissing.length} setup item${preOpMissing.length === 1 ? "" : "s"} missing` : "Setup ready"}
+              </span>
             </div>
-          </div>
-          <div className="mt-3">
-            <TextInput
-              label={`Estimated WL for ${activeCanal?.name || "active canal"}`}
-              value={activeCanal?.estimatedWorkingLength}
-              onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)}
-              placeholder="mm"
-              inputMode="decimal"
-              invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)}
-              helperText="This field is for the active canal. Add or rename canals in the canal selector before working on additional canals."
-            />
+            {preOpMissing.length ? (
+              <ul className="mt-3 list-inside list-disc space-y-1 text-xs text-red-800">
+                {preOpMissing.map((item) => <li key={item}>{item}</li>)}
+              </ul>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -151,12 +239,6 @@ export function DecisionCard({
           {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Record before continuing</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.requiredInputs)}</p></div> : null}
         </div>
       )}
-      {currentNode.safetyNotes?.length ? (
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          <strong>Safety / stop rule</strong>
-          <ul className="mt-2 list-inside list-disc space-y-1">{currentNode.safetyNotes.map((note) => <li key={note}>{note}</li>)}</ul>
-        </div>
-      ) : null}
       {validationMessage ? (
         <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
           <strong>Cannot continue with “{validationMessage.optionLabel}” yet.</strong>

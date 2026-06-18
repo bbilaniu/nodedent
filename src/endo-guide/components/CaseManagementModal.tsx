@@ -1,12 +1,17 @@
 import React, { useState } from "react";
-import type { EndoCase, PriorCanalStatus } from "../types";
+import type { CanalRecord, CaseSetupFocusTarget, EndoCase, PriorCanalStatus } from "../types";
+import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
+import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
+import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
-import { blankCanal, caseStatusOptions, makeDefaultNewCanalName } from "../state/persistence";
+import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { SelectInput, TextInput } from "./FormControls";
+import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
 
 type SavedCaseSummary = {
   id: string;
@@ -20,20 +25,38 @@ type SavedCaseSummary = {
 
 export function CaseManagementModal({
   caseData,
+  activeCanal,
   currentNodeId,
   onClose,
   onUpdateCase,
   onUpdateDiagnosis,
+  onUpdatePreOp,
+  onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
+  onRecordAnesthesiaEvent,
+  onRecordIsolationEvent,
+  onOpenIsolationWorkflow,
+  userAnesthesiaCatalogItems = [],
+  onUserAnesthesiaCatalogItemsChange,
   onDownloadCaseJson,
+  initialFocusSection,
 }: {
   caseData: EndoCase;
+  activeCanal?: CanalRecord | null;
   currentNodeId: string;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
+  onUpdatePreOp: (field: string, value: string | boolean) => void;
+  onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
+  onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
+  onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  userAnesthesiaCatalogItems?: CatalogItem[];
+  onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
   onDownloadCaseJson: () => void;
+  initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const closureLabel = caseData.closure?.type
     ? caseData.closure.type.replace("closure.", "").replace(/([A-Z])/g, " $1").toLowerCase()
@@ -46,7 +69,7 @@ export function CaseManagementModal({
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Case panel</p>
-            <h2 className="mt-1 text-2xl font-bold text-brand-navy">Current case</h2>
+            <h2 className="mt-1 text-2xl font-bold text-brand-navy">Case Setup & Status</h2>
             <p className="mt-1 text-sm text-brand-slate">Review case state and edit current visit context.</p>
           </div>
           <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
@@ -86,29 +109,22 @@ export function CaseManagementModal({
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-            <h3 className="mb-3 text-sm font-semibold text-brand-navy">Patient / visit</h3>
-            <div className="grid gap-3">
-              <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
-              <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
-              <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
-              <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
-              <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-slate">Use suggested status</button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-            <h3 className="mb-3 text-sm font-semibold text-brand-navy">Diagnosis / plan</h3>
-            <div className="grid gap-3">
-              <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
-              <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
-              <label className="block">
-                <span className="mb-1 block text-xs font-medium text-brand-slate">Next visit / plan</span>
-                <textarea value={caseData.nextVisitPlan || ""} onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })} placeholder="e.g., continue obturation, crown recommended, refer" className="h-28 w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20" />
-              </label>
-            </div>
-          </div>
+        <div className="mt-4">
+          <CaseSetupStatusPanel
+            caseData={caseData}
+            activeCanal={activeCanal}
+            onUpdateCase={onUpdateCase}
+            onUpdateDiagnosis={onUpdateDiagnosis}
+            onUpdatePreOp={onUpdatePreOp}
+            onUpdateActiveCanal={onUpdateActiveCanal}
+            onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
+            onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
+            onRecordIsolationEvent={onRecordIsolationEvent}
+            onOpenIsolationWorkflow={onOpenIsolationWorkflow}
+            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
+            onUserAnesthesiaCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
+            initialFocusSection={initialFocusSection}
+          />
         </div>
         <div className="mt-4">
           <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download current case JSON</button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useId, useState } from "react";
 
 export function TextInput({
   label,
@@ -7,8 +7,10 @@ export function TextInput({
   placeholder,
   invalid = false,
   inputMode,
+  type = "text",
   helperText,
   rightLabel,
+  suggestions = [],
 }: {
   label: string;
   value?: string;
@@ -16,10 +18,15 @@ export function TextInput({
   placeholder?: string;
   invalid?: boolean;
   inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  type?: React.HTMLInputTypeAttribute;
   helperText?: React.ReactNode;
   rightLabel?: React.ReactNode;
+  suggestions?: string[];
 }) {
   const [draft, setDraft] = useState(value ?? "");
+  const inputId = useId();
+  const suggestionListId = `${inputId}-suggestions`;
+  const hasSuggestions = suggestions.length > 0;
 
   useEffect(() => {
     setDraft(value ?? "");
@@ -40,8 +47,15 @@ export function TextInput({
         }}
         placeholder={placeholder}
         inputMode={inputMode}
+        type={type}
+        list={hasSuggestions ? suggestionListId : undefined}
         className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       />
+      {hasSuggestions ? (
+        <datalist id={suggestionListId}>
+          {suggestions.map((suggestion) => <option key={suggestion} value={suggestion} />)}
+        </datalist>
+      ) : null}
       {helperText ? <span className="mt-1 block text-xs leading-5 text-brand-slate">{helperText}</span> : null}
     </label>
   );

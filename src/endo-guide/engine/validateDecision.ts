@@ -1,6 +1,8 @@
 import type { CanalRecord, DecisionOption, EndoCase } from "../types";
 import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
+import { protocolNodes } from "../protocol/nodes";
+import { getCapabilityStatus, isKnownCapabilityName } from "../workflow/selectors";
 import { isBlank, isPositiveMeasurement, isValidFinalShape } from "./measurements";
 
 const closureReadyStatuses = new Set(["complete", "paused", "medicated", "referred"]);
@@ -39,6 +41,18 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
   const addMissing = (message: string) => {
     if (!missing.includes(message)) missing.push(message);
   };
+  const node = protocolNodes[nodeId];
+  const capabilityScope = caseData.tooth ? { kind: activeCanal?.name ? "canal" as const : "tooth" as const, tooth: caseData.tooth, canal: activeCanal?.name } : undefined;
+
+  node?.capabilityRequirements?.forEach((requirement) => {
+    if (!isKnownCapabilityName(requirement.name)) return;
+    const status = getCapabilityStatus(caseData, requirement.name, capabilityScope);
+    if (status.needsReassessment && requirement.allowReassessment !== false) {
+      addMissing(requirement.message || `${requirement.name} needs reassessment`);
+      return;
+    }
+    if (!status.satisfied) addMissing(requirement.message || status.reason || `${requirement.name} is not satisfied`);
+  });
 
   const label = option?.label || "";
   if (nodeId === "preop") {
