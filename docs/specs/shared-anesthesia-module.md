@@ -58,6 +58,7 @@ Initial event details:
 - `doseUnit`
 - `administeredAt`
 - `vasoconstrictor`
+- `vasoconstrictorDose`
 - `response`
 - `notes`
 - `reason`
@@ -116,6 +117,7 @@ type AnesthesiaEntry = {
   doseUnit?: string;
   administeredAt?: string;
   vasoconstrictor?: string;
+  vasoconstrictorDose?: string;
   response?: string;
   notes?: string;
 };
@@ -299,7 +301,7 @@ Reasoning level: medium.
   - `Topical`
   - `Other` only if a non-injection, non-topical route must be documented.
 - Show route-specific fields only when they apply:
-  - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, and time administered.
+  - Injection entries: technique, site, agent, dose, dose unit, vasoconstrictor, vasoconstrictor dose, and time administered.
   - Topical entries: application type, site, agent, time administered, and notes.
   - Other entries: free-text route/application/site/notes fields without forcing injection terminology.
 - Keep time administered editable and clearable.
@@ -341,7 +343,7 @@ Phase 4B ownership decision:
 Implemented:
 
 - Added an `anesthesiaCatalog` module with explicit metadata marking it as documentation suggestions only.
-- Added route-scoped suggestions for injection technique, injection dose units, vasoconstrictor documentation text, topical application type, and other-route labels.
+- Added route-scoped suggestions for injection technique, injection dose units, vasoconstrictor documentation text, vasoconstrictor dose text, topical application type, and other-route labels.
 - Kept agent/product suggestions empty in the interim catalog.
 - Added optional datalist suggestions to shared text inputs so clinicians can type custom values.
 - Wired route-filtered suggestions into the Case Setup & Status anesthesia panel.
@@ -427,9 +429,49 @@ Implemented catalog infrastructure:
 
 Deferred:
 
-- Durable user/clinic/template catalog storage and management UI.
+- Clinic/template catalog storage and management UI.
 - Import/export or synchronization of user/clinic/template catalog layers.
 - Source-backed timing or expiry rules.
+
+#### Phase 6C: Local User Catalog Persistence For Anesthesia
+
+Status: implemented narrowly for local user-owned anesthesia catalog storage.
+Reasoning level: medium.
+
+- Add localStorage persistence for user-owned anesthesia catalog items only.
+- Use the versioned storage key `nodedent.userCatalog.sharedAnesthesia.v1`.
+- Add load/save helpers with validation and safe fallback when stored JSON is missing, malformed, or incompatible.
+- Persist only `user`-owned anesthesia catalog items; do not persist `appCore`, `seed`, `clinic`, or `template` items in this phase.
+- Pass loaded user catalog items into the shared catalog merge/filter layer used by `getAnesthesiaCatalogOptions`.
+- Preserve free-text datalist behavior for catalog-backed fields.
+- Preserve non-prescriptive behavior: catalog selections must not infer adequacy, dose, timing, expiry, safety, or treatment recommendations.
+- Preserve selected catalog labels as snapshotted anesthesia event detail text.
+
+Implemented:
+
+- Added versioned local user anesthesia catalog load/save helpers.
+- Added validation that accepts only `owner: "user"` and `category: "anesthesia"` items with valid route/field applicability.
+- Added safe fallback for missing, malformed, or incompatible stored data.
+- Wired loaded user anesthesia catalog items into Case Setup and embedded anesthesia runner suggestions.
+- Added tests for missing storage, malformed storage, valid user items, seed/user merging, route-filtered options, hidden/inactive exclusion, favorite/sort order, and non-prescriptive product-selection behavior.
+
+Deferred:
+
+- Catalog management UI.
+- Clinic/template catalog storage.
+- Import/export.
+- Sync.
+- Source-backed expiry or timing rules.
+- Dose or amount defaults.
+
+#### Phase 6D: Catalog Management UI
+
+Status: deferred.
+Reasoning level: medium-high.
+
+- Add UI for adding, hiding, favoriting, sorting, and editing user-owned catalog items.
+- Keep every catalog-backed field editable/free-text.
+- Keep source-backed rules and clinical recommendations out of catalog management.
 
 ## Later Runner Acceptance Criteria
 

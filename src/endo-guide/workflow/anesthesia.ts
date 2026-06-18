@@ -36,6 +36,7 @@ export type AnesthesiaEventDetails = {
   doseUnit?: string;
   administeredAt?: string;
   vasoconstrictor?: string;
+  vasoconstrictorDose?: string;
   response?: AnesthesiaAdequacyResponse;
   notes?: string;
   reason?: string;
@@ -82,6 +83,7 @@ export function getAnesthesiaEventDetails(event: ClinicalEvent): AnesthesiaEvent
     doseUnit: normalizeString(details.doseUnit),
     administeredAt: normalizeString(details.administeredAt),
     vasoconstrictor: normalizeString(details.vasoconstrictor),
+    vasoconstrictorDose: normalizeString(details.vasoconstrictorDose),
     response: normalizeEnum(details.response, anesthesiaAdequacyResponses),
     notes: normalizeString(details.notes),
     reason: normalizeString(details.reason),
@@ -150,6 +152,7 @@ function formatAnesthesiaContext(details: AnesthesiaEventDetails) {
     formatDose(details),
     details.administeredAt ? `time: ${details.administeredAt}` : null,
     details.vasoconstrictor ? `vasoconstrictor: ${details.vasoconstrictor}` : null,
+    details.vasoconstrictorDose ? `vasoconstrictor dose: ${details.vasoconstrictorDose}` : null,
   ].filter(Boolean).join("; ");
 }
 

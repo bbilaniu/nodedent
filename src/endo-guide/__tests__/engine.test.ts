@@ -18,6 +18,7 @@ import { handoffNodeIds, protocolNodes } from "../protocol/nodes";
 import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecord.schema";
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
+import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
   anesthesiaAdequacyResponses,
@@ -82,6 +83,16 @@ function listFiles(directory: string): string[] {
     const path = join(directory, entry);
     return statSync(path).isDirectory() ? listFiles(path) : [path];
   });
+}
+
+function memoryStorage(initial: Record<string, string> = {}) {
+  const store = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
 }
 
 function applyFirstOption(caseData: EndoCase, currentNodeId: string) {
@@ -1446,6 +1457,7 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
       doseUnit: "mL",
       administeredAt: "09:55",
       vasoconstrictor: "none documented",
+      vasoconstrictorDose: "1:200K epinephrine/adrenaline",
       response: "partial",
       notes: "assessment note",
       reason: "documented reason",
@@ -1490,12 +1502,14 @@ test("shared anesthesia phase 1 model parses typed details and preserves legacy 
   assert.equal(details.route, "topical");
   assert.equal(details.applicationType, "documented application");
   assert.equal(details.administeredAt, "09:55");
+  assert.equal(details.vasoconstrictorDose, "1:200K epinephrine/adrenaline");
   assert.equal(details.response, "partial");
   assert.deepEqual(details.teeth, ["36", "37"]);
   assert.deepEqual(getAnesthesiaScopeFromEvent(event), { kind: "custom", teeth: ["36", "37"], regionLabel: "Q3" });
   assert.match(eventFragment(event), /route: topical/);
   assert.match(eventFragment(event), /documented application/);
   assert.match(eventFragment(event), /time: 09:55/);
+  assert.match(eventFragment(event), /vasoconstrictor dose: 1:200K epinephrine\/adrenaline/);
   assert.match(eventFragment(event), /Response: partial/);
 
   const otherDetails = getAnesthesiaEventDetails(otherRouteEvent);
@@ -1530,6 +1544,8 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.equal(getAnesthesiaCatalogOptions("injection", "applicationTypes").includes("Topical application"), false);
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "doseUnits"), ["mL", "carpule(s)"]);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "doseUnits"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses"), ["1:100K epinephrine/adrenaline", "1:200K epinephrine/adrenaline"]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "vasoconstrictorDoses"), []);
   assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
 });
 
@@ -1574,6 +1590,101 @@ test("shared catalog infrastructure merges customizable documentation catalog la
   assert.equal(injectionTechniqueLabels.includes("Block"), false);
   assert.deepEqual(topicalTechniqueLabels, []);
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "techniques", [userTechnique]).slice(0, 1), ["Clinic shortcut"]);
+});
+
+test("user anesthesia catalog persistence loads, validates, and merges local user items", () => {
+  const userAgent: CatalogItem = {
+    id: "user.anesthesia.injection.agents.documented-agent",
+    owner: "user",
+    category: "anesthesia",
+    label: "Documented user agent",
+    appliesTo: { route: "injection", field: "agents" },
+    active: true,
+    favorite: true,
+    sortOrder: 1,
+  };
+  const userTechnique: CatalogItem = {
+    id: "user.anesthesia.injection.techniques.custom",
+    owner: "user",
+    category: "anesthesia",
+    label: "User favorite technique",
+    aliases: ["UFT"],
+    appliesTo: { route: "injection", field: "techniques" },
+    active: true,
+    favorite: true,
+    sortOrder: 1,
+  };
+  const hiddenUserTechnique: CatalogItem = {
+    id: "user.anesthesia.injection.techniques.hidden",
+    owner: "user",
+    category: "anesthesia",
+    label: "Hidden technique",
+    appliesTo: { route: "injection", field: "techniques" },
+    active: false,
+    sortOrder: 0,
+  };
+  const userVasoconstrictorDose: CatalogItem = {
+    id: "user.anesthesia.injection.vasoconstrictor-doses.custom",
+    owner: "user",
+    category: "anesthesia",
+    label: "1:80K epinephrine/adrenaline",
+    appliesTo: { route: "injection", field: "vasoconstrictorDoses" },
+    active: true,
+    sortOrder: 1,
+  };
+  const storage = memoryStorage();
+
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(storage), []);
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(memoryStorage({ [USER_ANESTHESIA_CATALOG_STORAGE_KEY]: "not json" })), []);
+  assert.deepEqual(loadUserAnesthesiaCatalogItems(memoryStorage({ [USER_ANESTHESIA_CATALOG_STORAGE_KEY]: JSON.stringify({ version: 2, items: [userTechnique] }) })), []);
+
+  saveUserAnesthesiaCatalogItems([
+    userAgent,
+    userTechnique,
+    userVasoconstrictorDose,
+    hiddenUserTechnique,
+    { ...userTechnique, id: "seed-owned-ignored", owner: "seed" },
+    { ...userTechnique, id: "wrong-category-ignored", category: "operative" },
+  ], storage);
+
+  const loadedItems = loadUserAnesthesiaCatalogItems(storage);
+  const injectionAgents = getAnesthesiaCatalogOptions("injection", "agents", loadedItems);
+  const injectionTechniques = getAnesthesiaCatalogOptions("injection", "techniques", loadedItems);
+  const injectionVasoconstrictorDoses = getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses", loadedItems);
+  const topicalTechniques = getAnesthesiaCatalogOptions("topical", "techniques", loadedItems);
+
+  assert.deepEqual(loadedItems.map((item) => item.owner), ["user", "user", "user", "user"]);
+  assert.equal(injectionAgents.includes("Documented user agent"), true);
+  assert.equal(injectionTechniques[0], "User favorite technique");
+  assert.equal(injectionVasoconstrictorDoses[0], "1:80K epinephrine/adrenaline");
+  assert.equal(injectionTechniques.includes("Hidden technique"), false);
+  assert.equal(injectionTechniques.includes("Infiltration"), true);
+  assert.deepEqual(topicalTechniques, []);
+
+  const administrationRecord = buildAnesthesiaEventFromForm("administration", {
+    ...defaultAnesthesiaFormState("36"),
+    agentLabel: injectionAgents[0],
+    dose: "",
+    doseUnit: "",
+    vasoconstrictor: "With vasoconstrictor",
+    vasoconstrictorDose: injectionVasoconstrictorDoses[0],
+    administeredAt: "09:55",
+  });
+  const administrationEvent = {
+    id: "evt_user_catalog_agent_no_inference",
+    timestamp: "2026-01-01T09:55:00.000Z",
+    type: administrationRecord!.eventType,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: administrationRecord!.details,
+  };
+
+  assert.equal(administrationRecord?.details.agentLabel, "Documented user agent");
+  assert.equal(administrationRecord?.details.vasoconstrictorDose, "1:80K epinephrine/adrenaline");
+  assert.equal(administrationRecord?.details.dose, undefined);
+  assert.equal(administrationRecord?.details.doseUnit, undefined);
+  assert.equal(administrationRecord?.options?.expiresAt, undefined);
+  assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
 });
 
 test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {
@@ -1621,6 +1732,7 @@ test("shared anesthesia phase 6A uses explicit clinician-entered reassessment ti
     doseUnit: getAnesthesiaCatalogOptions("injection", "doseUnits")[0],
     administeredAt: "09:55",
     vasoconstrictor: getAnesthesiaCatalogOptions("injection", "vasoconstrictors")[0],
+    vasoconstrictorDose: getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses")[0],
   };
   const administrationRecord = buildAnesthesiaEventFromForm("administration", administrationForm);
   const administrationEvent = {
@@ -1638,6 +1750,7 @@ test("shared anesthesia phase 6A uses explicit clinician-entered reassessment ti
   assert.equal(administrationRecord?.details.technique, "Infiltration");
   assert.equal(administrationRecord?.details.doseUnit, "mL");
   assert.equal(administrationRecord?.details.vasoconstrictor, "With vasoconstrictor");
+  assert.equal(administrationRecord?.details.vasoconstrictorDose, "1:100K epinephrine/adrenaline");
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
   assert.equal(administrationStatus.satisfied, false);
   assert.equal(administrationStatus.needsReassessment, false);

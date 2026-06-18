@@ -8,6 +8,7 @@ export type AnesthesiaCatalogField =
   | "applicationTypes"
   | "doseUnits"
   | "vasoconstrictors"
+  | "vasoconstrictorDoses"
   | "routeLabels";
 
 export const anesthesiaCatalogOwnership = {
@@ -49,6 +50,8 @@ export const seedAnesthesiaCatalogItems: CatalogItem[] = [
   anesthesiaCatalogItem("vasoconstrictors", "injection", "With vasoconstrictor", 10),
   anesthesiaCatalogItem("vasoconstrictors", "injection", "Without vasoconstrictor", 20),
   anesthesiaCatalogItem("vasoconstrictors", "injection", "None documented", 30),
+  anesthesiaCatalogItem("vasoconstrictorDoses", "injection", "1:100K epinephrine/adrenaline", 10),
+  anesthesiaCatalogItem("vasoconstrictorDoses", "injection", "1:200K epinephrine/adrenaline", 20),
   anesthesiaCatalogItem("applicationTypes", "topical", "Topical application", 10),
   anesthesiaCatalogItem("applicationTypes", "topical", "Gel", 20),
   anesthesiaCatalogItem("applicationTypes", "topical", "Liquid", 30),

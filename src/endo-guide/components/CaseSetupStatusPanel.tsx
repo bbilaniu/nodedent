@@ -6,6 +6,7 @@ import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
 import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
@@ -114,6 +115,7 @@ export function CaseSetupStatusPanel({
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
   onOpenIsolationWorkflow,
+  userAnesthesiaCatalogItems = [],
   initialFocusSection,
 }: {
   caseData: EndoCase;
@@ -126,6 +128,7 @@ export function CaseSetupStatusPanel({
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  userAnesthesiaCatalogItems?: CatalogItem[];
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
@@ -330,7 +333,12 @@ export function CaseSetupStatusPanel({
             {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
           </div>
         ) : null}
-        <AnesthesiaEventForm tooth={caseData.tooth} latestEvent={latestAnesthesiaEvent} onRecordEvent={onRecordAnesthesiaEvent} />
+        <AnesthesiaEventForm
+          tooth={caseData.tooth}
+          latestEvent={latestAnesthesiaEvent}
+          userCatalogItems={userAnesthesiaCatalogItems}
+          onRecordEvent={onRecordAnesthesiaEvent}
+        />
       </section>
 
       <section ref={isolationSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">

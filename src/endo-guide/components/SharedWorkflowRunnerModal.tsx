@@ -3,6 +3,7 @@ import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase, WorkflowDefinitio
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { sharedAnesthesiaWorkflow, sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { AnesthesiaWorkflowRunner } from "./AnesthesiaWorkflowRunner";
@@ -21,6 +22,7 @@ export function SharedWorkflowRunnerModal({
   parentWorkflowRunId,
   latestAnesthesiaEvent,
   latestIsolationEvent,
+  userAnesthesiaCatalogItems = [],
   onClose,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
@@ -31,6 +33,7 @@ export function SharedWorkflowRunnerModal({
   parentWorkflowRunId: string;
   latestAnesthesiaEvent?: ClinicalEvent;
   latestIsolationEvent?: ClinicalEvent;
+  userAnesthesiaCatalogItems?: CatalogItem[];
   onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
@@ -74,6 +77,7 @@ export function SharedWorkflowRunnerModal({
             caseData={caseData}
             parentWorkflowRunId={parentWorkflowRunId}
             latestAnesthesiaEvent={latestAnesthesiaEvent}
+            userCatalogItems={userAnesthesiaCatalogItems}
             onClose={onClose}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
           />

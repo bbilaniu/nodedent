@@ -3,6 +3,7 @@ import type { ClinicalEvent } from "../types";
 import type { AnesthesiaAdequacyResponse, AnesthesiaEventDetails, AnesthesiaEventType, AnesthesiaRoute } from "../workflow/anesthesia";
 import { anesthesiaEventTypes } from "../workflow/anesthesia";
 import { getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
+import type { CatalogItem } from "../workflow/catalogs";
 import {
   anesthesiaAdministrationActionFromLabel,
   anesthesiaAdministrationActionLabels,
@@ -26,11 +27,13 @@ export function AnesthesiaEventForm({
   tooth,
   latestEvent,
   defaultAction = anesthesiaEventTypes.administered,
+  userCatalogItems = [],
   onRecordEvent,
 }: {
   tooth: string;
   latestEvent?: ClinicalEvent;
   defaultAction?: AnesthesiaAdministrationAction;
+  userCatalogItems?: CatalogItem[];
   onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
   const [mode, setMode] = useState<AnesthesiaMode>("administration");
@@ -43,12 +46,13 @@ export function AnesthesiaEventForm({
   const routeIsInjection = mode === "administration" && form.route === "injection";
   const routeIsTopical = mode === "administration" && form.route === "topical";
   const routeIsOther = mode === "administration" && form.route === "other";
-  const agentSuggestions = getAnesthesiaCatalogOptions(form.route, "agents");
-  const techniqueSuggestions = getAnesthesiaCatalogOptions(form.route, "techniques");
-  const applicationTypeSuggestions = getAnesthesiaCatalogOptions(form.route, "applicationTypes");
-  const doseUnitSuggestions = getAnesthesiaCatalogOptions(form.route, "doseUnits");
-  const vasoconstrictorSuggestions = getAnesthesiaCatalogOptions(form.route, "vasoconstrictors");
-  const routeLabelSuggestions = getAnesthesiaCatalogOptions(form.route, "routeLabels");
+  const agentSuggestions = getAnesthesiaCatalogOptions(form.route, "agents", userCatalogItems);
+  const techniqueSuggestions = getAnesthesiaCatalogOptions(form.route, "techniques", userCatalogItems);
+  const applicationTypeSuggestions = getAnesthesiaCatalogOptions(form.route, "applicationTypes", userCatalogItems);
+  const doseUnitSuggestions = getAnesthesiaCatalogOptions(form.route, "doseUnits", userCatalogItems);
+  const vasoconstrictorSuggestions = getAnesthesiaCatalogOptions(form.route, "vasoconstrictors", userCatalogItems);
+  const vasoconstrictorDoseSuggestions = getAnesthesiaCatalogOptions(form.route, "vasoconstrictorDoses", userCatalogItems);
+  const routeLabelSuggestions = getAnesthesiaCatalogOptions(form.route, "routeLabels", userCatalogItems);
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -167,6 +171,7 @@ export function AnesthesiaEventForm({
             <TextInput label="Dose" value={form.dose} onChange={(value) => updateForm({ dose: value })} placeholder="optional" inputMode="decimal" />
             <TextInput label="Dose unit" value={form.doseUnit} onChange={(value) => updateForm({ doseUnit: value })} placeholder="e.g., mL, carpule" suggestions={doseUnitSuggestions} />
             <TextInput label="Vasoconstrictor" value={form.vasoconstrictor} onChange={(value) => updateForm({ vasoconstrictor: value })} placeholder="optional" suggestions={vasoconstrictorSuggestions} />
+            <TextInput label="Vasoconstrictor dose" value={form.vasoconstrictorDose} onChange={(value) => updateForm({ vasoconstrictorDose: value })} placeholder="e.g., 1:100K epinephrine/adrenaline" suggestions={vasoconstrictorDoseSuggestions} />
             <TextInput label="Time administered" value={form.administeredAt} onChange={(value) => updateForm({ administeredAt: value })} placeholder="e.g., 09:55" />
           </>
         ) : null}

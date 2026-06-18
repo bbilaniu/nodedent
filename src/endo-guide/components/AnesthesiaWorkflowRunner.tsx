@@ -4,6 +4,7 @@ import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/an
 import { anesthesiaEventTypes, sharedAnesthesiaWorkflow } from "../workflow/anesthesia";
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getAnesthesiaEventLabel } from "../workflow/anesthesiaForm";
+import type { CatalogItem } from "../workflow/catalogs";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 
 function getNextAnesthesiaNodeId(eventType: AnesthesiaEventType) {
@@ -17,6 +18,7 @@ export function AnesthesiaWorkflowRunner({
   caseData,
   parentWorkflowRunId,
   latestAnesthesiaEvent,
+  userCatalogItems = [],
   onClose,
   onRecordAnesthesiaEvent,
 }: {
@@ -24,6 +26,7 @@ export function AnesthesiaWorkflowRunner({
   caseData: EndoCase;
   parentWorkflowRunId: string;
   latestAnesthesiaEvent?: ClinicalEvent;
+  userCatalogItems?: CatalogItem[];
   onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
@@ -75,6 +78,7 @@ export function AnesthesiaWorkflowRunner({
             tooth={caseData.tooth}
             latestEvent={latestAnesthesiaEvent}
             defaultAction={defaultAction}
+            userCatalogItems={userCatalogItems}
             onRecordEvent={recordEvent}
           />
         </div>

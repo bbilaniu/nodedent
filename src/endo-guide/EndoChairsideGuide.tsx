@@ -23,6 +23,7 @@ import { buildPatientSummary } from "./notes/buildPatientSummary";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
+import { loadUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
@@ -107,6 +108,7 @@ export default function EndoChairsideGuide() {
       return initialCase;
     }
   });
+  const [userAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
   const [currentNodeId, setCurrentNodeId] = useState(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -942,6 +944,7 @@ export default function EndoChairsideGuide() {
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
             onOpenIsolationWorkflow={openIsolationWorkflow}
+            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}
           />
@@ -955,6 +958,7 @@ export default function EndoChairsideGuide() {
             parentWorkflowRunId={rootWorkflowRunId}
             latestAnesthesiaEvent={latestAnesthesiaEvent}
             latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
+            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onClose={() => setEmbeddedWorkflowLaunch(null)}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}

@@ -19,6 +19,7 @@ export type AnesthesiaFormState = {
   doseUnit: string;
   administeredAt: string;
   vasoconstrictor: string;
+  vasoconstrictorDose: string;
   response: AnesthesiaAdequacyResponse;
   targetTeeth: string;
   regionLabel: string;
@@ -76,6 +77,7 @@ export function defaultAnesthesiaFormState(
     doseUnit: "",
     administeredAt: "",
     vasoconstrictor: "",
+    vasoconstrictorDose: "",
     response: "notAssessed",
     targetTeeth: tooth || "",
     regionLabel: "",
@@ -105,6 +107,7 @@ export function buildAnesthesiaFormState(
     doseUnit: details.doseUnit || "",
     administeredAt: details.administeredAt || "",
     vasoconstrictor: details.vasoconstrictor || "",
+    vasoconstrictorDose: details.vasoconstrictorDose || "",
     response: details.response || "notAssessed",
     targetTeeth: details.teeth?.join(" ") || details.tooth || tooth || "",
     regionLabel: details.regionLabel || "",
@@ -152,6 +155,7 @@ export function buildAnesthesiaEventFromForm(
       doseUnit: routeIsInjection ? form.doseUnit.trim() || undefined : undefined,
       administeredAt: routeIsInjection || routeIsTopical ? form.administeredAt.trim() || undefined : undefined,
       vasoconstrictor: routeIsInjection ? form.vasoconstrictor.trim() || undefined : undefined,
+      vasoconstrictorDose: routeIsInjection ? form.vasoconstrictorDose.trim() || undefined : undefined,
       response: mode === "assessment" ? form.response : undefined,
       teeth: teeth.length ? teeth : undefined,
       regionLabel: form.regionLabel.trim() || undefined,
