@@ -499,6 +499,12 @@ Deferred:
 - Import/export or sync of catalogs.
 - Source-backed timing, expiry, safety, or treatment recommendation rules.
 
+Cross-module catalog boundary:
+
+- Keep narrow shortcut management contextual to anesthesia capture UI, such as Case Setup & Status and the embedded anesthesia runner.
+- Keep event-recording actions separate from shortcut-management actions.
+- Defer bulk catalog editing, import/export, sync, clinic/template ownership, and global catalog management to a later settings/catalog workspace shared across modules.
+
 ## Later Runner Acceptance Criteria
 
 - Users can record multiple local-anesthesia entries for the same visit.
@@ -520,8 +526,10 @@ Deferred:
 - The first UI should be a Case Setup & Status panel form. An embedded runner can follow after the event contract and selectors are stable.
 - Case Setup & Status and the embedded anesthesia runner should share form helpers and the reusable `AnesthesiaEventForm` so event construction does not drift.
 - Post-administration assessment should remain event-detail text initially. Add separate event types beyond adequacy and reassessment only when they affect status, alerts, follow-up, or note generation.
+- Do not add an anesthesia-specific visit identity model. Keep anesthesia events compatible with a future `visitId` or case/visit model.
+- Treat prior-visit anesthesia as historical context unless a future same-visit/current-visit model explicitly marks it reusable.
+- Keep operative treatment intent, surfaces, restorative materials, shades, bonding/cementation details, and restoration targets out of shared anesthesia events; future operative workflows should compare their treatment targets against scoped anesthesia status instead of making anesthesia own operative target data.
 
 ## Open Decisions
 
 - Whether additional route or adequacy-response values are needed after the first typed UI is tested.
-- How seeded, user, clinic, and template catalogs will be stored, synchronized, imported, exported, and managed across clinical modules.

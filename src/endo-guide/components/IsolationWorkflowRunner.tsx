@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
 import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase, ProtocolNode } from "../types";
-import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
-import { getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, sharedIsolationWorkflow } from "../workflow/isolation";
+import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind, IsolationSupport } from "../workflow/isolation";
+import { getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildUserIsolationCatalogItemsFromForm, getIsolationCatalogOptions } from "../workflow/isolationCatalog";
+import type { CatalogItem } from "../workflow/catalogs";
 import { SelectInput, TextInput } from "./FormControls";
 
 const isolationActionLabels = {
@@ -17,22 +19,30 @@ const replacementIsolationMethodOptions = [...isolationMethods];
 
 type IsolationFormState = {
   method: IsolationMethod;
+  methodLabel: string;
   regionKind: IsolationRegionKind;
   regionLabel: string;
   exposedTeeth: string;
   clampCode: string;
   clampTooth: string;
+  supportLabel: string;
+  supportTooth: string;
+  supportNote: string;
   note: string;
 };
 
 function defaultIsolationForm(tooth: string): IsolationFormState {
   return {
     method: "rubberDam",
+    methodLabel: "",
     regionKind: "custom",
     regionLabel: "",
     exposedTeeth: tooth || "",
     clampCode: "",
     clampTooth: tooth || "",
+    supportLabel: "",
+    supportTooth: "",
+    supportNote: "",
     note: "",
   };
 }
@@ -58,12 +68,33 @@ function buildIsolationDetails(form: IsolationFormState, eventType: IsolationEve
   const teeth = form.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
   const reassessment = eventType === isolationEventTypes.compromised || eventType === isolationEventTypes.removed;
   const clamp = shouldShowClamp(eventType, form.method);
+  const supportLabel = form.supportLabel.trim();
+  const supportTooth = form.supportTooth.trim();
+  const supportNote = form.supportNote.trim();
+  const supports: IsolationSupport[] = [];
+  if (!reassessment && clamp && (form.clampCode.trim() || form.clampTooth.trim())) {
+    supports.push({
+      type: "clamp" as const,
+      tooth: form.clampTooth.trim() || undefined,
+      clampCode: form.clampCode.trim() || undefined,
+    });
+  }
+  if (!reassessment && (supportLabel || supportTooth || supportNote)) {
+    supports.push({
+      type: isolationSupportTypeFromLabel(supportLabel),
+      label: supportLabel || undefined,
+      tooth: supportTooth || undefined,
+      notes: supportNote || undefined,
+    });
+  }
 
   return {
     method: eventType === isolationEventTypes.rubberDamPlaced ? "rubberDam" : reassessment ? undefined : form.method,
+    methodLabel: !reassessment ? form.methodLabel.trim() || undefined : undefined,
     regionKind: form.regionKind,
     regionLabel: form.regionLabel.trim() || undefined,
     exposedTeeth: teeth.length ? teeth : undefined,
+    supports: supports.length ? supports : undefined,
     clampCode: clamp ? form.clampCode.trim() || undefined : undefined,
     clampTooth: clamp ? form.clampTooth.trim() || undefined : undefined,
     reason: reassessment ? form.note.trim() || undefined : undefined,
@@ -77,11 +108,15 @@ function formFromEvent(event: ClinicalEvent | undefined, tooth: string): Isolati
   return {
     ...defaultIsolationForm(tooth),
     method: details.method || "rubberDam",
+    methodLabel: details.methodLabel || "",
     regionKind: details.regionKind || "custom",
     regionLabel: details.regionLabel || "",
     exposedTeeth: details.exposedTeeth?.join(" ") || tooth || "",
     clampCode: details.clampCode || details.supports?.find((support) => support.type === "clamp")?.clampCode || "",
     clampTooth: details.clampTooth || details.supports?.find((support) => support.type === "clamp")?.tooth || tooth || "",
+    supportLabel: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.label || "",
+    supportTooth: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.tooth || "",
+    supportNote: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.notes || "",
   };
 }
 
@@ -90,6 +125,8 @@ export function IsolationWorkflowRunner({
   caseData,
   parentWorkflowRunId,
   latestIsolationEvent,
+  userCatalogItems = [],
+  onUserCatalogItemsChange,
   onClose,
   onRecordIsolationEvent,
 }: {
@@ -97,6 +134,8 @@ export function IsolationWorkflowRunner({
   caseData: EndoCase;
   parentWorkflowRunId: string;
   latestIsolationEvent?: ClinicalEvent;
+  userCatalogItems?: CatalogItem[];
+  onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
   onClose: () => void;
   onRecordIsolationEvent: (
     eventType: IsolationEventType,
@@ -110,10 +149,29 @@ export function IsolationWorkflowRunner({
   const defaultEventType = getDefaultEventType(currentNode);
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
   const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, caseData.tooth));
-  const completion = workflow.completionNodeIds.includes(currentNode.id);
   const visibleOptions = useMemo(() => currentNode.options || [], [currentNode.options]);
+  const hasRecordableOptions = visibleOptions.some((option) => option.noteEvent?.type);
+  const completion = workflow.completionNodeIds.includes(currentNode.id) && !hasRecordableOptions;
   const selectedOption = visibleOptions.find((option) => option.noteEvent?.type === selectedEventType) || visibleOptions[0];
   const methodOptions = selectedEventType === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
+  const showMethodLabelField = selectedEventType !== isolationEventTypes.compromised && selectedEventType !== isolationEventTypes.removed;
+  const methodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userCatalogItems);
+  const supportTypeSuggestions = getIsolationCatalogOptions("supportTypes", userCatalogItems);
+  const supportPhraseSuggestions = getIsolationCatalogOptions("supportPhrases", userCatalogItems);
+  const regionLabelSuggestions = getIsolationCatalogOptions("regionLabels", userCatalogItems);
+  const clampCodeSuggestions = getIsolationCatalogOptions("clampCodes", userCatalogItems);
+  const noteSuggestions = getIsolationCatalogOptions("notes", userCatalogItems);
+  const reasonSuggestions = getIsolationCatalogOptions("reasons", userCatalogItems);
+  const shortcutItems = buildUserIsolationCatalogItemsFromForm({
+    action: selectedEventType,
+    methodLabel: showMethodLabelField ? form.methodLabel : "",
+    regionLabel: form.regionLabel,
+    clampCode: shouldShowClamp(selectedEventType, form.method) ? form.clampCode : "",
+    supportType: showMethodLabelField ? form.supportLabel : "",
+    supportPhrase: showMethodLabelField ? form.supportNote : "",
+    note: form.note,
+  });
+  const canSaveShortcuts = Boolean(onUserCatalogItemsChange && shortcutItems.length);
 
   function updateForm(updates: Partial<IsolationFormState>) {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -142,6 +200,16 @@ export function IsolationWorkflowRunner({
     setModuleNodeId(selectedOption.nextNodeId);
     const nextNode = workflow.nodes[selectedOption.nextNodeId];
     if (nextNode) setSelectedEventType(getDefaultEventType(nextNode));
+  }
+
+  function saveCatalogItems() {
+    if (!onUserCatalogItemsChange || !shortcutItems.length) return;
+    const nextItems = shortcutItems.reduce((current, item) => {
+      const index = current.findIndex((candidate) => candidate.id === item.id);
+      if (index === -1) return [...current, item];
+      return current.map((candidate, candidateIndex) => candidateIndex === index ? item : candidate);
+    }, userCatalogItems);
+    onUserCatalogItemsChange(nextItems);
   }
 
   return (
@@ -176,18 +244,28 @@ export function IsolationWorkflowRunner({
                 options={methodOptions}
               />
             ) : null}
+            {showMethodLabelField ? (
+              <TextInput label="Method label" value={form.methodLabel} onChange={(value) => updateForm({ methodLabel: value })} placeholder="optional display text" suggestions={methodLabelSuggestions} />
+            ) : null}
             <SelectInput
               label="Region"
               value={form.regionKind}
               onChange={(value) => updateForm({ regionKind: value as IsolationRegionKind })}
               options={[...isolationRegionKinds]}
             />
-            <TextInput label="Region label" value={form.regionLabel} onChange={(value) => updateForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" />
+            <TextInput label="Region label" value={form.regionLabel} onChange={(value) => updateForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" suggestions={regionLabelSuggestions} />
             <TextInput label="Exposed teeth" value={form.exposedTeeth} onChange={(value) => updateForm({ exposedTeeth: value })} placeholder="e.g., 34 35 36 37" />
             {shouldShowClamp(selectedEventType, form.method) ? (
               <>
                 <TextInput label="Clamp tooth" value={form.clampTooth} onChange={(value) => updateForm({ clampTooth: value })} placeholder="e.g., 37" />
-                <TextInput label="Clamp code" value={form.clampCode} onChange={(value) => updateForm({ clampCode: value })} placeholder="e.g., W8A" />
+                <TextInput label="Clamp code" value={form.clampCode} onChange={(value) => updateForm({ clampCode: value })} placeholder="e.g., W8A" suggestions={clampCodeSuggestions} />
+              </>
+            ) : null}
+            {showMethodLabelField ? (
+              <>
+                <TextInput label="Support type" value={form.supportLabel} onChange={(value) => updateForm({ supportLabel: value })} placeholder="optional" suggestions={supportTypeSuggestions} />
+                <TextInput label="Support tooth" value={form.supportTooth} onChange={(value) => updateForm({ supportTooth: value })} placeholder="optional" />
+                <TextInput label="Support note" value={form.supportNote} onChange={(value) => updateForm({ supportNote: value })} placeholder="optional" suggestions={supportPhraseSuggestions} />
               </>
             ) : null}
             <TextInput
@@ -195,6 +273,7 @@ export function IsolationWorkflowRunner({
               value={form.note}
               onChange={(value) => updateForm({ note: value })}
               placeholder={selectedEventType === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
+              suggestions={selectedEventType === isolationEventTypes.compromised || selectedEventType === isolationEventTypes.removed ? reasonSuggestions : noteSuggestions}
             />
           </div>
         </div>
@@ -210,14 +289,26 @@ export function IsolationWorkflowRunner({
             Return to parent workflow
           </button>
         ) : selectedOption ? (
-          <button
-            type="button"
-            onClick={applySelectedOption}
-            className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
-          >
-            Record {selectedOption.label.toLowerCase()}
-            <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+            <button
+              type="button"
+              onClick={applySelectedOption}
+              className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
+            >
+              Record {selectedOption.label.toLowerCase()}
+              <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
+            </button>
+            {onUserCatalogItemsChange ? (
+              <button
+                type="button"
+                onClick={saveCatalogItems}
+                disabled={!canSaveShortcuts}
+                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+              >
+                Save shortcuts
+              </button>
+            ) : null}
+          </div>
         ) : null}
       </div>
     </>

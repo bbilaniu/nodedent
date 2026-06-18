@@ -19,6 +19,7 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
   anesthesiaAdequacyResponses,
@@ -39,7 +40,8 @@ import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../wor
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
-import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
@@ -1421,6 +1423,78 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
 
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", surfaceScope), false);
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+
+  const toothScopedRestorationCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_tooth_restoration_only",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "finalRestoration.placed",
+        capabilitiesSatisfied: [
+          {
+            name: "finalRestoration.placed",
+            scope: { kind: "tooth", tooth: "36" },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(toothScopedRestorationCase, "finalRestoration.placed", surfaceScope), false);
+});
+
+test("operative surface queries can compare against tooth-level isolation coverage", () => {
+  const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
+  const unrelatedSurfaceScope = createOperativeSurfaceScope({ tooth: "46", surface: "O", procedureId: "op_46_o" });
+  const rubberDamEvent = {
+    id: "evt_surface_ready_iso",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    scope: { kind: "custom" as const, teeth: ["36", "37"], regionLabel: "Q3" },
+    details: {
+      method: "rubberDam",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+      exposedTeeth: ["36", "37"],
+      clampCode: "W8A",
+      clampTooth: "37",
+    },
+  };
+  const isolatedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...rubberDamEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(rubberDamEvent)],
+      },
+    ],
+  });
+  const compromisedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      ...isolatedCase.globalEvents,
+      {
+        id: "evt_surface_ready_iso_compromised",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: isolationEventTypes.compromised,
+        scope: { kind: "tooth" as const, tooth: "36" },
+        details: { reason: "dam displaced" },
+      },
+    ],
+  });
+  const currentStatus = getCapabilityStatus(isolatedCase, "isolation.established", surfaceScope);
+  const compromisedStatus = getCapabilityStatus(compromisedCase, "isolation.established", surfaceScope);
+
+  assert.equal(currentStatus.satisfied, true);
+  assert.equal(currentStatus.needsReassessment, false);
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", unrelatedSurfaceScope), false);
+  assert.equal(compromisedStatus.satisfied, false);
+  assert.equal(compromisedStatus.needsReassessment, true);
+  assert.equal(getIsolationEventDetails(rubberDamEvent).exposedTeeth?.includes("36"), true);
+  assert.equal("surfaces" in (rubberDamEvent.details as Record<string, unknown>), false);
 });
 
 test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {
@@ -1547,6 +1621,235 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.deepEqual(getAnesthesiaCatalogOptions("injection", "vasoconstrictorDoses"), ["1:100K epinephrine/adrenaline", "1:200K epinephrine/adrenaline"]);
   assert.deepEqual(getAnesthesiaCatalogOptions("topical", "vasoconstrictorDoses"), []);
   assert.equal(getAnesthesiaCatalogOptions("other", "routeLabels").includes("Inhaled"), true);
+});
+
+test("shared isolation catalog suggestions are narrow and non-prescriptive", () => {
+  assert.equal(isolationCatalogOwnership.owner, "seed");
+  assert.equal(isolationCatalogOwnership.clinicalUse, "documentationSuggestionsOnly");
+  assert.equal(isolationCatalogOwnership.allowsCustomText, true);
+  assert.equal(isolationCatalogOwnership.hasClampRecommendations, false);
+  assert.equal(isolationCatalogOwnership.hasMethodRecommendations, false);
+  assert.equal(isolationCatalogOwnership.hasOperativeReadinessRules, false);
+
+  assert.equal(seedIsolationCatalogItems.every((item) => item.owner === "seed"), true);
+  assert.equal(seedIsolationCatalogItems.every((item) => item.category === "isolation"), true);
+  assert.equal(seedIsolationCatalogItems.some((item) => item.label === "Rubber dam" && item.appliesTo?.field === "methodLabels"), true);
+  assert.equal(seedIsolationCatalogItems.some((item) => item.appliesTo?.field === "supportTypes" && item.label === "Clamp"), true);
+  assert.deepEqual(getIsolationCatalogOptions("clampCodes"), []);
+  assert.equal(getIsolationCatalogOptions("methodLabels").includes("Rubber dam"), true);
+  assert.equal(getIsolationCatalogOptions("supportTypes").includes("Clamp"), true);
+  assert.equal(getIsolationCatalogOptions("reasons").includes("Saliva contamination"), true);
+  assert.equal(getIsolationCatalogOptions("notes").includes("Isolation stable"), true);
+});
+
+test("shared isolation catalog merges user items, hides seed rows, and snapshots event labels", () => {
+  const userClampCode = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "W8A",
+    aliases: ["8A"],
+    favorite: true,
+    sortOrder: 1,
+  });
+  const userReason = createUserIsolationCatalogItem({
+    field: "reasons",
+    label: "Clinic reason",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const hiddenSeedReason = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Saliva contamination")!,
+    { active: false, favorite: false }
+  );
+  const favoriteSeedNote = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Isolation monitored throughout")!,
+    { active: true, favorite: true }
+  );
+  const customItems = [userClampCode, userReason, hiddenSeedReason, favoriteSeedNote];
+  const clampCodes = getIsolationCatalogOptions("clampCodes", customItems);
+  const reasons = getIsolationCatalogOptions("reasons", customItems);
+  const notes = getIsolationCatalogOptions("notes", customItems);
+  const reasonAliases = getCatalogLabels(mergeCatalogItems(seedIsolationCatalogItems, customItems), {
+    category: "isolation",
+    field: "clampCodes",
+    includeAliases: true,
+  });
+  const event = {
+    id: "evt_isolation_catalog_snapshot",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    details: {
+      method: "rubberDam",
+      clampCode: clampCodes[0],
+      reason: reasons[0],
+      notes: notes[0],
+    },
+  };
+  const hiddenAfterRecording = [
+    createUserIsolationCatalogOverride(userClampCode, { active: false, favorite: userClampCode.favorite }),
+    createUserIsolationCatalogOverride(userReason, { active: false, favorite: userReason.favorite }),
+    createUserIsolationCatalogOverride(favoriteSeedNote, { active: false, favorite: favoriteSeedNote.favorite }),
+  ];
+
+  assert.deepEqual(clampCodes, ["W8A"]);
+  assert.deepEqual(reasonAliases, ["W8A", "8A"]);
+  assert.equal(reasons[0], "Clinic reason");
+  assert.equal(reasons.includes("Saliva contamination"), false);
+  assert.equal(notes[0], "Isolation monitored throughout");
+  assert.deepEqual(getIsolationCatalogOptions("clampCodes", hiddenAfterRecording), []);
+  assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
+  assert.equal(getIsolationEventDetails(event).reason, "Clinic reason");
+  assert.equal(getIsolationEventDetails(event).notes, "Isolation monitored throughout");
+});
+
+test("user isolation catalog persistence loads, validates, and merges local user items", () => {
+  const userClampCode = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "W8A",
+    aliases: ["8A"],
+    favorite: true,
+    sortOrder: 1,
+  });
+  const userReason = createUserIsolationCatalogItem({
+    field: "reasons",
+    label: "User reason",
+    favorite: true,
+    sortOrder: 1,
+  });
+  const hiddenUserNote = createUserIsolationCatalogItem({
+    field: "notes",
+    label: "Hidden note",
+    active: false,
+    sortOrder: 0,
+  });
+  const hiddenSeedReason = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Saliva contamination")!,
+    { active: false, favorite: false }
+  );
+  const favoriteSeedNote = createUserIsolationCatalogOverride(
+    seedIsolationCatalogItems.find((item) => item.label === "Isolation monitored throughout")!,
+    { active: true, favorite: true }
+  );
+  const invalidFieldItem: CatalogItem = {
+    ...userReason,
+    id: "user.isolation.invalid-field",
+    appliesTo: { field: "agents" },
+  };
+  const routedItem: CatalogItem = {
+    ...userReason,
+    id: "user.isolation.routed",
+    appliesTo: { route: "injection", field: "reasons" },
+  };
+  const storage = memoryStorage();
+
+  assert.deepEqual(loadUserIsolationCatalogItems(storage), []);
+  assert.deepEqual(loadUserIsolationCatalogItems(memoryStorage({ [USER_ISOLATION_CATALOG_STORAGE_KEY]: "not json" })), []);
+  assert.deepEqual(loadUserIsolationCatalogItems(memoryStorage({ [USER_ISOLATION_CATALOG_STORAGE_KEY]: JSON.stringify({ version: 2, items: [userReason] }) })), []);
+
+  saveUserIsolationCatalogItems([
+    userClampCode,
+    userReason,
+    hiddenUserNote,
+    hiddenSeedReason,
+    favoriteSeedNote,
+    { ...userReason, id: "seed-owned-ignored", owner: "seed" },
+    { ...userReason, id: "wrong-category-ignored", category: "anesthesia" },
+    invalidFieldItem,
+    routedItem,
+  ], storage);
+
+  const loadedItems = loadUserIsolationCatalogItems(storage);
+  const clampCodes = getIsolationCatalogOptions("clampCodes", loadedItems);
+  const reasons = getIsolationCatalogOptions("reasons", loadedItems);
+  const notes = getIsolationCatalogOptions("notes", loadedItems);
+  const event = {
+    id: "evt_isolation_user_catalog_no_inference",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.removed,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: {
+      clampCode: clampCodes[0],
+      reason: reasons[0],
+      notes: notes[0],
+    },
+  };
+  const caseData = baseCase({ tooth: "36", globalEvents: [event] });
+
+  assert.equal(loadedItems.every((item) => item.owner === "user" && item.category === "isolation"), true);
+  assert.equal(loadedItems.some((item) => item.id === "seed-owned-ignored"), false);
+  assert.equal(loadedItems.some((item) => item.id === "wrong-category-ignored"), false);
+  assert.equal(loadedItems.some((item) => item.id === "user.isolation.invalid-field"), false);
+  assert.equal(loadedItems.some((item) => item.id === "user.isolation.routed"), false);
+  assert.deepEqual(clampCodes, ["W8A"]);
+  assert.equal(reasons[0], "User reason");
+  assert.equal(reasons.includes("Saliva contamination"), false);
+  assert.equal(notes[0], "Isolation monitored throughout");
+  assert.equal(notes.includes("Hidden note"), false);
+  assert.equal(getIsolationEventDetails(event).clampCode, "W8A");
+  assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).satisfied, false);
+  assert.equal(getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" }).needsReassessment, true);
+});
+
+test("isolation shortcut saving captures only catalog-backed documentation fields", () => {
+  const placementItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.rubberDamPlaced,
+    methodLabel: "Rubber dam",
+    regionLabel: "Q3",
+    clampCode: "W8A",
+    supportType: "Ligature",
+    supportPhrase: "Ligature placed",
+    note: "Isolation stable",
+  });
+  const reassessmentItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.compromised,
+    regionLabel: "Q3",
+    clampCode: "W8A",
+    note: "Saliva contamination",
+  });
+  const removalItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationEventTypes.removed,
+    regionLabel: "",
+    clampCode: "",
+    note: "Dam removed for assessment",
+  });
+
+  assert.deepEqual(placementItems.map((item) => item.appliesTo?.field), ["methodLabels", "regionLabels", "clampCodes", "supportTypes", "supportPhrases", "notes"]);
+  assert.deepEqual(placementItems.map((item) => item.label), ["Rubber dam", "Q3", "W8A", "Ligature", "Ligature placed", "Isolation stable"]);
+  assert.deepEqual(reassessmentItems.map((item) => item.appliesTo?.field), ["regionLabels", "clampCodes", "reasons"]);
+  assert.deepEqual(removalItems.map((item) => item.appliesTo?.field), ["reasons"]);
+  assert.equal([...placementItems, ...reassessmentItems, ...removalItems].every((item) => item.owner === "user" && item.favorite === true), true);
+});
+
+test("isolation event details preserve captured method and support labels", () => {
+  const event = {
+    id: "evt_isolation_support_labels",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    details: {
+      method: "rubberDam",
+      methodLabel: "Rubber dam with ligature support",
+      exposedTeeth: ["36", "37"],
+      clampCode: "W8A",
+      clampTooth: "37",
+      supports: [
+        { type: "clamp", tooth: "37", clampCode: "W8A" },
+        { type: "ligature", label: "Ligature", tooth: "36", notes: "Ligature placed" },
+      ],
+    },
+  };
+  const details = getIsolationEventDetails(event);
+  const support = details.supports?.at(1);
+
+  assert.equal(details.methodLabel, "Rubber dam with ligature support");
+  assert.equal(support?.type, "ligature");
+  assert.equal(support?.label, "Ligature");
+  assert.equal(support?.tooth, "36");
+  assert.equal(support?.notes, "Ligature placed");
+  assert.equal(getIsolationCoverageSummary(event).method, "Rubber dam with ligature support");
+  assert.match(eventFragment(event), /Rubber dam with ligature support placed/);
+  assert.match(eventFragment(event), /Ligature on tooth 36 \(Ligature placed\)/);
 });
 
 test("shared catalog infrastructure merges customizable documentation catalog layers", () => {
@@ -2054,6 +2357,41 @@ test("capability selectors match isolation events by exposed tooth and invalidat
   assert.match(eventFragment(compromisedCase.globalEvents[1]), /Isolation compromised: saliva contamination/);
 });
 
+test("alternative isolation establishes capability and formats without optional clamp or exposed teeth", () => {
+  const alternativeIsolationEvent = {
+    id: "evt_alt_iso",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.alternativeIsolationUsed,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    details: {
+      method: "cottonRoll",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+    },
+  };
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [alternativeIsolationEvent],
+  });
+  const status = getCapabilityStatus(caseData, "isolation.established", { kind: "quadrant", regionLabel: "Q3" });
+  const fragment = eventFragment(alternativeIsolationEvent);
+
+  assert.equal(status.satisfied, true);
+  assert.equal(status.needsReassessment, false);
+  assert.equal(isCapabilitySatisfied(caseData, "isolation.established", { kind: "quadrant", regionLabel: "Q3" }), true);
+  assert.deepEqual(getIsolationCoverageSummary(alternativeIsolationEvent), {
+    method: "Cotton roll",
+    region: "Quadrant: Q3",
+    exposedTeeth: "not recorded",
+    clampCode: "not recorded",
+    clampTooth: "not recorded",
+  });
+  assert.equal(fragment, "Alternative isolation used (cottonRoll) (Q3).");
+  assert.doesNotMatch(fragment, /Clamp/);
+  assert.doesNotMatch(fragment, /isolated teeth/);
+});
+
 test("shared isolation replacement re-establishes the isolation capability", () => {
   const caseData = baseCase({
     tooth: "36",
@@ -2078,14 +2416,34 @@ test("shared isolation replacement re-establishes the isolation capability", () 
       },
     ],
   });
+  const removedCase = baseCase({
+    tooth: "36",
+    globalEvents: caseData.globalEvents.slice(0, 2),
+  });
+  const removedStatus = getCapabilityStatus(removedCase, "isolation.established", { kind: "tooth", tooth: "36" });
   const status = getCapabilityStatus(caseData, "isolation.established", { kind: "tooth", tooth: "36" });
 
   assert.equal(sharedIsolationWorkflow.workflowId, "shared.isolation");
   assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-complete"), true);
+  assert.equal(removedStatus.satisfied, false);
+  assert.equal(removedStatus.needsReassessment, true);
+  assert.match(eventFragment(removedCase.globalEvents[1]), /Isolation removed/);
   assert.equal(status.satisfied, true);
   assert.equal(status.needsReassessment, false);
   assert.match(eventFragment(caseData.globalEvents[2]), /Isolation replaced/);
   assert.match(eventFragment(caseData.globalEvents[2]), /Clamp W14A on tooth 36/);
+});
+
+test("shared isolation reassessment node exposes recordable actions", () => {
+  const reassessmentNode = sharedIsolationWorkflow.nodes["isolation-needs-reassessment"];
+  const eventTypes = reassessmentNode.options.map((option) => option.noteEvent?.type).filter(Boolean);
+
+  assert.equal(sharedIsolationWorkflow.completionNodeIds.includes("isolation-needs-reassessment"), true);
+  assert.deepEqual(eventTypes, [
+    isolationEventTypes.compromised,
+    isolationEventTypes.replaced,
+    isolationEventTypes.removed,
+  ]);
 });
 
 test("capability selectors use explicit capability expiry for reassessment", () => {

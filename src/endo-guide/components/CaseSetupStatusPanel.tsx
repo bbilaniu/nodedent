@@ -11,8 +11,10 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { anesthesiaRouteFromLabel, anesthesiaRouteLabels, anesthesiaRouteOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogItems } from "../workflow/catalogs";
-import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
-import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
+import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind, IsolationSupport } from "../workflow/isolation";
+import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel } from "../workflow/isolation";
+import type { IsolationCatalogField } from "../workflow/isolationCatalog";
+import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { SelectInput, TextInput } from "./FormControls";
@@ -55,6 +57,18 @@ const anesthesiaCatalogFieldLabels = {
 
 const anesthesiaCatalogFieldOptions = Object.values(anesthesiaCatalogFieldLabels);
 
+const isolationCatalogFieldLabels = {
+  methodLabels: "Method label",
+  supportTypes: "Support type",
+  supportPhrases: "Support phrase",
+  regionLabels: "Region label",
+  reasons: "Reason",
+  notes: "Note phrase",
+  clampCodes: "Clamp code",
+} as const satisfies Record<IsolationCatalogField, string>;
+
+const isolationCatalogFieldOptions = Object.values(isolationCatalogFieldLabels);
+
 function anesthesiaCatalogFieldFromLabel(label: string): AnesthesiaCatalogField {
   const entry = Object.entries(anesthesiaCatalogFieldLabels).find(([, fieldLabel]) => fieldLabel === label);
   return (entry?.[0] as AnesthesiaCatalogField | undefined) || "agents";
@@ -62,6 +76,15 @@ function anesthesiaCatalogFieldFromLabel(label: string): AnesthesiaCatalogField 
 
 function labelForAnesthesiaCatalogField(field: AnesthesiaCatalogField) {
   return anesthesiaCatalogFieldLabels[field];
+}
+
+function isolationCatalogFieldFromLabel(label: string): IsolationCatalogField {
+  const entry = Object.entries(isolationCatalogFieldLabels).find(([, fieldLabel]) => fieldLabel === label);
+  return (entry?.[0] as IsolationCatalogField | undefined) || "clampCodes";
+}
+
+function labelForIsolationCatalogField(field: IsolationCatalogField) {
+  return isolationCatalogFieldLabels[field];
 }
 
 function updateUserCatalogItem(items: CatalogItem[], nextItem: CatalogItem) {
@@ -81,6 +104,17 @@ function getVisibleAnesthesiaCatalogRows(items: CatalogItem[], route: string, fi
     item.category === "anesthesia" &&
     item.active === false &&
     item.appliesTo?.route === route &&
+    item.appliesTo?.field === field
+  ));
+  return [...ordered, ...inactiveOverrides.filter((item) => !ordered.some((orderedItem) => orderedItem.id === item.id))];
+}
+
+function getVisibleIsolationCatalogRows(items: CatalogItem[], field: IsolationCatalogField) {
+  const merged = getIsolationCatalogItems(items);
+  const ordered = getCatalogItems(merged, { category: "isolation", field });
+  const inactiveOverrides = items.filter((item) => (
+    item.category === "isolation" &&
+    item.active === false &&
     item.appliesTo?.field === field
   ));
   return [...ordered, ...inactiveOverrides.filter((item) => !ordered.some((orderedItem) => orderedItem.id === item.id))];
@@ -232,6 +266,148 @@ function AnesthesiaCatalogManager({
   );
 }
 
+function IsolationCatalogManager({
+  userCatalogItems,
+  onChange,
+}: {
+  userCatalogItems: CatalogItem[];
+  onChange: (items: CatalogItem[]) => void;
+}) {
+  const [fieldLabel, setFieldLabel] = useState<string>(labelForIsolationCatalogField("clampCodes"));
+  const [label, setLabel] = useState("");
+  const [editingItemId, setEditingItemId] = useState("");
+  const [editingLabel, setEditingLabel] = useState("");
+  const field = isolationCatalogFieldFromLabel(fieldLabel);
+  const rows = getVisibleIsolationCatalogRows(userCatalogItems, field);
+
+  function addShortcut() {
+    const trimmed = label.trim();
+    if (!trimmed) return;
+    const nextItem = createUserIsolationCatalogItem({
+      field,
+      label: trimmed,
+      favorite: true,
+      sortOrder: 1,
+    });
+    onChange(updateUserCatalogItem(userCatalogItems, nextItem));
+    setLabel("");
+  }
+
+  function startEdit(item: CatalogItem) {
+    setEditingItemId(item.id);
+    setEditingLabel(item.label);
+  }
+
+  function saveEdit(item: CatalogItem) {
+    const trimmed = editingLabel.trim();
+    if (!trimmed) return;
+    onChange(updateUserCatalogItem(userCatalogItems, { ...item, label: trimmed }));
+    setEditingItemId("");
+    setEditingLabel("");
+  }
+
+  function deleteUserItem(item: CatalogItem) {
+    onChange(userCatalogItems.filter((candidate) => candidate.id !== item.id));
+    if (editingItemId === item.id) {
+      setEditingItemId("");
+      setEditingLabel("");
+    }
+  }
+
+  function toggleFavorite(item: CatalogItem) {
+    const nextItem = createUserIsolationCatalogOverride(item, {
+      active: item.active !== false,
+      favorite: !item.favorite,
+    });
+    onChange(updateUserCatalogItem(userCatalogItems, nextItem));
+  }
+
+  function toggleActive(item: CatalogItem) {
+    const nextItem = createUserIsolationCatalogOverride(item, {
+      active: item.active === false,
+      favorite: item.favorite,
+    });
+    onChange(updateUserCatalogItem(userCatalogItems, nextItem));
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-brand-light-node bg-white p-3">
+      <p className="mb-3 text-xs leading-5 text-brand-slate">
+        Favorites appear first in the selected field's suggestions. Seed rows can be hidden or favorited with user overrides; user rows can also be edited or deleted.
+      </p>
+      <div className="flex flex-col gap-3 md:grid md:grid-cols-[1fr_1.5fr_auto] md:items-end">
+        <SelectInput label="Field" value={fieldLabel} onChange={setFieldLabel} options={isolationCatalogFieldOptions} />
+        <TextInput label="Shortcut" value={label} onChange={setLabel} placeholder="custom text" />
+        <button
+          type="button"
+          onClick={addShortcut}
+          disabled={!label.trim()}
+          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${label.trim() ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+        >
+          Add
+        </button>
+      </div>
+      {rows.length ? (
+        <div className="mt-3 grid gap-2">
+          {rows.map((item) => {
+            const seedItem = seedIsolationCatalogItems.find((candidate) => candidate.id === item.id);
+            const ownerLabel = seedItem && item.owner === "user" ? "Seed override" : item.owner === "seed" ? "Seed" : "User";
+            const canEditOrDelete = item.owner === "user" && !seedItem;
+            const editing = editingItemId === item.id;
+            return (
+              <div key={item.id} className={`flex flex-col gap-2 rounded-lg border px-3 py-2 sm:flex-row sm:items-center sm:justify-between ${item.active === false ? "border-brand-light-node bg-brand-light-slate text-brand-slate" : "border-brand-light-node bg-white text-brand-navy"}`}>
+                <div className="min-w-0">
+                  {editing ? (
+                    <TextInput label="Edit shortcut" value={editingLabel} onChange={setEditingLabel} placeholder="custom text" />
+                  ) : (
+                    <p className="truncate text-sm font-semibold">{item.label}</p>
+                  )}
+                  <p className="text-xs leading-5 text-brand-slate">{ownerLabel}{item.favorite ? " · Favorite" : ""}{item.active === false ? " · Hidden" : ""}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  {editing ? (
+                    <>
+                      <button type="button" onClick={() => saveEdit(item)} className="rounded-lg border border-brand-navy bg-brand-navy px-2 py-1 text-xs font-semibold text-white hover:bg-brand-navy-deep">
+                        Save
+                      </button>
+                      <button type="button" onClick={() => { setEditingItemId(""); setEditingLabel(""); }} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy hover:bg-brand-light-slate">
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => toggleFavorite(item)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy hover:bg-brand-light-slate">
+                        {item.favorite ? "Unfavorite" : "Favorite"}
+                      </button>
+                      <button type="button" onClick={() => toggleActive(item)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy hover:bg-brand-light-slate">
+                        {item.active === false ? "Show" : "Hide"}
+                      </button>
+                      {canEditOrDelete ? (
+                        <>
+                          <button type="button" onClick={() => startEdit(item)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy hover:bg-brand-light-slate">
+                            Edit
+                          </button>
+                          <button type="button" onClick={() => deleteUserItem(item)} className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50">
+                            Delete
+                          </button>
+                        </>
+                      ) : seedItem && item.owner === "user" ? (
+                        <button type="button" onClick={() => deleteUserItem(item)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy hover:bg-brand-light-slate">
+                          Reset
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function eventTypeFromLabel(label: string): IsolationEventType {
   const entry = Object.entries(isolationActionLabels).find(([, actionLabel]) => actionLabel === label);
   return (entry?.[0] as IsolationEventType | undefined) || isolationEventTypes.rubberDamPlaced;
@@ -244,11 +420,15 @@ function defaultIsolationMethod(action: IsolationEventType): IsolationMethod {
 type IsolationFormState = {
   action: IsolationEventType;
   method: IsolationMethod;
+  methodLabel: string;
   regionKind: IsolationRegionKind;
   regionLabel: string;
   exposedTeeth: string;
   clampCode: string;
   clampTooth: string;
+  supportLabel: string;
+  supportTooth: string;
+  supportNote: string;
   note: string;
 };
 
@@ -256,11 +436,15 @@ function defaultIsolationFormState(tooth: string, action: IsolationEventType = i
   return {
     action,
     method: defaultIsolationMethod(action),
+    methodLabel: "",
     regionKind: "custom",
     regionLabel: "",
     exposedTeeth: tooth || "",
     clampCode: "",
     clampTooth: tooth || "",
+    supportLabel: "",
+    supportTooth: "",
+    supportNote: "",
     note: "",
   };
 }
@@ -282,11 +466,15 @@ function buildIsolationFormState(tooth: string, action: IsolationEventType, sour
   return {
     ...defaultIsolationFormState(tooth, action),
     method: details.method || defaultIsolationMethod(action),
+    methodLabel: details.methodLabel || "",
     regionKind: details.regionKind || "custom",
     regionLabel: details.regionLabel || "",
     exposedTeeth: details.exposedTeeth?.join(" ") || tooth || "",
     clampCode: clamp.clampCode,
     clampTooth: clamp.clampTooth || tooth || "",
+    supportLabel: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.label || "",
+    supportTooth: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.tooth || "",
+    supportNote: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.notes || "",
   };
 }
 
@@ -307,9 +495,12 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
+  userIsolationCatalogItems = [],
+  onUserIsolationCatalogItemsChange,
   initialFocusSection,
 }: {
   caseData: EndoCase;
@@ -321,9 +512,12 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
+  userIsolationCatalogItems?: CatalogItem[];
+  onUserIsolationCatalogItemsChange?: (items: CatalogItem[]) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
@@ -351,6 +545,10 @@ export function CaseSetupStatusPanel({
     { label: "Anesthesia", status: capabilitySummary.anesthesia },
     { label: "Isolation", status: capabilitySummary.isolation },
   ];
+  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
+  const anesthesiaWorkflowEntryNodeId = anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment
+    ? "anesthesia-needs-reassessment"
+    : undefined;
   const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
   const showMethodField = isolationForm.action === isolationEventTypes.alternativeIsolationUsed || isolationForm.action === isolationEventTypes.replaced;
   const methodOptions = isolationForm.action === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
@@ -358,6 +556,24 @@ export function CaseSetupStatusPanel({
     isolationForm.action === isolationEventTypes.rubberDamPlaced ||
     (isolationForm.action === isolationEventTypes.replaced && isolationForm.method === "rubberDam");
   const actionIsReassessment = isolationForm.action === isolationEventTypes.compromised || isolationForm.action === isolationEventTypes.removed;
+  const showMethodLabelField = !actionIsReassessment;
+  const isolationMethodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userIsolationCatalogItems);
+  const isolationSupportTypeSuggestions = getIsolationCatalogOptions("supportTypes", userIsolationCatalogItems);
+  const isolationSupportPhraseSuggestions = getIsolationCatalogOptions("supportPhrases", userIsolationCatalogItems);
+  const isolationRegionLabelSuggestions = getIsolationCatalogOptions("regionLabels", userIsolationCatalogItems);
+  const isolationClampCodeSuggestions = getIsolationCatalogOptions("clampCodes", userIsolationCatalogItems);
+  const isolationReasonSuggestions = getIsolationCatalogOptions("reasons", userIsolationCatalogItems);
+  const isolationNoteSuggestions = getIsolationCatalogOptions("notes", userIsolationCatalogItems);
+  const isolationShortcutItems = buildUserIsolationCatalogItemsFromForm({
+    action: isolationForm.action,
+    methodLabel: showMethodLabelField ? isolationForm.methodLabel : "",
+    regionLabel: isolationForm.regionLabel,
+    clampCode: showClampFields ? isolationForm.clampCode : "",
+    supportType: showMethodLabelField ? isolationForm.supportLabel : "",
+    supportPhrase: showMethodLabelField ? isolationForm.supportNote : "",
+    note: isolationForm.note,
+  });
+  const canSaveIsolationShortcuts = Boolean(onUserIsolationCatalogItemsChange && isolationShortcutItems.length);
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -402,11 +618,32 @@ export function CaseSetupStatusPanel({
 
   function submitIsolationEvent() {
     const teeth = isolationForm.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
+    const supportLabel = isolationForm.supportLabel.trim();
+    const supportTooth = isolationForm.supportTooth.trim();
+    const supportNote = isolationForm.supportNote.trim();
+    const supports: IsolationSupport[] = [];
+    if (!actionIsReassessment && showClampFields && (isolationForm.clampCode.trim() || isolationForm.clampTooth.trim())) {
+      supports.push({
+        type: "clamp" as const,
+        tooth: isolationForm.clampTooth.trim() || undefined,
+        clampCode: isolationForm.clampCode.trim() || undefined,
+      });
+    }
+    if (!actionIsReassessment && (supportLabel || supportTooth || supportNote)) {
+      supports.push({
+        type: isolationSupportTypeFromLabel(supportLabel),
+        label: supportLabel || undefined,
+        tooth: supportTooth || undefined,
+        notes: supportNote || undefined,
+      });
+    }
     const details: IsolationEventDetails = {
       method: isolationForm.action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : actionIsReassessment ? undefined : isolationForm.method,
+      methodLabel: showMethodLabelField ? isolationForm.methodLabel.trim() || undefined : undefined,
       regionKind: isolationForm.regionKind,
       regionLabel: isolationForm.regionLabel.trim() || undefined,
       exposedTeeth: teeth.length ? teeth : undefined,
+      supports: supports.length ? supports : undefined,
       clampCode: showClampFields ? isolationForm.clampCode.trim() || undefined : undefined,
       clampTooth: showClampFields ? isolationForm.clampTooth.trim() || undefined : undefined,
       reason: actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
@@ -415,6 +652,11 @@ export function CaseSetupStatusPanel({
 
     onRecordIsolationEvent(isolationForm.action, details);
     resetIsolationForm();
+  }
+
+  function saveIsolationShortcuts() {
+    if (!onUserIsolationCatalogItemsChange || !isolationShortcutItems.length) return;
+    onUserIsolationCatalogItemsChange(updateUserCatalogItems(userIsolationCatalogItems, isolationShortcutItems));
   }
 
   return (
@@ -528,6 +770,16 @@ export function CaseSetupStatusPanel({
             {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
           </div>
         ) : null}
+        <div className="mt-3">
+          <button
+            type="button"
+            aria-label="Open embedded anesthesia workflow"
+            onClick={() => onOpenAnesthesiaWorkflow(anesthesiaWorkflowEntryNodeId)}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaIsEstablished ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+          >
+            {anesthesiaIsEstablished ? "Open workflow" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
+          </button>
+        </div>
         <AnesthesiaEventForm
           tooth={caseData.tooth}
           latestEvent={latestAnesthesiaEvent}
@@ -632,18 +884,28 @@ export function CaseSetupStatusPanel({
               options={methodOptions}
             />
           ) : null}
+          {showMethodLabelField ? (
+            <TextInput label="Method label" value={isolationForm.methodLabel} onChange={(value) => updateIsolationForm({ methodLabel: value })} placeholder="optional display text" suggestions={isolationMethodLabelSuggestions} />
+          ) : null}
           <SelectInput
             label="Region"
             value={isolationForm.regionKind}
             onChange={(value) => updateIsolationForm({ regionKind: value as IsolationRegionKind })}
             options={[...isolationRegionKinds]}
           />
-          <TextInput label="Region label" value={isolationForm.regionLabel} onChange={(value) => updateIsolationForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" />
+          <TextInput label="Region label" value={isolationForm.regionLabel} onChange={(value) => updateIsolationForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" suggestions={isolationRegionLabelSuggestions} />
           <TextInput label="Exposed teeth" value={isolationForm.exposedTeeth} onChange={(value) => updateIsolationForm({ exposedTeeth: value })} placeholder="e.g., 34 35 36 37" />
           {showClampFields ? (
             <>
               <TextInput label="Clamp tooth" value={isolationForm.clampTooth} onChange={(value) => updateIsolationForm({ clampTooth: value })} placeholder="e.g., 37" />
-              <TextInput label="Clamp code" value={isolationForm.clampCode} onChange={(value) => updateIsolationForm({ clampCode: value })} placeholder="e.g., W8A" />
+              <TextInput label="Clamp code" value={isolationForm.clampCode} onChange={(value) => updateIsolationForm({ clampCode: value })} placeholder="e.g., W8A" suggestions={isolationClampCodeSuggestions} />
+            </>
+          ) : null}
+          {showMethodLabelField ? (
+            <>
+              <TextInput label="Support type" value={isolationForm.supportLabel} onChange={(value) => updateIsolationForm({ supportLabel: value })} placeholder="optional" suggestions={isolationSupportTypeSuggestions} />
+              <TextInput label="Support tooth" value={isolationForm.supportTooth} onChange={(value) => updateIsolationForm({ supportTooth: value })} placeholder="optional" />
+              <TextInput label="Support note" value={isolationForm.supportNote} onChange={(value) => updateIsolationForm({ supportNote: value })} placeholder="optional" suggestions={isolationSupportPhraseSuggestions} />
             </>
           ) : null}
           <TextInput
@@ -651,15 +913,31 @@ export function CaseSetupStatusPanel({
             value={isolationForm.note}
             onChange={(value) => updateIsolationForm({ note: value })}
             placeholder={isolationForm.action === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
+            suggestions={actionIsReassessment ? isolationReasonSuggestions : isolationNoteSuggestions}
           />
         </div>
-        <button
-          type="button"
-          onClick={submitIsolationEvent}
-          className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
-        >
-          {isolationSubmitLabels[isolationForm.action]}
-        </button>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={submitIsolationEvent}
+            className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+          >
+            {isolationSubmitLabels[isolationForm.action]}
+          </button>
+          {onUserIsolationCatalogItemsChange ? (
+            <button
+              type="button"
+              onClick={saveIsolationShortcuts}
+              disabled={!canSaveIsolationShortcuts}
+              className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveIsolationShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+            >
+              Save shortcuts
+            </button>
+          ) : null}
+        </div>
+        {onUserIsolationCatalogItemsChange ? (
+          <IsolationCatalogManager userCatalogItems={userIsolationCatalogItems} onChange={onUserIsolationCatalogItemsChange} />
+        ) : null}
       </section>
     </div>
   );
