@@ -24,13 +24,16 @@ export const isolationInvalidatingEventTypes = [
 
 export const isolationRegionKinds = ["quadrant", "sextant", "archSegment", "custom"] as const;
 export const isolationMethods = ["rubberDam", "splitDam", "cottonRoll", "isovac", "other"] as const;
+export const isolationSupportTypes = ["clamp", "wedge", "ligature", "other"] as const;
 
 export type IsolationEventType = typeof isolationEventTypes[keyof typeof isolationEventTypes];
 export type IsolationRegionKind = typeof isolationRegionKinds[number];
 export type IsolationMethod = typeof isolationMethods[number];
+export type IsolationSupportType = typeof isolationSupportTypes[number];
 
 export type IsolationSupport = {
-  type: "clamp" | "wedge" | "ligature" | "other";
+  type: IsolationSupportType;
+  label?: string;
   tooth?: string;
   clampCode?: string;
   notes?: string;
@@ -38,6 +41,7 @@ export type IsolationSupport = {
 
 export type IsolationEventDetails = {
   method?: IsolationMethod;
+  methodLabel?: string;
   regionKind?: IsolationRegionKind;
   regionLabel?: string;
   exposedTeeth?: string[];
@@ -71,19 +75,50 @@ const isolationRegionLabels = {
   custom: "Custom",
 } as const satisfies Record<IsolationRegionKind, string>;
 
+export const isolationSupportTypeLabels = {
+  clamp: "Clamp",
+  wedge: "Wedge",
+  ligature: "Ligature",
+  other: "Other support",
+} as const satisfies Record<IsolationSupportType, string>;
+
+export function isolationSupportTypeFromLabel(label: string): IsolationSupportType {
+  const normalized = label.trim().toLowerCase();
+  const entry = Object.entries(isolationSupportTypeLabels).find(([, supportLabel]) => supportLabel.toLowerCase() === normalized);
+  return (entry?.[0] as IsolationSupportType | undefined) || "other";
+}
+
 function normalizeTeeth(teeth?: unknown) {
   return Array.isArray(teeth)
     ? teeth.map(String).map((tooth) => tooth.trim()).filter(Boolean)
     : [];
 }
 
+function normalizeSupport(value: unknown): IsolationSupport | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const support = value as Record<string, unknown>;
+  const type = typeof support.type === "string" && (isolationSupportTypes as readonly string[]).includes(support.type)
+    ? support.type as IsolationSupport["type"]
+    : undefined;
+  if (!type) return undefined;
+
+  return {
+    type,
+    label: typeof support.label === "string" ? support.label : undefined,
+    tooth: typeof support.tooth === "string" ? support.tooth : undefined,
+    clampCode: typeof support.clampCode === "string" ? support.clampCode : undefined,
+    notes: typeof support.notes === "string" ? support.notes : undefined,
+  };
+}
+
 export function getIsolationEventDetails(event: ClinicalEvent): IsolationEventDetails {
   const details = event.details && typeof event.details === "object" ? event.details : {};
   const exposedTeeth = normalizeTeeth(details.exposedTeeth);
-  const supports = Array.isArray(details.supports) ? details.supports.filter((support) => support && typeof support === "object") as IsolationSupport[] : undefined;
+  const supports = Array.isArray(details.supports) ? details.supports.map(normalizeSupport).filter(Boolean) as IsolationSupport[] : undefined;
 
   return {
     method: typeof details.method === "string" && isolationMethods.includes(details.method as IsolationMethod) ? details.method as IsolationMethod : undefined,
+    methodLabel: typeof details.methodLabel === "string" ? details.methodLabel : undefined,
     regionKind: typeof details.regionKind === "string" && isolationRegionKinds.includes(details.regionKind as IsolationRegionKind) ? details.regionKind as IsolationRegionKind : undefined,
     regionLabel: typeof details.regionLabel === "string" ? details.regionLabel : event.scope?.regionLabel,
     exposedTeeth: exposedTeeth.length ? exposedTeeth : event.scope?.teeth,
@@ -161,7 +196,7 @@ export function getIsolationCoverageSummary(event?: ClinicalEvent | null): Isola
   const clampTooth = details.clampTooth || clampSupport?.tooth;
 
   return {
-    method: details.method ? isolationMethodLabels[details.method] : "not recorded",
+    method: details.methodLabel || (details.method ? isolationMethodLabels[details.method] : "not recorded"),
     region: formatRegion(details, scope),
     exposedTeeth: exposedTeeth.length ? exposedTeeth.join(", ") : "not recorded",
     clampCode: clampCode || "not recorded",
@@ -177,10 +212,23 @@ function formatSupport(details: IsolationEventDetails) {
   const clampSupport = details.supports?.find((support) => support.type === "clamp");
   const clampCode = details.clampCode || clampSupport?.clampCode;
   const clampTooth = details.clampTooth || clampSupport?.tooth;
-  if (clampCode && clampTooth) return ` Clamp ${clampCode} on tooth ${clampTooth}.`;
-  if (clampCode) return ` Clamp ${clampCode} used.`;
-  if (clampTooth) return ` Clamp placed on tooth ${clampTooth}.`;
-  return "";
+  const supportFragments = details.supports
+    ?.filter((support) => support.type !== "clamp" || support.label || support.notes)
+    .map((support) => {
+      const label = support.label || (support.type === "other" ? "Support" : support.type);
+      const tooth = support.tooth ? ` on tooth ${support.tooth}` : "";
+      const notes = support.notes ? ` (${support.notes})` : "";
+      return `${label}${tooth}${notes}`;
+    }) || [];
+  const clampFragment = clampCode && clampTooth
+    ? `Clamp ${clampCode} on tooth ${clampTooth}`
+    : clampCode
+      ? `Clamp ${clampCode} used`
+      : clampTooth
+        ? `Clamp placed on tooth ${clampTooth}`
+        : "";
+  const fragments = [clampFragment, ...supportFragments].filter(Boolean);
+  return fragments.length ? ` ${fragments.join("; ")}.` : "";
 }
 
 export function formatIsolationEventFragment(event: ClinicalEvent) {
@@ -190,10 +238,10 @@ export function formatIsolationEventFragment(event: ClinicalEvent) {
   const support = formatSupport(details);
 
   if (event.type === isolationEventTypes.rubberDamPlaced) {
-    return `Rubber dam isolation placed${region}${exposed ? `; exposed teeth ${exposed}` : ""}.${support}`;
+    return `${details.methodLabel || "Rubber dam isolation"} placed${region}${exposed ? `; exposed teeth ${exposed}` : ""}.${support}`;
   }
   if (event.type === isolationEventTypes.alternativeIsolationUsed) {
-    return `Alternative isolation used${details.method ? ` (${details.method})` : ""}${region}${exposed ? `; isolated teeth ${exposed}` : ""}.`;
+    return `Alternative isolation used${details.methodLabel ? ` (${details.methodLabel})` : details.method ? ` (${details.method})` : ""}${region}${exposed ? `; isolated teeth ${exposed}` : ""}.${support}`;
   }
   if (event.type === isolationEventTypes.compromised) {
     return `Isolation compromised${details.reason ? `: ${details.reason}` : ""}. Reassessment required.`;
@@ -202,7 +250,7 @@ export function formatIsolationEventFragment(event: ClinicalEvent) {
     return `Isolation removed${details.reason ? `: ${details.reason}` : ""}.`;
   }
   if (event.type === isolationEventTypes.replaced) {
-    return `Isolation replaced${region}${exposed ? `; exposed teeth ${exposed}` : ""}.${support}`;
+    return `Isolation replaced${details.methodLabel ? ` (${details.methodLabel})` : ""}${region}${exposed ? `; exposed teeth ${exposed}` : ""}.${support}`;
   }
   return `${event.type}.`;
 }

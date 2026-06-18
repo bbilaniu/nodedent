@@ -1793,8 +1793,11 @@ test("user isolation catalog persistence loads, validates, and merges local user
 test("isolation shortcut saving captures only catalog-backed documentation fields", () => {
   const placementItems = buildUserIsolationCatalogItemsFromForm({
     action: isolationEventTypes.rubberDamPlaced,
+    methodLabel: "Rubber dam",
     regionLabel: "Q3",
     clampCode: "W8A",
+    supportType: "Ligature",
+    supportPhrase: "Ligature placed",
     note: "Isolation stable",
   });
   const reassessmentItems = buildUserIsolationCatalogItemsFromForm({
@@ -1810,11 +1813,43 @@ test("isolation shortcut saving captures only catalog-backed documentation field
     note: "Dam removed for assessment",
   });
 
-  assert.deepEqual(placementItems.map((item) => item.appliesTo?.field), ["regionLabels", "clampCodes", "notes"]);
-  assert.deepEqual(placementItems.map((item) => item.label), ["Q3", "W8A", "Isolation stable"]);
+  assert.deepEqual(placementItems.map((item) => item.appliesTo?.field), ["methodLabels", "regionLabels", "clampCodes", "supportTypes", "supportPhrases", "notes"]);
+  assert.deepEqual(placementItems.map((item) => item.label), ["Rubber dam", "Q3", "W8A", "Ligature", "Ligature placed", "Isolation stable"]);
   assert.deepEqual(reassessmentItems.map((item) => item.appliesTo?.field), ["regionLabels", "clampCodes", "reasons"]);
   assert.deepEqual(removalItems.map((item) => item.appliesTo?.field), ["reasons"]);
   assert.equal([...placementItems, ...reassessmentItems, ...removalItems].every((item) => item.owner === "user" && item.favorite === true), true);
+});
+
+test("isolation event details preserve captured method and support labels", () => {
+  const event = {
+    id: "evt_isolation_support_labels",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    details: {
+      method: "rubberDam",
+      methodLabel: "Rubber dam with ligature support",
+      exposedTeeth: ["36", "37"],
+      clampCode: "W8A",
+      clampTooth: "37",
+      supports: [
+        { type: "clamp", tooth: "37", clampCode: "W8A" },
+        { type: "ligature", label: "Ligature", tooth: "36", notes: "Ligature placed" },
+      ],
+    },
+  };
+  const details = getIsolationEventDetails(event);
+  const support = details.supports?.at(1);
+
+  assert.equal(details.methodLabel, "Rubber dam with ligature support");
+  assert.equal(support?.type, "ligature");
+  assert.equal(support?.label, "Ligature");
+  assert.equal(support?.tooth, "36");
+  assert.equal(support?.notes, "Ligature placed");
+  assert.equal(getIsolationCoverageSummary(event).method, "Rubber dam with ligature support");
+  assert.match(eventFragment(event), /Rubber dam with ligature support placed/);
+  assert.match(eventFragment(event), /Ligature on tooth 36 \(Ligature placed\)/);
 });
 
 test("shared catalog infrastructure merges customizable documentation catalog layers", () => {

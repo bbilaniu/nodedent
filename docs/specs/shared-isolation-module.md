@@ -264,8 +264,9 @@ Implemented:
 
 - Loaded user-owned isolation catalog items at the app root and persisted updates through `nodedent.userCatalog.sharedIsolation.v1`.
 - Passed user isolation catalog items into Case Setup & Status and the embedded isolation workflow runner.
-- Added datalist suggestions for isolation region labels, clamp codes, reason phrases, and note phrases.
+- Added datalist suggestions for isolation method labels, support types, support phrases, region labels, clamp codes, reason phrases, and note phrases.
 - Added contextual `Save shortcuts` actions in both isolation capture surfaces. Saving shortcuts updates the user catalog only and does not record a clinical event.
+- Added structured support capture in both isolation capture surfaces so support type, support tooth, and support notes snapshot into `supports[]` without affecting capability output.
 - Added a compact isolation shortcut manager in Case Setup & Status for field-specific add, favorite/unfavorite, hide/unhide, edit, delete, and seed-override reset behavior.
 - Kept shortcut management local to user-owned isolation catalog items. Clinic/template storage, global settings, import/export, and sync remain deferred.
 - Added tests for shortcut item extraction from isolation forms, including note versus reason field routing and exclusion of blank values.

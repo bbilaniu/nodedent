@@ -11,8 +11,8 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { anesthesiaRouteFromLabel, anesthesiaRouteLabels, anesthesiaRouteOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogItems } from "../workflow/catalogs";
-import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind } from "../workflow/isolation";
-import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds } from "../workflow/isolation";
+import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind, IsolationSupport } from "../workflow/isolation";
+import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel } from "../workflow/isolation";
 import type { IsolationCatalogField } from "../workflow/isolationCatalog";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
@@ -420,11 +420,15 @@ function defaultIsolationMethod(action: IsolationEventType): IsolationMethod {
 type IsolationFormState = {
   action: IsolationEventType;
   method: IsolationMethod;
+  methodLabel: string;
   regionKind: IsolationRegionKind;
   regionLabel: string;
   exposedTeeth: string;
   clampCode: string;
   clampTooth: string;
+  supportLabel: string;
+  supportTooth: string;
+  supportNote: string;
   note: string;
 };
 
@@ -432,11 +436,15 @@ function defaultIsolationFormState(tooth: string, action: IsolationEventType = i
   return {
     action,
     method: defaultIsolationMethod(action),
+    methodLabel: "",
     regionKind: "custom",
     regionLabel: "",
     exposedTeeth: tooth || "",
     clampCode: "",
     clampTooth: tooth || "",
+    supportLabel: "",
+    supportTooth: "",
+    supportNote: "",
     note: "",
   };
 }
@@ -458,11 +466,15 @@ function buildIsolationFormState(tooth: string, action: IsolationEventType, sour
   return {
     ...defaultIsolationFormState(tooth, action),
     method: details.method || defaultIsolationMethod(action),
+    methodLabel: details.methodLabel || "",
     regionKind: details.regionKind || "custom",
     regionLabel: details.regionLabel || "",
     exposedTeeth: details.exposedTeeth?.join(" ") || tooth || "",
     clampCode: clamp.clampCode,
     clampTooth: clamp.clampTooth || tooth || "",
+    supportLabel: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.label || "",
+    supportTooth: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.tooth || "",
+    supportNote: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.notes || "",
   };
 }
 
@@ -538,14 +550,21 @@ export function CaseSetupStatusPanel({
     isolationForm.action === isolationEventTypes.rubberDamPlaced ||
     (isolationForm.action === isolationEventTypes.replaced && isolationForm.method === "rubberDam");
   const actionIsReassessment = isolationForm.action === isolationEventTypes.compromised || isolationForm.action === isolationEventTypes.removed;
+  const showMethodLabelField = !actionIsReassessment;
+  const isolationMethodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userIsolationCatalogItems);
+  const isolationSupportTypeSuggestions = getIsolationCatalogOptions("supportTypes", userIsolationCatalogItems);
+  const isolationSupportPhraseSuggestions = getIsolationCatalogOptions("supportPhrases", userIsolationCatalogItems);
   const isolationRegionLabelSuggestions = getIsolationCatalogOptions("regionLabels", userIsolationCatalogItems);
   const isolationClampCodeSuggestions = getIsolationCatalogOptions("clampCodes", userIsolationCatalogItems);
   const isolationReasonSuggestions = getIsolationCatalogOptions("reasons", userIsolationCatalogItems);
   const isolationNoteSuggestions = getIsolationCatalogOptions("notes", userIsolationCatalogItems);
   const isolationShortcutItems = buildUserIsolationCatalogItemsFromForm({
     action: isolationForm.action,
+    methodLabel: showMethodLabelField ? isolationForm.methodLabel : "",
     regionLabel: isolationForm.regionLabel,
     clampCode: showClampFields ? isolationForm.clampCode : "",
+    supportType: showMethodLabelField ? isolationForm.supportLabel : "",
+    supportPhrase: showMethodLabelField ? isolationForm.supportNote : "",
     note: isolationForm.note,
   });
   const canSaveIsolationShortcuts = Boolean(onUserIsolationCatalogItemsChange && isolationShortcutItems.length);
@@ -593,11 +612,32 @@ export function CaseSetupStatusPanel({
 
   function submitIsolationEvent() {
     const teeth = isolationForm.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
+    const supportLabel = isolationForm.supportLabel.trim();
+    const supportTooth = isolationForm.supportTooth.trim();
+    const supportNote = isolationForm.supportNote.trim();
+    const supports: IsolationSupport[] = [];
+    if (!actionIsReassessment && showClampFields && (isolationForm.clampCode.trim() || isolationForm.clampTooth.trim())) {
+      supports.push({
+        type: "clamp" as const,
+        tooth: isolationForm.clampTooth.trim() || undefined,
+        clampCode: isolationForm.clampCode.trim() || undefined,
+      });
+    }
+    if (!actionIsReassessment && (supportLabel || supportTooth || supportNote)) {
+      supports.push({
+        type: isolationSupportTypeFromLabel(supportLabel),
+        label: supportLabel || undefined,
+        tooth: supportTooth || undefined,
+        notes: supportNote || undefined,
+      });
+    }
     const details: IsolationEventDetails = {
       method: isolationForm.action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : actionIsReassessment ? undefined : isolationForm.method,
+      methodLabel: showMethodLabelField ? isolationForm.methodLabel.trim() || undefined : undefined,
       regionKind: isolationForm.regionKind,
       regionLabel: isolationForm.regionLabel.trim() || undefined,
       exposedTeeth: teeth.length ? teeth : undefined,
+      supports: supports.length ? supports : undefined,
       clampCode: showClampFields ? isolationForm.clampCode.trim() || undefined : undefined,
       clampTooth: showClampFields ? isolationForm.clampTooth.trim() || undefined : undefined,
       reason: actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
@@ -828,6 +868,9 @@ export function CaseSetupStatusPanel({
               options={methodOptions}
             />
           ) : null}
+          {showMethodLabelField ? (
+            <TextInput label="Method label" value={isolationForm.methodLabel} onChange={(value) => updateIsolationForm({ methodLabel: value })} placeholder="optional display text" suggestions={isolationMethodLabelSuggestions} />
+          ) : null}
           <SelectInput
             label="Region"
             value={isolationForm.regionKind}
@@ -840,6 +883,13 @@ export function CaseSetupStatusPanel({
             <>
               <TextInput label="Clamp tooth" value={isolationForm.clampTooth} onChange={(value) => updateIsolationForm({ clampTooth: value })} placeholder="e.g., 37" />
               <TextInput label="Clamp code" value={isolationForm.clampCode} onChange={(value) => updateIsolationForm({ clampCode: value })} placeholder="e.g., W8A" suggestions={isolationClampCodeSuggestions} />
+            </>
+          ) : null}
+          {showMethodLabelField ? (
+            <>
+              <TextInput label="Support type" value={isolationForm.supportLabel} onChange={(value) => updateIsolationForm({ supportLabel: value })} placeholder="optional" suggestions={isolationSupportTypeSuggestions} />
+              <TextInput label="Support tooth" value={isolationForm.supportTooth} onChange={(value) => updateIsolationForm({ supportTooth: value })} placeholder="optional" />
+              <TextInput label="Support note" value={isolationForm.supportNote} onChange={(value) => updateIsolationForm({ supportNote: value })} placeholder="optional" suggestions={isolationSupportPhraseSuggestions} />
             </>
           ) : null}
           <TextInput

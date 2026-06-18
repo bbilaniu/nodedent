@@ -90,19 +90,28 @@ function shortcutItem(field: IsolationCatalogField, label: string) {
 
 export function buildUserIsolationCatalogItemsFromForm({
   action,
+  methodLabel = "",
   regionLabel = "",
   clampCode = "",
+  supportType = "",
+  supportPhrase = "",
   note = "",
 }: {
   action: IsolationEventType;
+  methodLabel?: string;
   regionLabel?: string;
   clampCode?: string;
+  supportType?: string;
+  supportPhrase?: string;
   note?: string;
 }): CatalogItem[] {
   const noteField = action === isolationEventTypes.compromised || action === isolationEventTypes.removed ? "reasons" : "notes";
   return [
+    shortcutItem("methodLabels", methodLabel),
     shortcutItem("regionLabels", regionLabel),
     shortcutItem("clampCodes", clampCode),
+    shortcutItem("supportTypes", supportType),
+    shortcutItem("supportPhrases", supportPhrase),
     shortcutItem(noteField, note),
   ].filter(Boolean) as CatalogItem[];
 }
