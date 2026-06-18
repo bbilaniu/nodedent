@@ -177,6 +177,13 @@ Tasks:
 - Confirm that rubber dam, alternative isolation, and replacement all establish `isolation.established` for their recorded scope.
 - Confirm that note fragments remain clear when clamp fields or exposed teeth are omitted.
 
+Implemented:
+
+- Verified the existing `shared.isolation` workflow identity, event vocabulary, supported scopes, completion nodes, event details, capability output, and coverage summary behavior.
+- Added focused tests for rubber dam isolation coverage by exposed tooth, unrelated-tooth non-matching, compromised isolation invalidation, removal invalidation, and replacement re-establishment.
+- Added focused tests confirming alternative isolation establishes `isolation.established` for the recorded region.
+- Added note-fragment coverage for rubber dam, compromised, removed, replaced, and alternative isolation events, including cases where optional clamp fields or exposed teeth are omitted.
+
 ## Phase 2: Isolation Catalog Model
 
 Status: implemented as a narrow shared catalog model with non-prescriptive seed suggestions and user-owned clamp-code support.
@@ -194,6 +201,16 @@ Tasks:
 
 Seed values should be intentionally small and non-prescriptive. Do not seed clamp-code shortcuts in the first isolation catalog pass; allow user-owned entries first and leave clinic-owned clamp-code shortcuts for the later clinic catalog layer.
 
+Implemented:
+
+- Added `src/endo-guide/workflow/isolationCatalog.ts` as the narrow isolation catalog model.
+- Added `isolationCatalogFields` and `IsolationCatalogField` for `methodLabels`, `supportTypes`, `supportPhrases`, `regionLabels`, `reasons`, `notes`, and `clampCodes`.
+- Added seeded non-prescriptive suggestions for method labels, support types, support phrases, region labels, reason phrases, and note phrases.
+- Kept seeded clamp-code suggestions empty; clamp-code shortcuts are supported only through user/custom catalog items in this phase.
+- Added `createUserIsolationCatalogItem`, `createUserIsolationCatalogOverride`, `getIsolationCatalogItems`, and `getIsolationCatalogOptions`.
+- Reused the shared catalog merge/filter/label helpers for owner precedence, active/hidden filtering, favorite ordering, sort order, aliases, and field applicability.
+- Added tests for non-prescriptive catalog metadata, no seeded clamp codes, user-owned clamp-code entries, seed hiding/favoriting through user overrides, alias inclusion, and event label snapshot behavior.
+
 ## Phase 3: Local User Isolation Catalog Persistence
 
 Status: implemented narrowly for local user-owned isolation catalog storage.
@@ -210,6 +227,16 @@ Tasks:
 - Pass loaded user catalog items into the shared catalog merge/filter layer.
 - Preserve editable/free-text behavior.
 - Preserve the rule that catalog selections do not infer safety, adequacy, treatment readiness, replacement need, or recommendations.
+
+Implemented:
+
+- Added `src/endo-guide/state/isolationCatalogPersistence.ts`.
+- Added the versioned local storage key `nodedent.userCatalog.sharedIsolation.v1`.
+- Added `loadUserIsolationCatalogItems` and `saveUserIsolationCatalogItems` with safe fallback for missing storage, malformed JSON, and incompatible payload versions.
+- Added validation that persists only `owner: "user"` and `category: "isolation"` catalog items.
+- Added validation that accepts only isolation catalog fields and rejects route-scoped items, app-core/seed/clinic/template-owned items, and wrong-category items.
+- Preserved user-owned seed overrides, including active/hidden and favorite metadata.
+- Added tests for missing storage, malformed storage, incompatible versions, valid user items, invalid item exclusion, seed/user merging, hidden item exclusion, favorite ordering, and the rule that catalog selections do not establish isolation capability.
 
 Deferred from this phase:
 
