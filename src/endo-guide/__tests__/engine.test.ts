@@ -34,7 +34,7 @@ import {
   sharedAnesthesiaWorkflow,
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
-import { anesthesiaCatalogOwnership, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
+import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
 import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
@@ -1708,6 +1708,46 @@ test("anesthesia catalog management helpers create user shortcuts and seed overr
   assert.equal(techniqueLabels[0], "Infiltration");
   assert.equal(techniqueLabels.includes("Block"), false);
   assert.equal(doseLabels[0], "1:50K epinephrine/adrenaline");
+});
+
+test("anesthesia entry shortcut saving captures only catalog-backed documentation fields", () => {
+  const injectionItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "injection",
+    agentLabel: "Custom agent",
+    technique: "Custom technique",
+    dose: "1.7",
+    doseUnit: "Custom dose unit",
+    administeredAt: "09:55",
+    vasoconstrictor: "Custom vasoconstrictor",
+    vasoconstrictorDose: "1:80K epinephrine/adrenaline",
+    targetTeeth: "36 37",
+    regionLabel: "Q3",
+    expiresAt: "2026-01-01T10:30",
+    note: "do not save",
+  });
+  const topicalItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "topical",
+    agentLabel: "Topical agent",
+    applicationType: "Cotton roll topical",
+    administeredAt: "09:56",
+    note: "do not save",
+  });
+  const otherItems = buildUserAnesthesiaCatalogItemsFromForm({
+    ...defaultAnesthesiaFormState("36"),
+    route: "other",
+    routeLabel: "Inhaled",
+    applicationType: "Other custom application",
+    site: "do not save",
+  });
+
+  assert.deepEqual(injectionItems.map((item) => item.appliesTo?.field), ["agents", "techniques", "doseUnits", "vasoconstrictors", "vasoconstrictorDoses"]);
+  assert.deepEqual(injectionItems.map((item) => item.label), ["Custom agent", "Custom technique", "Custom dose unit", "Custom vasoconstrictor", "1:80K epinephrine/adrenaline"]);
+  assert.equal(injectionItems.some((item) => ["1.7", "09:55", "36 37", "Q3", "2026-01-01T10:30", "do not save"].includes(item.label)), false);
+  assert.deepEqual(topicalItems.map((item) => item.appliesTo?.field), ["agents", "applicationTypes"]);
+  assert.deepEqual(otherItems.map((item) => item.appliesTo?.field), ["routeLabels", "applicationTypes"]);
+  assert.equal(injectionItems.every((item) => item.owner === "user" && item.favorite === true), true);
 });
 
 test("shared anesthesia phase 6A uses explicit clinician-entered reassessment time only", () => {

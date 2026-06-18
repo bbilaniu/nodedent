@@ -23,6 +23,7 @@ export function SharedWorkflowRunnerModal({
   latestAnesthesiaEvent,
   latestIsolationEvent,
   userAnesthesiaCatalogItems = [],
+  onUserAnesthesiaCatalogItemsChange,
   onClose,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
@@ -34,6 +35,7 @@ export function SharedWorkflowRunnerModal({
   latestAnesthesiaEvent?: ClinicalEvent;
   latestIsolationEvent?: ClinicalEvent;
   userAnesthesiaCatalogItems?: CatalogItem[];
+  onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
   onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
@@ -78,6 +80,7 @@ export function SharedWorkflowRunnerModal({
             parentWorkflowRunId={parentWorkflowRunId}
             latestAnesthesiaEvent={latestAnesthesiaEvent}
             userCatalogItems={userAnesthesiaCatalogItems}
+            onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
             onClose={onClose}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
           />

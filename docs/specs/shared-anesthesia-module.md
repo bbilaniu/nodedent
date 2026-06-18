@@ -478,12 +478,18 @@ Implemented:
 - Added a compact anesthesia shortcut manager inside the Case Setup anesthesia section.
 - Supports route and field selection for anesthesia shortcut context.
 - Supports adding user-owned anesthesia shortcuts.
+- Supports saving shortcut values directly from a filled administration entry without recording an event.
 - Supports favoriting and hiding catalog rows through user-owned overrides, including seed-item overrides.
 - Supports editing and deleting user-owned shortcuts.
 - Explains that favorites appear first in the selected field's suggestions.
 - Persists changes through the Phase 6C local user anesthesia catalog storage helper.
 - Keeps seed catalog entries read-only; user changes are stored as user-owned entries or overrides.
 - Preserves free-text datalist entry behavior and non-prescriptive catalog behavior.
+- Saves only route-appropriate catalog-backed fields from entries:
+  - Injection: agent, technique, dose unit, vasoconstrictor, and vasoconstrictor dose.
+  - Topical: agent and application type.
+  - Other: route label and application type.
+- Does not save dose amount, administered time, response, reassessment time, notes, teeth, or region as shortcuts.
 
 Deferred:
 

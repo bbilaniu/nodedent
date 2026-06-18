@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import type { ClinicalEvent } from "../types";
 import type { AnesthesiaAdequacyResponse, AnesthesiaEventDetails, AnesthesiaEventType, AnesthesiaRoute } from "../workflow/anesthesia";
 import { anesthesiaEventTypes } from "../workflow/anesthesia";
-import { getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
+import { buildUserAnesthesiaCatalogItemsFromForm, getAnesthesiaCatalogOptions } from "../workflow/anesthesiaCatalog";
 import type { CatalogItem } from "../workflow/catalogs";
 import {
   anesthesiaAdministrationActionFromLabel,
@@ -28,12 +28,14 @@ export function AnesthesiaEventForm({
   latestEvent,
   defaultAction = anesthesiaEventTypes.administered,
   userCatalogItems = [],
+  onSaveCatalogItems,
   onRecordEvent,
 }: {
   tooth: string;
   latestEvent?: ClinicalEvent;
   defaultAction?: AnesthesiaAdministrationAction;
   userCatalogItems?: CatalogItem[];
+  onSaveCatalogItems?: (items: CatalogItem[]) => void;
   onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
   const [mode, setMode] = useState<AnesthesiaMode>("administration");
@@ -53,6 +55,8 @@ export function AnesthesiaEventForm({
   const vasoconstrictorSuggestions = getAnesthesiaCatalogOptions(form.route, "vasoconstrictors", userCatalogItems);
   const vasoconstrictorDoseSuggestions = getAnesthesiaCatalogOptions(form.route, "vasoconstrictorDoses", userCatalogItems);
   const routeLabelSuggestions = getAnesthesiaCatalogOptions(form.route, "routeLabels", userCatalogItems);
+  const shortcutItems = mode === "administration" ? buildUserAnesthesiaCatalogItemsFromForm(form) : [];
+  const canSaveShortcuts = Boolean(onSaveCatalogItems && shortcutItems.length);
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -94,6 +98,11 @@ export function AnesthesiaEventForm({
     if (!event) return;
     onRecordEvent(event.eventType, event.details, event.options);
     resetForm();
+  }
+
+  function saveShortcuts() {
+    if (!canSaveShortcuts) return;
+    onSaveCatalogItems?.(shortcutItems);
   }
 
   return (
@@ -208,14 +217,26 @@ export function AnesthesiaEventForm({
           />
         ) : null}
       </div>
-      <button
-        type="button"
-        onClick={submitEvent}
-        disabled={!canSubmit}
-        className={`mt-3 rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
-      >
-        {mode === "administration" ? getAnesthesiaRouteActionLabel(form.route) : "Record assessment"}
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={submitEvent}
+          disabled={!canSubmit}
+          className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
+        >
+          {mode === "administration" ? getAnesthesiaRouteActionLabel(form.route) : "Record assessment"}
+        </button>
+        {mode === "administration" && onSaveCatalogItems ? (
+          <button
+            type="button"
+            onClick={saveShortcuts}
+            disabled={!canSaveShortcuts}
+            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+          >
+            Save shortcuts
+          </button>
+        ) : null}
+      </div>
     </>
   );
 }

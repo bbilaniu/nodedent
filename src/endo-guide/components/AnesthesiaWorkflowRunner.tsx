@@ -19,6 +19,7 @@ export function AnesthesiaWorkflowRunner({
   parentWorkflowRunId,
   latestAnesthesiaEvent,
   userCatalogItems = [],
+  onUserCatalogItemsChange,
   onClose,
   onRecordAnesthesiaEvent,
 }: {
@@ -27,6 +28,7 @@ export function AnesthesiaWorkflowRunner({
   parentWorkflowRunId: string;
   latestAnesthesiaEvent?: ClinicalEvent;
   userCatalogItems?: CatalogItem[];
+  onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
   onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
@@ -54,6 +56,16 @@ export function AnesthesiaWorkflowRunner({
     setModuleNodeId(getNextAnesthesiaNodeId(eventType));
   }
 
+  function saveCatalogItems(items: CatalogItem[]) {
+    if (!onUserCatalogItemsChange) return;
+    const nextItems = items.reduce((current, item) => {
+      const index = current.findIndex((candidate) => candidate.id === item.id);
+      if (index === -1) return [...current, item];
+      return current.map((candidate, candidateIndex) => candidateIndex === index ? item : candidate);
+    }, userCatalogItems);
+    onUserCatalogItemsChange(nextItems);
+  }
+
   return (
     <>
       <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
@@ -79,6 +91,7 @@ export function AnesthesiaWorkflowRunner({
             latestEvent={latestAnesthesiaEvent}
             defaultAction={defaultAction}
             userCatalogItems={userCatalogItems}
+            onSaveCatalogItems={onUserCatalogItemsChange ? saveCatalogItems : undefined}
             onRecordEvent={recordEvent}
           />
         </div>

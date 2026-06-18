@@ -965,6 +965,7 @@ export default function EndoChairsideGuide() {
             latestAnesthesiaEvent={latestAnesthesiaEvent}
             latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
+            onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             onClose={() => setEmbeddedWorkflowLaunch(null)}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}

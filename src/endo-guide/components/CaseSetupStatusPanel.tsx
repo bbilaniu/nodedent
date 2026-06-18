@@ -70,6 +70,10 @@ function updateUserCatalogItem(items: CatalogItem[], nextItem: CatalogItem) {
   return items.map((item, itemIndex) => itemIndex === index ? nextItem : item);
 }
 
+function updateUserCatalogItems(items: CatalogItem[], nextItems: CatalogItem[]) {
+  return nextItems.reduce(updateUserCatalogItem, items);
+}
+
 function getVisibleAnesthesiaCatalogRows(items: CatalogItem[], route: string, field: AnesthesiaCatalogField) {
   const merged = getAnesthesiaCatalogItems(items);
   const ordered = getCatalogItems(merged, { category: "anesthesia", route, field });
@@ -528,6 +532,7 @@ export function CaseSetupStatusPanel({
           tooth={caseData.tooth}
           latestEvent={latestAnesthesiaEvent}
           userCatalogItems={userAnesthesiaCatalogItems}
+          onSaveCatalogItems={onUserAnesthesiaCatalogItemsChange ? (items) => onUserAnesthesiaCatalogItemsChange(updateUserCatalogItems(userAnesthesiaCatalogItems, items)) : undefined}
           onRecordEvent={onRecordAnesthesiaEvent}
         />
         {onUserAnesthesiaCatalogItemsChange ? (

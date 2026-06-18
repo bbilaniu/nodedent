@@ -1,6 +1,7 @@
 import type { AnesthesiaRoute } from "./anesthesia";
 import type { CatalogItem } from "./catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "./catalogs";
+import type { AnesthesiaFormState } from "./anesthesiaForm";
 
 export type AnesthesiaCatalogField =
   | "agents"
@@ -79,6 +80,35 @@ export function createUserAnesthesiaCatalogOverride(item: CatalogItem, updates: 
     active: updates.active,
     favorite: updates.favorite,
   };
+}
+
+function shortcutItem(route: AnesthesiaRoute, field: AnesthesiaCatalogField, label: string) {
+  const trimmed = label.trim();
+  return trimmed ? createUserAnesthesiaCatalogItem({ route, field, label: trimmed, favorite: true, sortOrder: 1 }) : undefined;
+}
+
+export function buildUserAnesthesiaCatalogItemsFromForm(form: AnesthesiaFormState): CatalogItem[] {
+  if (form.route === "injection") {
+    return [
+      shortcutItem("injection", "agents", form.agentLabel),
+      shortcutItem("injection", "techniques", form.technique),
+      shortcutItem("injection", "doseUnits", form.doseUnit),
+      shortcutItem("injection", "vasoconstrictors", form.vasoconstrictor),
+      shortcutItem("injection", "vasoconstrictorDoses", form.vasoconstrictorDose),
+    ].filter(Boolean) as CatalogItem[];
+  }
+
+  if (form.route === "topical") {
+    return [
+      shortcutItem("topical", "agents", form.agentLabel),
+      shortcutItem("topical", "applicationTypes", form.applicationType),
+    ].filter(Boolean) as CatalogItem[];
+  }
+
+  return [
+    shortcutItem("other", "routeLabels", form.routeLabel),
+    shortcutItem("other", "applicationTypes", form.applicationType),
+  ].filter(Boolean) as CatalogItem[];
 }
 
 export const seedAnesthesiaCatalogItems: CatalogItem[] = [
