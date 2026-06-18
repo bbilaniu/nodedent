@@ -76,4 +76,4 @@ Separating Case Setup & Status from the decision card keeps the active card focu
 
 ## Follow-Up
 
-Use the implemented generalized workflow node plan in `docs/specs/archive/generalized-workflow-nodes.md` as the completed migration record. Use `docs/specs/shared-anesthesia-module.md` for the next shared-module implementation track.
+Use the implemented generalized workflow node plan in `docs/specs/archive/generalized-workflow-nodes.md` as the completed migration record. Use `docs/specs/archive/shared-anesthesia-module.md` as the completed shared anesthesia module record.

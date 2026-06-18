@@ -11,7 +11,6 @@ This folder separates clinical source material, active product specs, architectu
 
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
-- [Shared anesthesia module](specs/shared-anesthesia-module.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 
 ## Engineering Guides
@@ -38,5 +37,6 @@ This folder separates clinical source material, active product specs, architectu
 - [Final shaping terminology update](specs/archive/codex_final_shapping.md)
 - [Generalized workflow nodes](specs/archive/generalized-workflow-nodes.md)
 - [Phase-aware canal switch menus](specs/archive/codex_multicanal_paralelle.md)
+- [Shared anesthesia module](specs/archive/shared-anesthesia-module.md)
 - [NodeDent app colour implementation plan](specs/archive/nodedent_app_colour_implementation_plan.md)
 - [NodeDent logo direction](specs/archive/nodedent_logo_direction.md)

@@ -99,5 +99,5 @@ Snapshotting event details protects historical notes and audit behavior. The cli
 ## Follow-Up
 
 - Update shared module specs to reference this ADR when adding or refining catalogs.
-- Keep `docs/specs/shared-anesthesia-module.md` Phase 6 catalog work non-prescriptive unless a separate source-backed decision is documented.
+- Keep the implemented shared anesthesia catalog work in `docs/specs/archive/shared-anesthesia-module.md` non-prescriptive unless a separate source-backed decision is documented.
 - Design future catalog persistence around owner, category, applicability, aliases, active/favorite status, sort order, and source/version metadata.

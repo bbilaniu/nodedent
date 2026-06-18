@@ -11,11 +11,42 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ## Relationship To Current Specs
 
-- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/shared-anesthesia-module.md` tracks the next shared-module implementation.
+- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` records the implemented shared anesthesia module. Isolation catalog work is the next shared-module direction.
 - `docs/adr/0004-generalize-clinical-workflow-nodes.md` records the architecture decision behind reusable workflow modules.
 - This roadmap tracks platform-level capabilities that should be revisited after the event ledger and shared modules are stable.
 
 ## Long-Term Themes
+
+### Shared Module And Workflow Pipeline
+
+The shared anesthesia module is implemented for the current narrow scope. The next shared module work should focus on the isolation catalog so isolation documentation can reuse the same seeded/customizable shortcut architecture without turning documentation values into recommendations.
+
+The next primary workflow area should be operative dentistry. Operative workflows should reuse shared diagnosis, radiographs, anesthesia, and isolation context where appropriate, while owning operative-specific treatment targets such as teeth, surfaces, materials, shades, bonding/cementation details, and restoration outputs.
+
+Near-term follow-up should avoid expanding anesthesia into source-backed clinical decision support until those rules have their own evidence-backed spec or ADR.
+
+### Clinical Documentation Catalogs
+
+NodeDent should eventually generalize the local user anesthesia catalog work into a broader catalog system.
+
+Future catalog work should include:
+
+- clinic and template catalog storage
+- catalog import/export
+- catalog sync across devices or clinic workspaces
+- a global settings or catalog management workspace
+- seeded/customizable catalogs for isolation methods, burs, endodontic file systems, filling materials, brands, shades, cements, bonding systems, and other reusable documentation vocabularies
+
+Catalogs should remain documentation shortcuts unless a separate source-backed decision explicitly adds rule behavior. Product or shortcut selections should not infer adequacy, dose, timing, expiry, safety, or treatment recommendations.
+
+### Local Anesthesia Improvements
+
+The shared anesthesia module should stay non-prescriptive by default, but future quality-of-life improvements may be useful:
+
+- Add automatic timestamping or a `Set to now` control for anesthesia administration time.
+- Consider automatic calculation of anesthetic dose in mg from anesthetic concentration and entered volume.
+- Keep calculated dose behavior visible and reversible, and do not use it to infer safety, adequacy, expiry, or treatment recommendations without a separate source-backed ADR/spec.
+- Add source-backed anesthesia timing or expiry rules only after a dedicated source review documents what rules are being applied and why.
 
 ### Clinical Timeline And History Viewer
 
