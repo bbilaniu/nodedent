@@ -1423,6 +1423,78 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
 
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", surfaceScope), false);
   assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+
+  const toothScopedRestorationCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_tooth_restoration_only",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: "finalRestoration.placed",
+        capabilitiesSatisfied: [
+          {
+            name: "finalRestoration.placed",
+            scope: { kind: "tooth", tooth: "36" },
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(toothScopedRestorationCase, "finalRestoration.placed", surfaceScope), false);
+});
+
+test("operative surface queries can compare against tooth-level isolation coverage", () => {
+  const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
+  const unrelatedSurfaceScope = createOperativeSurfaceScope({ tooth: "46", surface: "O", procedureId: "op_46_o" });
+  const rubberDamEvent = {
+    id: "evt_surface_ready_iso",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    workflowVersion: sharedIsolationWorkflow.version,
+    scope: { kind: "custom" as const, teeth: ["36", "37"], regionLabel: "Q3" },
+    details: {
+      method: "rubberDam",
+      regionKind: "quadrant",
+      regionLabel: "Q3",
+      exposedTeeth: ["36", "37"],
+      clampCode: "W8A",
+      clampTooth: "37",
+    },
+  };
+  const isolatedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...rubberDamEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(rubberDamEvent)],
+      },
+    ],
+  });
+  const compromisedCase = baseCase({
+    tooth: "36",
+    globalEvents: [
+      ...isolatedCase.globalEvents,
+      {
+        id: "evt_surface_ready_iso_compromised",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: isolationEventTypes.compromised,
+        scope: { kind: "tooth" as const, tooth: "36" },
+        details: { reason: "dam displaced" },
+      },
+    ],
+  });
+  const currentStatus = getCapabilityStatus(isolatedCase, "isolation.established", surfaceScope);
+  const compromisedStatus = getCapabilityStatus(compromisedCase, "isolation.established", surfaceScope);
+
+  assert.equal(currentStatus.satisfied, true);
+  assert.equal(currentStatus.needsReassessment, false);
+  assert.equal(isCapabilitySatisfied(isolatedCase, "isolation.established", unrelatedSurfaceScope), false);
+  assert.equal(compromisedStatus.satisfied, false);
+  assert.equal(compromisedStatus.needsReassessment, true);
+  assert.equal(getIsolationEventDetails(rubberDamEvent).exposedTeeth?.includes("36"), true);
+  assert.equal("surfaces" in (rubberDamEvent.details as Record<string, unknown>), false);
 });
 
 test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {

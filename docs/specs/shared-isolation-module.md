@@ -272,6 +272,7 @@ Implemented:
 
 ## Phase 5: Operative Workflow Readiness
 
+Status: implemented as selector compatibility and test coverage for operative surface targets.
 Reasoning level: high.
 
 Prepare isolation documentation for the next primary workflow area: operative dentistry.
@@ -287,6 +288,14 @@ Tasks:
 - Record enough structured context for future timeline/history views, including method, broad region, exposed teeth, clamp code, anchor tooth, supports, compromised isolation, replacement, and removal.
 
 This phase should not implement the operative workflow itself. It should only keep the shared isolation module compatible with that future workflow.
+
+Implemented:
+
+- Updated capability scope matching so shared context and coverage capabilities can satisfy an operative surface query when the recorded event covers the same tooth without owning surface-level treatment data.
+- Kept final restoration output stricter: tooth-scoped or canal-scoped restoration capability does not satisfy a surface-scoped operative restoration query.
+- Added tests confirming exposed-tooth isolation coverage satisfies an operative surface target on the same tooth.
+- Added tests confirming unrelated operative surface targets are not satisfied and matching compromised isolation invalidates the surface-target readiness check.
+- Confirmed isolation event details remain coverage-only and do not store operative surfaces.
 
 ## Decisions
 

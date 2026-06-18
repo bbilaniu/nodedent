@@ -76,7 +76,14 @@ function hasSurfaceSubscope(scope: WorkflowScope) {
   return scope.kind === "surface" || Boolean(scope.surface || scope.surfaces?.length);
 }
 
-function scopeMatches(candidate?: WorkflowScope, query?: WorkflowScope) {
+function canUseToothScopeForSurfaceQuery(name?: KnownCapabilityName) {
+  return name === "diagnosis.recorded" ||
+    name === "radiographs.reviewed" ||
+    name === "anesthesia.adequate" ||
+    name === "isolation.established";
+}
+
+function scopeMatches(candidate?: WorkflowScope, query?: WorkflowScope, name?: KnownCapabilityName) {
   if (!query || !candidate) return true;
   if (query.kind === "patient") return candidate.kind === "patient";
   if (candidate.kind === "patient") return true;
@@ -93,6 +100,7 @@ function scopeMatches(candidate?: WorkflowScope, query?: WorkflowScope) {
     const sameTooth = candidate.tooth === query.tooth || candidate.teeth?.includes(query.tooth);
     const candidateHasToothScope = Boolean(candidate.tooth || candidate.teeth?.length);
     if (candidateHasToothScope && !sameTooth) return false;
+    if (sameTooth && queryHasSurface && !candidateHasSurface && !candidateHasCanal && canUseToothScopeForSurfaceQuery(name)) return true;
     if (sameTooth && !queryHasCanal && !queryHasSurface) return true;
   }
 
@@ -183,7 +191,7 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
     const satisfiesCapability = name === "anesthesia.adequate"
       ? Boolean(getAnesthesiaAdequateCapabilityOutput(event))
       : isolationEstablishedEvents.has(event.type);
-    return (satisfiesCapability || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope);
+    return (satisfiesCapability || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope, name);
   });
   const latest = matchingEvents.at(-1);
   if (!latest) return undefined;
@@ -217,7 +225,7 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
   const explicitStatus = events
     .flatMap((event) => {
       const capability = eventSatisfiesCapability(event, name);
-      if (!capability || !scopeMatches(capability.scope, queryScope)) return [];
+      if (!capability || !scopeMatches(capability.scope, queryScope, name)) return [];
       return [statusFromCapabilityEvent(event, capability, name, now)];
     })
     .at(-1);
