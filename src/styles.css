@@ -102,6 +102,7 @@ html[data-theme="dark"] [class~="hover:bg-brand-mint/25"]:hover {
 }
 
 html[data-theme="dark"] .bg-amber-50,
+html[data-theme="dark"] [class~="bg-amber-50/70"],
 html[data-theme="dark"] [class~="hover:bg-amber-100"]:hover {
   background-color: #34230A;
 }
