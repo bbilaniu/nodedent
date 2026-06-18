@@ -11,7 +11,7 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ## Relationship To Current Specs
 
-- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` records the implemented shared anesthesia module. Isolation catalog work is the next shared-module direction.
+- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` and `docs/specs/archive/shared-isolation-module.md` record the implemented shared anesthesia and shared isolation modules.
 - `docs/adr/0004-generalize-clinical-workflow-nodes.md` records the architecture decision behind reusable workflow modules.
 - This roadmap tracks platform-level capabilities that should be revisited after the event ledger and shared modules are stable.
 
@@ -19,7 +19,9 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ### Shared Module And Workflow Pipeline
 
-The shared anesthesia module is implemented for the current narrow scope. The next shared module work should focus on the isolation catalog so isolation documentation can reuse the same seeded/customizable shortcut architecture without turning documentation values into recommendations.
+The shared anesthesia and shared isolation modules are implemented for the current narrow scope. Both modules use structured events, event-backed capabilities, embedded workflow entry points, Case Setup & Status capture, and local user-owned documentation catalogs without turning shortcut values into clinical recommendations.
+
+Near-term shared-module follow-up should focus on main workspace cleanup rather than adding another shared module. The endodontic pre-op card, NodeDent Home, Case Setup & Status, and shared module launch controls should be made visually and behaviorally consistent before the next primary workflow is added.
 
 The next primary workflow area should be operative dentistry. Operative workflows should reuse shared diagnosis, radiographs, anesthesia, and isolation context where appropriate, while owning operative-specific treatment targets such as teeth, surfaces, materials, shades, bonding/cementation details, and restoration outputs.
 
