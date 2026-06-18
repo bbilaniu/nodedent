@@ -13,7 +13,7 @@ The goal is to make isolation documentation faster and more reusable across endo
 
 - Preserve the existing `shared.isolation` workflow, event vocabulary, scoped capability output, and reassessment behavior.
 - Add an isolation-specific catalog shape that follows [ADR 0005: Support Seeded Customizable Clinical Documentation Catalogs](../adr/0005-support-seeded-customizable-documentation-catalogs.md).
-- Support editable documentation shortcuts for isolation methods, clamp codes, supports, region labels, reason phrases, and note phrases.
+- Support editable documentation shortcuts for isolation methods, user- or clinic-owned clamp codes, supports, region labels, reason phrases, and note phrases.
 - Keep rubber dam, split dam, cotton roll, Isovac, and other isolation documentation available without implying one method is recommended.
 - Keep isolation status reusable by parent workflows through event-backed `isolation.established` capability output.
 - Prepare isolation scope and summaries for future operative dentistry workflows that treat teeth and surfaces, not canals.
@@ -71,6 +71,8 @@ Current event details:
 - `clampTooth`
 - `notes`
 - `reason`
+
+These details describe isolation coverage and documentation context only. Shared isolation events should not store operative treatment intent, surfaces, restorative materials, shades, bonding/cementation details, or restoration targets.
 
 Current support details:
 
@@ -137,12 +139,13 @@ For isolation, app core may own stable non-prescriptive values such as:
 Seed, user, clinic, and template catalogs should own variable documentation values such as:
 
 - user-facing method labels
-- clamp codes
 - support note phrases
 - region labels
 - reason phrases
 - local abbreviations
 - clinic-specific documentation shortcuts
+
+Clamp-code shortcuts are variable documentation values, but the first isolation catalog pass should not ship app-owned seeded clamp-code shortcuts. Clamp codes should start as user-owned or clinic-owned shortcuts because they are product/clinician-specific and could be misread as clamp-selection guidance. Seed values should be limited to non-prescriptive documentation vocabulary such as method labels, support types, reason phrases, and note phrases.
 
 Catalog-backed isolation fields must remain editable/free-text through datalist or autocomplete behavior. Selecting a suggestion must snapshot the selected label or typed text into the isolation event details so historical notes do not depend on live catalog item names.
 
@@ -185,7 +188,7 @@ Tasks:
 - Snapshot selected or typed labels into event details.
 - Add tests for merging seed and user items, route/field-style filtering where relevant, hidden item exclusion, favorite ordering, and label snapshot behavior.
 
-Seed values should be intentionally small and non-prescriptive. If clamp-code seeds are uncertain, start with no seeded clamp-code list and allow user-owned entries first.
+Seed values should be intentionally small and non-prescriptive. Do not seed clamp-code shortcuts in the first isolation catalog pass; allow user-owned entries first and leave clinic-owned clamp-code shortcuts for the later clinic catalog layer.
 
 ## Phase 3: Local User Isolation Catalog Persistence
 
@@ -218,6 +221,7 @@ Tasks:
 - Support user-owned edit, hide/unhide, favorite/unfavorite, and delete behavior where the shared catalog model supports it.
 - Keep the action language clear that saving a shortcut does not record a clinical event.
 - Keep event-recording actions separate from shortcut-management actions.
+- Defer bulk catalog editing, import/export, sync, clinic/template ownership, and global catalog management to a later settings/catalog workspace.
 
 ## Phase 5: Operative Workflow Readiness
 
@@ -225,7 +229,10 @@ Prepare isolation documentation for the next primary workflow area: operative de
 
 Tasks:
 
-- Ensure isolation scope and summaries can describe teeth and surfaces being treated once the operative dentistry workflow exists.
+- Ensure isolation scope and summaries describe coverage in terms that future operative workflows can compare against treated teeth and surfaces.
+- Record isolation coverage, not operative treatment intent. Shared isolation events should capture method, region kind, region label, exposed teeth, clamp tooth, clamp code, supports, reason, and notes.
+- Keep surfaces, materials, shades, bonding/cementation details, and restoration targets in the future operative dentistry workflow.
+- Allow future operative selectors to compare operative treatment targets against current isolation coverage without making isolation own operative surfaces.
 - Avoid canal-oriented UI assumptions in shared isolation surfaces.
 - Keep isolation reusable by endodontic and operative workflows through event-backed capability lookup.
 - Record enough structured context for future timeline/history views, including method, broad region, exposed teeth, clamp code, anchor tooth, supports, compromised isolation, replacement, and removal.
@@ -241,13 +248,14 @@ This phase should not implement the operative workflow itself. It should only ke
 - Keep catalog-backed fields editable/free-text.
 - Snapshot selected or typed catalog labels into event details.
 - Defer source-backed isolation rules to a separate ADR or active spec.
-
-## Open Decisions
-
-- Whether NodeDent should ship any seeded clamp-code shortcuts or leave clamp codes user/clinic-owned at first.
-- Which isolation shortcuts belong in the runner versus a future global catalog settings surface.
-- How much operative target context, such as surfaces, should live in shared isolation events versus operative workflow events.
-- Whether future isolation summaries need visit identity once multi-visit continuity is modeled.
+- Do not ship app-owned seeded clamp-code shortcuts in the first isolation catalog pass.
+- Allow narrow contextual shortcut actions in the isolation runner, such as save-as-shortcut, favorite/unfavorite, hide/unhide, and delete for user-owned items.
+- Defer bulk catalog editing, import/export, sync, clinic/template ownership, and global catalog management to a later settings/catalog workspace.
+- Keep event-recording actions separate from shortcut-management actions.
+- Record isolation coverage in shared isolation events; do not store operative treatment intent, surfaces, materials, shades, bonding/cementation details, or restoration targets there.
+- Do not add an isolation-specific visit identity model now.
+- Keep isolation events compatible with a future `visitId` or case/visit model.
+- Treat prior-visit isolation as historical context unless a future same-visit/current-visit model explicitly marks it reusable.
 
 ## Deferred Ideas
 
