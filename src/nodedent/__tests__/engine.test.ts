@@ -2,7 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { EndoCase } from "../types";
+import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
+import { CaseManagementModal } from "../components/CaseManagementModal";
+import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
+import { getSharedReadinessActions } from "../components/SharedReadinessCard";
+import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
@@ -43,14 +50,32 @@ import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabili
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
+  blankOperativeWorkflowSetup,
+  buildFinalRestorationPlacedCapability,
+  buildOperativeSetupEventDetails,
+  buildOperativeRestorationEventDetails,
+  buildOperativeRestorationPlacedEvent,
+  createOperativeReadinessScopes,
+  createOperativeRestorationScope,
+  getLatestOperativeWorkflowSetup,
+  getOperativeSetupFromEvent,
+  getOperativeReadinessCapabilitySummary,
+  getOperativeRestorationEvents,
+  getOperativeRestorationRecordFromEvent,
+  normalizeOperativeSurfaces,
   createOperativeSurfaceScope,
+  finalRestorationPlacedEventType,
   isEndodonticCanalScope,
+  isOperativeRestorationPlacedEvent,
   isOperativeSurfaceScope,
+  operativeDirectRestorationWorkflowId,
   operativeDirectRestorationWorkflow,
   operativeReadinessCapabilityRequirements,
   operativeRestorationOutputCapabilities,
+  operativeScopeRecordedEventType,
   scopesTargetDifferentToothSubstructures,
   sharedDiagnosisWorkflowId,
+  upsertOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import {
   endodonticRootWorkflow,
@@ -60,6 +85,7 @@ import {
   workflowLauncherEntries,
 } from "../workflow/registry";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
+import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowHasOperativeTargetPanel } from "../workflow/targetPanels";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -177,7 +203,7 @@ function postShapingCase(overrides: Partial<EndoCase> = {}): EndoCase {
 }
 
 test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
-  const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
+  const moduleRoots = [join(process.cwd(), "src/nodedent/engine"), join(process.cwd(), "src/nodedent/notes")];
   const forbiddenPatterns = [
     /from ["']react["']/,
     /\bwindow\b/,
@@ -223,6 +249,173 @@ test("handoff nodes are intentional and resolvable", () => {
   expectedHandoffs.forEach((nodeId) => {
     assert.ok(protocolNodes[nodeId], `Handoff node ${nodeId} should exist`);
   });
+});
+
+test("workflow target panel routing keeps operative workflows out of the endodontic canal panel", () => {
+  assert.equal(getWorkflowTargetPanelKind(endodonticRootWorkflowId), "endodontic");
+  assert.equal(workflowHasEndodonticTargetPanel(endodonticRootWorkflowId), true);
+
+  assert.equal(getWorkflowTargetPanelKind(operativeDirectRestorationWorkflowId), "operative");
+  assert.equal(workflowHasEndodonticTargetPanel(operativeDirectRestorationWorkflowId), false);
+  assert.equal(workflowHasOperativeTargetPanel(operativeDirectRestorationWorkflowId), true);
+});
+
+test("case setup hides endodontic active-canal setup for operative workflows", () => {
+  const caseData = baseCase();
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+    caseData,
+    activeCanal: caseData.canals[0],
+    activeWorkflowId: operativeDirectRestorationWorkflowId,
+    currentNodeId: "operative-readiness",
+    onClose: noop,
+    onUpdateCase: noop,
+    onUpdateDiagnosis: noop,
+    onUpdatePreOp: noop,
+    onUpdateActiveCanal: noop,
+    onApplySuggestedCaseStatus: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onDownloadCaseJson: noop,
+  }));
+
+  assert.equal(markup.includes("Diagnosis readiness"), true);
+  assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Endodontic workflow setup"), false);
+  assert.equal(markup.includes("Estimated WL for"), false);
+  assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("active workflow target panel renders operative setup without canal controls", () => {
+  const caseData = baseCase({ tooth: "36" });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(ActiveWorkflowTargetPanel, {
+    activeWorkflowId: operativeDirectRestorationWorkflowId,
+    endodonticProps: {
+      caseData,
+      newCanalName: "",
+      renameCanalName: "",
+      onNewCanalNameChange: noop,
+      onRenameCanalNameChange: noop,
+      onSelectCanal: noop,
+      onAddCanal: noop,
+      onRenameActiveCanal: noop,
+      onDeleteActiveCanal: noop,
+      onManualEvent: noop,
+      onResetManualStatus: noop,
+      onOpenPhaseMap: noop,
+    },
+    operativeProps: {
+      caseData,
+      setup: {
+        tooth: "36",
+        surfaces: "M O",
+        restorationIntent: "direct restoration",
+        material: "composite",
+        shade: "A2",
+      },
+      onSetupChange: noop,
+    },
+  }));
+
+  assert.equal(markup.includes("Operative setup"), true);
+  assert.equal(markup.includes("Current operative scope"), true);
+  assert.equal(markup.includes("36 MO"), true);
+  assert.equal(markup.includes("Endodontic progress"), false);
+  assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("shared readiness actions open reusable setup and module paths for operative context", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
+    preOp: { ...initialCase.preOp, paReviewed: true },
+  });
+  const caseSetupTargets: string[] = [];
+  const anesthesiaEntries: Array<string | undefined> = [];
+  const isolationEntries: Array<string | undefined> = [];
+  const actions = getSharedReadinessActions({
+    capabilitySummary: getCaseCapabilitySummary(caseData),
+    onOpenCaseSetupStatus: (focusTarget) => caseSetupTargets.push(focusTarget || ""),
+    onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
+    onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
+  });
+
+  assert.deepEqual(actions.map((action) => action.label), ["Diagnosis", "Radiographs", "Anesthesia", "Isolation"]);
+  actions.find((action) => action.label === "Diagnosis")?.onClick();
+  actions.find((action) => action.label === "Radiographs")?.onClick();
+  actions.find((action) => action.label === "Anesthesia")?.onClick();
+  actions.find((action) => action.label === "Isolation")?.onClick();
+
+  assert.deepEqual(caseSetupTargets, ["diagnosis", "radiographs"]);
+  assert.deepEqual(anesthesiaEntries, [undefined]);
+  assert.deepEqual(isolationEntries, [undefined]);
+});
+
+test("workflow launcher exposes operative runner entry", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: baseCase(),
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Operative direct restoration"), true);
+  assert.equal(markup.includes("Start / resume workflow"), true);
+  assert.equal(markup.includes("Model only"), false);
+});
+
+test("operative runner renders setup readiness record and completion states without endodontic controls", () => {
+  const caseData = baseCase({ tooth: "36" });
+  const setup = {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+  const completionEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_runner_complete",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      ...setup,
+      outcome: "placed",
+      notes: "Occlusion checked by clinician",
+    },
+  });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(OperativeWorkflowRunner, {
+    caseData,
+    setup,
+    capabilitySummary: getOperativeReadinessCapabilitySummary(caseData, setup),
+    latestRestorationEvent: completionEvent,
+    onSetupChange: noop,
+    onRecordRestoration: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Direct restoration"), true);
+  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Operative setup"), true);
+  assert.equal(markup.includes("Restoration record"), true);
+  assert.equal(markup.includes("Operative workflow complete"), true);
+  assert.equal(markup.includes("Record final restoration"), true);
+  assert.equal(markup.includes("Active canal status"), false);
+  assert.equal(markup.includes("WL/shape data"), false);
+  assert.equal(markup.includes("Decision"), false);
 });
 
 test("every protocol note event has a note fragment", () => {
@@ -1386,6 +1579,87 @@ test("operative direct restoration workflow reuses shared context and owns resto
   assert.deepEqual(completionNode.capabilityRequirements?.map((requirement) => requirement.name), ["finalRestoration.placed"]);
 });
 
+test("operative setup helpers normalize surfaces and scope details", () => {
+  assert.deepEqual(normalizeOperativeSurfaces("M O"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces("M,O"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces("MO"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces(["M/O", "O"]), ["M", "O"]);
+
+  const setup = {
+    ...blankOperativeWorkflowSetup,
+    tooth: "36",
+    surfaces: "MO",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+
+  assert.deepEqual(buildOperativeSetupEventDetails(setup, "30"), {
+    tooth: "36",
+    surfaces: ["M", "O"],
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  });
+  assert.deepEqual(buildOperativeSetupEventDetails({ ...blankOperativeWorkflowSetup, surfaces: "D" }, "37"), {
+    tooth: "37",
+    surfaces: ["D"],
+  });
+  assert.deepEqual(createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" }), {
+    kind: "surface",
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+});
+
+test("operative setup hydrates from the latest setup event", () => {
+  const olderEvent = {
+    id: "evt_operative_scope_old",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "O" }),
+    details: { tooth: "36", surfaces: ["O"], material: "composite" },
+  };
+  const latestEvent = {
+    id: "evt_operative_scope_latest",
+    timestamp: "2026-01-01T10:05:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"] }),
+    details: {
+      tooth: "36",
+      surfaces: ["M", "O"],
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    },
+  };
+  const unrelatedEvent = {
+    id: "evt_unrelated",
+    timestamp: "2026-01-01T10:03:00.000Z",
+    type: "case.note",
+  };
+  const expectedSetup = {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+
+  assert.deepEqual(getOperativeSetupFromEvent(latestEvent), expectedSetup);
+  assert.deepEqual(getLatestOperativeWorkflowSetup(baseCase({ tooth: "36", globalEvents: [olderEvent, unrelatedEvent, latestEvent] })), expectedSetup);
+  assert.deepEqual(upsertOperativeScopeRecordedEvent([unrelatedEvent, olderEvent], latestEvent).map((event) => event.id), ["evt_unrelated", "evt_operative_scope_latest"]);
+});
+
 test("operative surface scope stays separate from endodontic canal scope", () => {
   const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
   const canalScope = { kind: "canal" as const, tooth: "36", canal: "MB" };
@@ -1444,6 +1718,217 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
   assert.equal(isCapabilitySatisfied(toothScopedRestorationCase, "finalRestoration.placed", surfaceScope), false);
 });
 
+test("operative restoration event helpers build a surface-scoped final restoration capability", () => {
+  const record = {
+    tooth: "36",
+    surfaces: "MO",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  };
+  const event = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record,
+    fallbackTooth: "30",
+    workflowRunId: "run_operative_1",
+  });
+  const expectedScope = {
+    kind: "surface" as const,
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  };
+
+  assert.equal(event.type, finalRestorationPlacedEventType);
+  assert.equal(event.workflowId, operativeDirectRestorationWorkflowId);
+  assert.equal(event.workflowVersion, "0.1.0");
+  assert.equal(event.nodeId, "operative-restoration-record");
+  assert.deepEqual(event.scope, expectedScope);
+  assert.deepEqual(createOperativeRestorationScope(record, "30"), expectedScope);
+  assert.deepEqual(buildOperativeRestorationEventDetails(record, "30"), {
+    tooth: "36",
+    surfaces: ["M", "O"],
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  });
+  assert.deepEqual(event.capabilitiesSatisfied, [
+    {
+      name: "finalRestoration.placed",
+      scope: expectedScope,
+      sourceEventId: "evt_operative_restoration",
+      workflowId: operativeDirectRestorationWorkflowId,
+      workflowRunId: "run_operative_1",
+      satisfiedAt: "2026-01-01T11:00:00.000Z",
+    },
+  ]);
+  assert.deepEqual(buildFinalRestorationPlacedCapability(event), event.capabilitiesSatisfied?.[0]);
+  assert.equal(isOperativeRestorationPlacedEvent(event), true);
+  assert.deepEqual(getOperativeRestorationRecordFromEvent(event), { ...record, surfaces: "M O" });
+  assert.equal(ClinicalEventSchema.safeParse(event).success, true);
+});
+
+test("operative final restoration capability satisfies only matching surface targets", () => {
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_match",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+      outcome: "placed",
+      notes: "",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      restorationEvent,
+      {
+        id: "evt_endo_closure",
+        timestamp: "2026-01-01T11:05:00.000Z",
+        type: "closure.finalRestoration",
+        tooth: "36",
+        canal: "All",
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" })), true);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "M" })), true);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "DO" })), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "46", surfaces: "MO" })), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+  assert.deepEqual(getOperativeRestorationEvents(caseData).map((event) => event.id), ["evt_operative_restoration_match"]);
+});
+
+test("operative setup and restoration records appear in notes and JSON export", () => {
+  const setupEvent = {
+    id: "evt_operative_setup_note",
+    timestamp: "2026-01-01T10:50:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" }),
+    details: {
+      tooth: "36",
+      surfaces: ["M", "O"],
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    },
+  };
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_note",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+      outcome: "placed",
+      notes: "Occlusion checked by clinician",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    procedureType: "Direct restoration",
+    globalEvents: [setupEvent, restorationEvent],
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "operative-restoration-complete");
+
+  assert.match(eventFragment(setupEvent), /Operative setup recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2/);
+  assert.match(eventFragment(restorationEvent), /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
+  assert.match(compact, /Operative setup recorded: tooth 36; surfaces M O/);
+  assert.match(compact, /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
+  assert.match(full, /Operative:/);
+  assert.match(full, /Operative setup recorded: tooth 36; surfaces M O/);
+  assert.match(full, /Final restoration recorded: tooth 36; surfaces M O/);
+  assert.equal(exported.operative?.setup?.eventId, "evt_operative_setup_note");
+  assert.deepEqual(exported.operative?.setup?.record, {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  });
+  assert.equal(exported.operative?.restorations.length, 1);
+  assert.deepEqual(exported.operative?.restorations[0].record, {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  });
+  assert.equal(exported.operative?.restorations[0].capabilitiesSatisfied[0].name, "finalRestoration.placed");
+  assert.equal(exported.events.length, 2);
+});
+
+test("operative note and export handle partially documented records without inferred wording", () => {
+  const setupEvent = {
+    id: "evt_operative_setup_partial",
+    timestamp: "2026-01-01T10:50:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "O" }),
+    details: {
+      tooth: "36",
+      surfaces: ["O"],
+    },
+  };
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_partial",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "O",
+      restorationIntent: "",
+      material: "",
+      shade: "",
+      outcome: "",
+      notes: "",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [setupEvent, restorationEvent],
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "operative-restoration-record");
+
+  assert.match(eventFragment(setupEvent), /^Operative setup recorded: tooth 36; surfaces O\.$/);
+  assert.match(eventFragment(restorationEvent), /^Final restoration recorded: tooth 36; surfaces O\.$/);
+  assert.match(compact, /Operative setup recorded: tooth 36; surfaces O\./);
+  assert.match(full, /Final restoration recorded: tooth 36; surfaces O\./);
+  assert.doesNotMatch(`${compact}\n${full}`, /recommend|adequate|successful/i);
+  assert.deepEqual(exported.operative?.restorations[0].record, {
+    tooth: "36",
+    surfaces: "O",
+    restorationIntent: "",
+    material: "",
+    shade: "",
+    outcome: "",
+    notes: "",
+  });
+});
+
 test("operative surface queries can compare against tooth-level isolation coverage", () => {
   const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
   const unrelatedSurfaceScope = createOperativeSurfaceScope({ tooth: "46", surface: "O", procedureId: "op_46_o" });
@@ -1497,6 +1982,66 @@ test("operative surface queries can compare against tooth-level isolation covera
   assert.equal("surfaces" in (rubberDamEvent.details as Record<string, unknown>), false);
 });
 
+test("operative readiness summary targets planned tooth and surfaces", () => {
+  const setup = {
+    ...blankOperativeWorkflowSetup,
+    tooth: "36",
+    surfaces: "MO",
+  };
+  const scopes = createOperativeReadinessScopes(setup, "30");
+  const anesthesiaEvent = {
+    id: "evt_operative_ready_anesthesia",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    scope: { kind: "tooth" as const, tooth: "36" },
+    tooth: "36",
+    details: { response: "adequate" as const, tooth: "36" },
+  };
+  const isolationEvent = {
+    id: "evt_operative_ready_isolation",
+    timestamp: "2026-01-01T10:01:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    scope: { kind: "custom" as const, teeth: ["36"], regionLabel: "Q3" },
+    details: { method: "rubberDam" as const, exposedTeeth: ["36"] },
+  };
+  const caseData = baseCase({
+    tooth: "30",
+    diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
+    preOp: { ...initialCase.preOp, paReviewed: true },
+    globalEvents: [
+      {
+        ...anesthesiaEvent,
+        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(anesthesiaEvent)],
+      },
+      {
+        ...isolationEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(isolationEvent)],
+      },
+    ],
+  });
+  const summary = getOperativeReadinessCapabilitySummary(caseData, setup);
+
+  assert.deepEqual(scopes.toothScope, { kind: "tooth", tooth: "36" });
+  assert.deepEqual(scopes.treatmentScope, {
+    kind: "surface",
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+  assert.equal(summary.diagnosis.satisfied, false);
+  assert.equal(summary.diagnosis.reason, "Recorded diagnosis is for a different tooth.");
+  assert.equal(summary.radiographs.satisfied, false);
+  assert.equal(summary.radiographs.reason, "Recorded radiograph review is for a different tooth.");
+  assert.equal(summary.anesthesia.satisfied, true);
+  assert.equal(summary.isolation.satisfied, true);
+  assert.equal(isCapabilitySatisfied(caseData, "anesthesia.adequate", scopes.treatmentScope), true);
+  assert.equal(isCapabilitySatisfied(caseData, "isolation.established", scopes.treatmentScope), true);
+});
+
 test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {
   const readyEntries = getReadyWorkflowLauncherEntries();
   const sharedEntries = getSharedModuleLauncherEntries();
@@ -1509,10 +2054,11 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), true);
-  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), true);
   assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
-  assert.equal(operativeEntry?.availability, "modelOnly");
+  assert.equal(operativeEntry?.availability, "ready");
+  assert.equal(operativeEntry?.launchLabel, "Start / resume workflow");
 });
 
 test("shared anesthesia phase 1 model parses typed details and preserves legacy events", () => {

@@ -11,7 +11,7 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ## Relationship To Current Specs
 
-- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` records the implemented shared anesthesia module. Isolation catalog work is the next shared-module direction.
+- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` and `docs/specs/archive/shared-isolation-module.md` record the implemented shared anesthesia and shared isolation modules.
 - `docs/adr/0004-generalize-clinical-workflow-nodes.md` records the architecture decision behind reusable workflow modules.
 - This roadmap tracks platform-level capabilities that should be revisited after the event ledger and shared modules are stable.
 
@@ -19,9 +19,17 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ### Shared Module And Workflow Pipeline
 
-The shared anesthesia module is implemented for the current narrow scope. The next shared module work should focus on the isolation catalog so isolation documentation can reuse the same seeded/customizable shortcut architecture without turning documentation values into recommendations.
+The shared anesthesia and shared isolation modules are implemented for the current narrow scope. Both modules use structured events, event-backed capabilities, embedded workflow entry points, Case Setup & Status capture, and local user-owned documentation catalogs without turning shortcut values into clinical recommendations.
 
-The next primary workflow area should be operative dentistry. Operative workflows should reuse shared diagnosis, radiographs, anesthesia, and isolation context where appropriate, while owning operative-specific treatment targets such as teeth, surfaces, materials, shades, bonding/cementation details, and restoration outputs.
+Near-term shared-module follow-up should focus on main workspace cleanup and cross-workflow consistency rather than adding another shared module. The endodontic pre-op card, NodeDent Home, Case Setup & Status, operative runner, and shared module launch controls should be made visually and behaviorally consistent before the next primary workflow family is added.
+
+The first usable non-endodontic primary workflow is operative direct restoration. Operative workflows should continue to reuse shared diagnosis, radiographs, anesthesia, and isolation context where appropriate, while owning operative-specific treatment targets such as teeth, surfaces, materials, shades, bonding/cementation details, and restoration outputs.
+
+The operative direct restoration runner should remain workflow-specific until another non-endodontic workflow repeats the same setup, readiness, record, and completion pattern. At that point, revisit whether a generic primary-workflow shell would reduce duplication without forcing all procedures through the same UI too early.
+
+Event-backed workflow setup and output should remain the durable state boundary. Derived operative summaries, caches, or future multi-procedure state can be added for ergonomics, but notes, exports, and capability matching should remain traceable to structured clinical events.
+
+Endodontic closure and operative final restoration placement should remain separate capabilities unless a future compatibility or workflow-switching spec defines how one satisfies or maps to the other.
 
 Near-term follow-up should avoid expanding anesthesia into source-backed clinical decision support until those rules have their own evidence-backed spec or ADR.
 
@@ -38,6 +46,8 @@ Future catalog work should include:
 - seeded/customizable catalogs for isolation methods, burs, endodontic file systems, filling materials, brands, shades, cements, bonding systems, and other reusable documentation vocabularies
 
 Catalogs should remain documentation shortcuts unless a separate source-backed decision explicitly adds rule behavior. Product or shortcut selections should not infer adequacy, dose, timing, expiry, safety, or treatment recommendations.
+
+Workflow fields should stay editable free text with suggestions until records show stable categories worth structuring. Restoration outcome is a current example: it can become a catalog-backed enum later, but the first operative workflow should not prematurely close that vocabulary.
 
 ### Local Anesthesia Improvements
 
@@ -158,5 +168,5 @@ Revisit this roadmap when:
 - `shared.isolation` or `shared.anesthesia` records structured events.
 - Case Setup & Status can summarize event-backed capabilities.
 - Multi-visit endodontic continuation is implemented.
-- NodeDent has at least one non-endodontic primary workflow.
+- A second non-endodontic primary workflow repeats the operative runner shape.
 - Localization becomes a product requirement rather than a future possibility.

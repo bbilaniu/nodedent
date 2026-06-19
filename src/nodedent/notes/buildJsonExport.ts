@@ -2,10 +2,20 @@ import type { EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
+import {
+  getLatestOperativeWorkflowSetup,
+  getOperativeRestorationEvents,
+  getOperativeRestorationRecordFromEvent,
+  isOperativeScopeRecordedEvent,
+} from "../workflow/operative";
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
+  const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
+  const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
+  const hasOperativeOutput = Boolean(latestOperativeSetupEvent || operativeRestorationEvents.length);
+
   return {
     currentNodeId: currentNodeId || caseData.currentNodeId || inferCurrentNodeIdFromEvents(caseData),
     patientNumber: caseData.patientNumber,
@@ -21,6 +31,25 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     preOp: caseData.preOp,
     canals: (caseData.canals || []).map((canal) => ({ ...canal, events: canal.events || [], status: statusLabels[getCanalStatus(canal)] })),
     closure: caseData.closure,
+    operative: hasOperativeOutput
+      ? {
+          setup: latestOperativeSetupEvent
+            ? {
+                eventId: latestOperativeSetupEvent.id,
+                timestamp: latestOperativeSetupEvent.timestamp,
+                scope: latestOperativeSetupEvent.scope,
+                record: getLatestOperativeWorkflowSetup(caseData),
+              }
+            : null,
+          restorations: operativeRestorationEvents.map((event) => ({
+            eventId: event.id,
+            timestamp: event.timestamp,
+            scope: event.scope,
+            record: getOperativeRestorationRecordFromEvent(event),
+            capabilitiesSatisfied: event.capabilitiesSatisfied || [],
+          })),
+        }
+      : undefined,
     events: caseData.globalEvents,
   };
 }

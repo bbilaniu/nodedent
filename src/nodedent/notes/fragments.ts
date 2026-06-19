@@ -1,8 +1,22 @@
 import type { ClinicalEvent, EndoCase } from "../types";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, isolationEventTypes } from "../workflow/isolation";
+import {
+  formatOperativeRestorationEventFragment,
+  formatOperativeSetupEventFragment,
+  isOperativeRestorationPlacedEvent,
+  isOperativeScopeRecordedEvent,
+} from "../workflow/operative";
 
 export function eventFragment(event: ClinicalEvent) {
+  if (isOperativeScopeRecordedEvent(event)) {
+    return formatOperativeSetupEventFragment(event);
+  }
+
+  if (isOperativeRestorationPlacedEvent(event)) {
+    return formatOperativeRestorationEventFragment(event);
+  }
+
   if (Object.values(anesthesiaEventTypes).includes(event.type as typeof anesthesiaEventTypes[keyof typeof anesthesiaEventTypes])) {
     return formatAnesthesiaEventFragment(event);
   }

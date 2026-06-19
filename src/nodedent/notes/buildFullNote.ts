@@ -28,6 +28,7 @@ export function buildFullNote(caseData: EndoCase) {
   appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));
   appendSection(lines, "Anesthesia:", groupEventsByPrefix(caseData, ["anesthesia."]));
   appendSection(lines, "Isolation:", groupEventsByPrefix(caseData, ["isolation."]));
+  appendSection(lines, "Operative:", groupEventsByPrefix(caseData, ["operative.", "finalRestoration."]));
   appendSection(lines, "Access / canals:", groupEventsByPrefix(caseData, ["access."]));
   const canalLines: string[] = [];
   caseData.canals.forEach((canal) => {

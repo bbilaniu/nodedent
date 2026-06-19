@@ -33,7 +33,7 @@ Keeping protocol data, decision logic, UI components, case state, and note gener
 
 ## Consequences
 
-- Protocol steps should live in data structures such as `src/endo-guide/protocol/nodes.ts`, not as hardcoded branch logic inside React JSX.
+- Protocol steps should live in data structures such as `src/nodedent/protocol/nodes.ts`, not as hardcoded branch logic inside React JSX.
 - Decision application should remain centralized in the engine layer.
 - Case data should remain tooth-based globally and canal-based after access.
 - Notes should be generated from structured case/event data, not manually assembled from UI state.

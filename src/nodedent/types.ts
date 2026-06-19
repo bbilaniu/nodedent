@@ -256,10 +256,11 @@ export type ValidationMessage = {
   missing: string[];
 };
 
-export type CaseSetupFocusTarget = "anesthesia" | "isolation";
+export type CaseSetupFocusTarget = "diagnosis" | "radiographs" | "anesthesia" | "isolation";
 
 export type EmbeddedWorkflowLaunch = {
   workflowId: string;
   entryNodeId?: string;
   workflowRunId: string;
+  targetTooth?: string;
 };

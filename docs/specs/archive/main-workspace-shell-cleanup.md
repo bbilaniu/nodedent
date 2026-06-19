@@ -1,0 +1,252 @@
+---
+status: implemented
+created_on: 2026-06-18
+completed_on: 2026-06-18
+---
+
+# Main Workspace Shell Cleanup Proposal
+
+This proposal defines the cleanup step between the implemented shared anesthesia/isolation modules and the next primary workflow area, operative dentistry.
+
+The goal is to stop the main workspace from being endodontic-first at the platform level while preserving the endodontic decision guide as the active clinical workflow when an endodontic case is being treated.
+
+## Context
+
+NodeDent now has:
+
+- an endodontic primary workflow
+- shared diagnosis and radiograph readiness
+- shared anesthesia documentation and `anesthesia.adequate` capability output
+- shared isolation documentation and `isolation.established` capability output
+- NodeDent Home / workflow launcher
+- Case Setup & Status
+- embedded shared workflow runners
+
+The current main screen still carries several transitional responsibilities in the endodontic decision card:
+
+- setup and readiness prompts
+- shared module launch controls
+- prior-visit and resume context
+- safety and validation messaging
+- endodontic phase/canal progress
+- active clinical decision options
+
+That made sense while NodeDent had only one primary workflow. It will not scale cleanly to operative dentistry, where the primary treatment targets are teeth and surfaces rather than canals.
+
+## Goals
+
+- Make NodeDent Home and Case Setup & Status the global navigation and setup layer.
+- Keep the endodontic decision guide focused on the active endodontic clinical step.
+- Move endodontic-only navigation and progress surfaces out of the platform-level main page.
+- Preserve fast chairside access to anesthesia and isolation without duplicating confusing entry points.
+- Prepare the shell for future workflow-specific target panels, including operative teeth/surfaces.
+- Keep the UI quiet, dense, and work-focused rather than turning the app into a landing page.
+
+## Non-Goals
+
+- Do not implement operative dentistry in this cleanup.
+- Do not replace the endodontic workflow engine.
+- Do not generalize canals into a universal target model.
+- Do not remove useful endodontic progress tools; relocate them into an endodontic-specific area.
+- Do not add source-backed clinical rules or recommendations.
+- Do not change clinical event identity, capability names, or workflow IDs.
+
+## Proposed Changes
+
+### 1. Reframe The Main Workspace
+
+The main app shell should read as NodeDent, not as only the Endodontic Chairside Decision Guide.
+
+Recommended structure:
+
+- global header: case identity, active procedure, autosave, theme, home/case actions
+- primary workspace: active workflow panel
+- secondary workspace: notes, event log, workflow-specific target/progress panel
+
+The endodontic decision card remains the active workflow panel when the current workflow is endodontic.
+
+### 2. Demote The Endodontic Decision Guide From App Identity
+
+The endodontic decision guide should remain clinically prominent, but it should no longer be the main page identity.
+
+Change the language and hierarchy from:
+
+- app = Endodontic Chairside Decision Guide
+
+To:
+
+- app = NodeDent clinical workspace
+- active workflow = Endodontic decision guide
+
+The decision card should focus on:
+
+- current phase
+- current step title
+- concise chairside instruction
+- compact safety/stop-rule banner
+- required-input summary
+- validation related to the current decision
+- primary decision options
+
+It should not own broad case setup, shared module launch, prior-visit setup, or global workflow navigation once those controls exist elsewhere.
+
+### 3. Move The Pathway Phase Canal Map Into Endodontic Progress
+
+The pathway phase/canal map is endodontic-specific. It should not appear as a global platform surface once NodeDent supports multiple primary workflow types.
+
+Recommended destination:
+
+- an `Endodontic progress` panel, drawer, or modal
+- available from the active endodontic workflow area
+- optionally shown in the secondary column only when the active workflow is endodontic
+
+The feature should remain useful for endodontic continuity, but operative workflows should not see canal-oriented phase mapping.
+
+### 4. Keep Canal Selection Endodontic-Specific
+
+Do not stretch the current canal selector into a universal selector for teeth, surfaces, canals, quadrants, and future target models.
+
+Instead, use a workflow-specific target panel pattern:
+
+- endodontic workflow: canal selector and canal status controls
+- operative workflow: tooth and surface selector
+- future workflows: their own target panels where needed
+
+A global case summary can still show the active tooth/procedure, but detailed target editing should belong to the active workflow domain.
+
+This avoids making one component understand every dental scope and keeps workflow target behavior easier to test.
+
+### 5. Rationalize Shared Module Entry Points
+
+Anesthesia and isolation should have parallel entry behavior:
+
+- quick capture in Case Setup & Status
+- full embedded workflow from NodeDent Home, readiness prompts, and Case Setup
+- clear labels for record/review/add-event states
+
+The endodontic pre-op decision card should eventually stop carrying broad shared-module launch controls once equivalent controls are available in NodeDent Home and Case Setup.
+
+### 5A. Shared Readiness Card Pattern
+
+A cross-workflow readiness card should replace workflow-specific readiness clusters over time.
+
+Recommended behavior:
+
+- Render a side-card style readiness surface that can be used by endodontic and operative workflows.
+- Include diagnosis, radiographs, anesthesia, and isolation readiness rows.
+- Make each row actionable:
+  - Diagnosis opens Case Setup & Status focused to diagnosis.
+  - Radiographs opens Case Setup & Status focused to radiographs.
+  - Anesthesia opens the anesthesia workflow or the anesthesia section in Case Setup & Status, depending on context.
+  - Isolation opens the isolation workflow or the isolation section in Case Setup & Status, depending on context.
+- Keep the card workflow-aware but not workflow-owned. It should summarize reusable shared context, not endodontic-only progress.
+- Use the same event-backed capability summaries as the current pre-access readiness block.
+
+This card should live in the side workspace rather than inside the active decision card once equivalent deep links exist. The current code can focus Case Setup & Status to anesthesia or isolation, but not yet to diagnosis or radiographs, so the first implementation should expand `CaseSetupFocusTarget` before replacing the pre-access readiness block.
+
+### 6. Fix Visual And Theme Drift
+
+Before adding operative dentistry, clean up current UI drift:
+
+- dark-mode warning and status panels
+- duplicated button styles
+- inconsistent action labels between anesthesia and isolation
+- crowded pre-op readiness layout
+- unclear distinction between global setup actions and active workflow decisions
+
+## Suggested Implementation Phases
+
+### Phase 1: Shell Language And Header Cleanup
+
+Reasoning level: low-medium.
+
+- Rename the top-level page identity toward NodeDent clinical workspace.
+- Keep the active workflow title visible inside the primary workflow card.
+- Preserve existing navigation behavior.
+- Fix remaining dark-mode style inconsistencies found during this pass.
+
+### Phase 2: Decision Card Decluttering
+
+Reasoning level: medium.
+
+- Move broad setup/module launch controls out of the decision card when equivalent controls exist in NodeDent Home or Case Setup.
+- Keep required-input and validation messaging local to the current decision.
+- Keep the safety/stop-rule banner compact and readable in light and dark mode.
+
+### Phase 3: Endodontic Progress Area
+
+Reasoning level: medium.
+
+- Move pathway phase/canal map into an endodontic-specific progress panel, drawer, or modal.
+- Keep it available from the endodontic workflow context.
+- Avoid showing canal phase mapping as a platform-level panel.
+
+### Phase 4: Workflow-Specific Target Panel Pattern
+
+Reasoning level: medium-high.
+
+- Treat `CanalSelector` as an endodontic target panel rather than a universal selector.
+- Define a simple interface or layout slot for active workflow target panels.
+- Do not implement operative teeth/surfaces yet; reserve the slot and naming so operative can add its own target panel later.
+
+### Phase 5: Operative Dentistry Readiness Review
+
+Reasoning level: high.
+
+- Confirm the main shell can host a non-endodontic primary workflow without showing canal-first UI.
+- Confirm operative can reuse diagnosis, radiographs, anesthesia, and isolation context through existing selectors.
+- Confirm operative treatment targets can own teeth/surfaces without changing shared isolation event ownership.
+
+## Acceptance Criteria
+
+- The main page reads as NodeDent with an active workflow, not as a single-purpose endodontic app.
+- The endodontic decision card is focused on the active clinical decision.
+- Shared module controls are available from global/setup surfaces without cluttering the active decision card.
+- The pathway phase/canal map is endodontic-specific, not a platform-level surface.
+- The canal selector remains endodontic-specific and is not stretched to operative surfaces.
+- A future operative workflow can add a teeth/surfaces target panel without modifying canal-specific code.
+- Light and dark mode remain readable for safety, warning, status, and action panels.
+
+## Implementation Progress
+
+Completed first pass:
+
+- The main header now presents NodeDent as the clinical workspace and names the endodontic decision guide as the active workflow.
+- The canal selector was renamed and framed as an endodontic progress/target panel instead of a platform-level selector.
+- The phase/canal map is available from the endodontic progress panel.
+- The decision card no longer carries broad saved-workflow, prior-visit, anesthesia, and isolation launch controls. Those remain available from NodeDent Home and Case Setup & Status.
+- A small active-workflow target-panel slot now routes `endo.rct` to the endodontic target panel without making the canal model generic.
+- The shell visual pass now uses shared local button styles for the main header, decision card actions, and endodontic progress actions.
+- Dark-mode overrides now cover the opacity-based status and action classes used by the shell cleanup surfaces.
+- The first Phase 5 slice adds testable workflow target-panel routing so `operative.direct-restoration` resolves to no canal panel until an operative teeth/surfaces panel exists.
+- A reusable side-workspace shared readiness card now owns diagnosis, radiographs, anesthesia, and isolation readiness actions instead of the endodontic decision card.
+
+Placement decision:
+
+- Keep `Endodontic progress` visible in the secondary column for the active endodontic workflow.
+- Rationale: canal status and phase progress are useful chairside, the panel is now scoped through the active-workflow target-panel slot, and it no longer has to appear for non-endodontic workflows.
+- Revisit when operative dentistry has a real runner and teeth/surfaces target panel, because that workflow may need a different density or placement pattern.
+
+## Phase 5 Review Result
+
+The shell cleanup is implemented for the current product state.
+
+Operative direct restoration remains model-only in the workflow launcher, so manual visual confirmation of an operative runner is deferred. The implemented guardrail is code-level: `operative.direct-restoration` resolves to no endodontic target panel, and tests protect that behavior until an operative teeth/surfaces panel exists.
+
+The shell no longer has known endodontic-first blockers for adding a future operative target panel:
+
+- NodeDent, not the endodontic guide, is the main workspace identity.
+- The endodontic decision guide is framed as the active workflow.
+- Endodontic canal progress is scoped behind the active workflow target-panel slot.
+- Shared readiness is side-workspace UI and can be reused by endodontic and operative workflows.
+- The decision card no longer owns broad setup, shared module launch, prior-visit, or saved-workflow controls.
+
+Remaining product questions are deferred to future specs rather than this shell cleanup.
+
+## Deferred Follow-Up
+
+- Should NodeDent Home become the first screen immediately, or remain a modal until there is a second primary workflow?
+- Which shared module controls should remain in the pre-op readiness card during the transition?
+- Should non-endodontic workflow target panels live in the secondary column, inside the active workflow card, or in Case Setup & Status?
+- Split Case Setup & Status into case identity/demographic data, workflow/procedure setup, and shared module panels.
+- Consider whether radiographs/radiology should become its own shared module for endodontic and operative workflows.
