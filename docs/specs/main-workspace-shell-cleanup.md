@@ -218,6 +218,7 @@ Completed first pass:
 - The shell visual pass now uses shared local button styles for the main header, decision card actions, and endodontic progress actions.
 - Dark-mode overrides now cover the opacity-based status and action classes used by the shell cleanup surfaces.
 - The first Phase 5 slice adds testable workflow target-panel routing so `operative.direct-restoration` resolves to no canal panel until an operative teeth/surfaces panel exists.
+- A reusable side-workspace shared readiness card now owns diagnosis, radiographs, anesthesia, and isolation readiness actions instead of the endodontic decision card.
 
 Still open:
 

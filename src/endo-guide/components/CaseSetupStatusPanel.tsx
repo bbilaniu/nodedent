@@ -525,7 +525,9 @@ export function CaseSetupStatusPanel({
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
+  const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
+  const radiographsSectionRef = useRef<HTMLElement | null>(null);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const anesthesiaEvents = (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType));
   const latestAnesthesiaEvent = anesthesiaEvents.at(-1);
@@ -586,6 +588,16 @@ export function CaseSetupStatusPanel({
   }, [caseData.tooth]);
 
   useEffect(() => {
+    if (initialFocusSection === "diagnosis") {
+      diagnosisSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      diagnosisSectionRef.current?.focus({ preventScroll: true });
+      return;
+    }
+    if (initialFocusSection === "radiographs") {
+      radiographsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      radiographsSectionRef.current?.focus({ preventScroll: true });
+      return;
+    }
     if (initialFocusSection === "anesthesia") {
       anesthesiaSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       anesthesiaSectionRef.current?.focus({ preventScroll: true });
@@ -687,7 +699,7 @@ export function CaseSetupStatusPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+      <section ref={diagnosisSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2">
         <h3 className="text-sm font-semibold text-brand-navy">Diagnosis and pre-op</h3>
         <div className="mt-3 grid gap-3">
           <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
@@ -703,7 +715,7 @@ export function CaseSetupStatusPanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+      <section ref={radiographsSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2">
         <h3 className="text-sm font-semibold text-brand-navy">Radiographs and active canal</h3>
         <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>

@@ -4,10 +4,7 @@ import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
-import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { cx, panelActionButton } from "./uiStyles";
-
-const sharedReadinessNodeIds = new Set(["preop", "access-chamber", "confirm-chamber"]);
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -33,17 +30,6 @@ function getRecentNodeFeedback(currentNode: ProtocolNode, activeCanal?: CanalRec
 
 function formatMm(value?: string) {
   return value ? `${value} mm` : "not set";
-}
-
-function compactStatusLabel(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "review";
-  return satisfied ? "ready" : "pending";
-}
-
-function readinessStatusClass(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
-  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
 }
 
 export function DecisionCard({
@@ -77,14 +63,6 @@ export function DecisionCard({
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
-  const capabilitySummary = getCaseCapabilitySummary(caseData);
-  const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
-  const readinessItems = [
-    { label: "Diagnosis", status: capabilitySummary.diagnosis },
-    { label: "Radiographs", status: capabilitySummary.radiographs },
-    { label: "Anesthesia", status: capabilitySummary.anesthesia },
-    { label: "Isolation", status: capabilitySummary.isolation },
-  ];
   const radiographLabels = [
     caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ? "PA" : null,
     caseData.preOp?.bwReviewed ? "BW" : null,
@@ -108,37 +86,6 @@ export function DecisionCard({
           <span>{currentNode.safetyNotes.join(" ")}</span>
         </div>
       ) : null}
-      {showSharedReadiness ? (
-        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-          <div className="grid gap-3">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <h4 className="text-sm font-bold text-brand-navy">Pre-access readiness</h4>
-              <div className="lg:w-auto">
-                <button
-                  type="button"
-                  onClick={() => onOpenCaseSetupStatus()}
-                  className={panelActionButton.primary}
-                >
-                  Open Case Setup
-                </button>
-              </div>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
-              {readinessItems.map(({ label, status }) => (
-                <div key={label} className={`min-w-0 rounded-xl border px-3 py-2 ${readinessStatusClass(status.satisfied, status.needsReassessment)}`}>
-                  <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <span className="text-xs font-bold">{label}</span>
-                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
-                      {compactStatusLabel(status.satisfied, status.needsReassessment)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-5 opacity-80">{status.summary}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
       {recentNodeFeedback ? (
         <div className="mt-4 rounded-2xl border border-brand-blue-light bg-brand-blue-light/20 p-4 text-sm font-semibold text-brand-navy">
           {recentNodeFeedback}
@@ -155,9 +102,6 @@ export function DecisionCard({
                 </p>
                 <p className="mt-1 text-xs leading-5 text-brand-slate">
                   Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographLabels.length ? radiographLabels.join(", ") : "not recorded"}
-                </p>
-                <p className="mt-1 text-xs leading-5 text-brand-slate">
-                  Shared status: diagnosis {compactStatusLabel(capabilitySummary.diagnosis.satisfied, capabilitySummary.diagnosis.needsReassessment)} · radiographs {compactStatusLabel(capabilitySummary.radiographs.satisfied, capabilitySummary.radiographs.needsReassessment)} · anesthesia {compactStatusLabel(capabilitySummary.anesthesia.satisfied, capabilitySummary.anesthesia.needsReassessment)} · isolation {compactStatusLabel(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">

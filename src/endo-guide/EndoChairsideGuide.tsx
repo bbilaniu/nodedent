@@ -9,6 +9,7 @@ import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
+import { SharedReadinessCard } from "./components/SharedReadinessCard";
 import { WorkflowLauncher } from "./components/WorkflowLauncher";
 import { cx, headerActionButton } from "./components/uiStyles";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
@@ -865,7 +866,13 @@ export default function EndoChairsideGuide() {
         />
 
         <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
-          <aside className="contents">
+          <aside className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
+            <SharedReadinessCard
+              caseData={caseData}
+              onOpenCaseSetupStatus={openCasePanel}
+              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+              onOpenIsolationWorkflow={openIsolationWorkflow}
+            />
             <ActiveWorkflowTargetPanel
               activeWorkflowId={endodonticRootWorkflowId}
               endodonticProps={{
@@ -884,7 +891,6 @@ export default function EndoChairsideGuide() {
                   setSelectedProgressPhase(currentNode.phase);
                   setIsProgressDetailOpen(true);
                 },
-                className: "order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1",
               }}
             />
           </aside>
