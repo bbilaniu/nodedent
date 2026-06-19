@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-18
+completed_on: 2026-06-18
 ---
 
 # Main Workspace Shell Cleanup Proposal
@@ -220,20 +221,32 @@ Completed first pass:
 - The first Phase 5 slice adds testable workflow target-panel routing so `operative.direct-restoration` resolves to no canal panel until an operative teeth/surfaces panel exists.
 - A reusable side-workspace shared readiness card now owns diagnosis, radiographs, anesthesia, and isolation readiness actions instead of the endodontic decision card.
 
-Still open:
-
-- Review the shell with the operative direct restoration model before enabling an operative runner.
-- Manual visual confirmation that operative renders without canal UI is not possible while `operative.direct-restoration` remains model-only and disabled in the launcher. Current confirmation is code-level through target-panel routing tests.
-- Consider a cross-workflow shared readiness card for diagnosis, radiographs, anesthesia, and isolation once Case Setup & Status supports diagnosis/radiograph focus targets.
-
 Placement decision:
 
 - Keep `Endodontic progress` visible in the secondary column for the active endodontic workflow.
 - Rationale: canal status and phase progress are useful chairside, the panel is now scoped through the active-workflow target-panel slot, and it no longer has to appear for non-endodontic workflows.
 - Revisit when operative dentistry has a real runner and teeth/surfaces target panel, because that workflow may need a different density or placement pattern.
 
-## Open Decisions
+## Phase 5 Review Result
+
+The shell cleanup is implemented for the current product state.
+
+Operative direct restoration remains model-only in the workflow launcher, so manual visual confirmation of an operative runner is deferred. The implemented guardrail is code-level: `operative.direct-restoration` resolves to no endodontic target panel, and tests protect that behavior until an operative teeth/surfaces panel exists.
+
+The shell no longer has known endodontic-first blockers for adding a future operative target panel:
+
+- NodeDent, not the endodontic guide, is the main workspace identity.
+- The endodontic decision guide is framed as the active workflow.
+- Endodontic canal progress is scoped behind the active workflow target-panel slot.
+- Shared readiness is side-workspace UI and can be reused by endodontic and operative workflows.
+- The decision card no longer owns broad setup, shared module launch, prior-visit, or saved-workflow controls.
+
+Remaining product questions are deferred to future specs rather than this shell cleanup.
+
+## Deferred Follow-Up
 
 - Should NodeDent Home become the first screen immediately, or remain a modal until there is a second primary workflow?
 - Which shared module controls should remain in the pre-op readiness card during the transition?
 - Should non-endodontic workflow target panels live in the secondary column, inside the active workflow card, or in Case Setup & Status?
+- Split Case Setup & Status into case identity/demographic data, workflow/procedure setup, and shared module panels.
+- Consider whether radiographs/radiology should become its own shared module for endodontic and operative workflows.

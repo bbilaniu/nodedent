@@ -11,7 +11,6 @@ This folder separates clinical source material, active product specs, architectu
 
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
-- [Main workspace shell cleanup proposal](specs/main-workspace-shell-cleanup.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 
 ## Engineering Guides
@@ -37,6 +36,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Endo chairside decision guide proposal](specs/archive/endo-chairside-decision-guide-proposal.md)
 - [Final shaping terminology update](specs/archive/codex_final_shapping.md)
 - [Generalized workflow nodes](specs/archive/generalized-workflow-nodes.md)
+- [Main workspace shell cleanup proposal](specs/archive/main-workspace-shell-cleanup.md)
 - [Phase-aware canal switch menus](specs/archive/codex_multicanal_paralelle.md)
 - [Shared anesthesia module](specs/archive/shared-anesthesia-module.md)
 - [Shared isolation module](specs/archive/shared-isolation-module.md)
