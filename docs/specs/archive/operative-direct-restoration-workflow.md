@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-19
+completed_on: 2026-06-19
 ---
 
 # Operative Direct Restoration Workflow
@@ -180,7 +181,7 @@ Status: implemented by adding operative setup and restoration event fragments, i
 
 Reasoning level needed: medium-high. This phase makes the workflow usable, and the UI must feel like a primary workflow without reusing endodontic-only decision card, canal selector, or measurement surfaces.
 
-Status: planned.
+Status: implemented by adding a minimal operative runner for the existing node sequence, launching it from NodeDent Home as a ready primary workflow, showing operative setup, shared readiness, restoration record, and completion state, keeping endodontic-only cards and canal controls hidden, and adding focused render and launcher tests.
 
 - Add a minimal operative runner for the existing node sequence.
 - Launch the operative runner from NodeDent Home instead of showing only setup preview.
@@ -205,10 +206,10 @@ Status: planned.
 - Run `npm run build` after code changes.
 - Run `npm run docs:check` after spec status, location, or README changes.
 
-## Open Decisions
+## Resolved Decisions
 
-- Should operative setup be represented only by events, or should `EndoCase` gain a narrow `operative` workflow-state object?
-- Should `operative.scope.recorded` be emitted on every setup edit or only when the clinician confirms scope?
-- Should the first runner use a reusable generic workflow runner shell, or a small operative-specific runner?
-- Should restoration outcome be a free-text field first, or a small documentation enum plus notes?
-- Should the existing endodontic final restoration closure event ever emit `finalRestoration.placed`, or remain separate until a later compatibility spec?
+- `operative.scope.recorded` is upserted on every setup edit. There is no separate scope-confirmation moment in the first usable workflow.
+- Operative setup and restoration output remain event-backed. Derived or cached operative state may be added later for performance or multi-procedure user experience, but events remain the source of truth.
+- The first operative runner is a small operative-specific runner. Treat it as a prototype for a future generic primary workflow shell only after another non-endodontic workflow repeats the same shape.
+- Restoration outcome remains free text in the first operative workflow. Consider a small documentation enum later only if real-world records show stable categories worth structuring.
+- Endodontic `closure.finalRestoration` and operative `finalRestoration.placed` remain separate. Any future mapping from endodontic closure to operative restoration output must be defined by an explicit compatibility or workflow-switching spec.

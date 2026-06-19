@@ -191,7 +191,7 @@ export function WorkflowLauncher({
                       onClick={isEndo ? onContinueEndodonticWorkflow : () => onOpenPrimaryWorkflowSetup(entry.workflowId)}
                       className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
                     >
-                      {isEndo ? entry.launchLabel : "Open setup"}
+                      {entry.launchLabel}
                     </button>
                   </div>
                 );

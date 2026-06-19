@@ -146,6 +146,8 @@ The app should support:
 7. Shared modules that can be reused across multiple workflows.
 8. Structured JSON reimport/export for editing, persistence, and future integration.
 
+Workflow setup and output should be recorded as structured clinical events wherever practical. Derived state, caches, and summaries are useful for speed and ergonomics, but they should remain rebuildable from event-backed case state rather than becoming a competing source of truth.
+
 ## Examples of Workflow Switching
 
 The system should support real clinical changes such as:
@@ -206,6 +208,10 @@ The preferred structure is:
 * **Shared modules:** diagnostics, previous visit context, anesthesia, isolation, radiographs, prescriptions, complications, follow-up
 * **Output layer:** EMR-ready notes, compact summaries, JSON export, and future API integration
 * **Audit layer:** timestamped event log and workflow state history
+
+Primary workflow UIs may start as focused workflow-specific runners when that keeps the first usable slice small. A generic primary-workflow shell should be extracted only after at least two non-endodontic workflows repeat the same runner shape.
+
+Clinical capability compatibility should be explicit. Similar-looking concepts from different workflows, such as endodontic final closure and operative final restoration placement, should not be treated as interchangeable unless a compatibility or workflow-switching spec defines the mapping.
 
 The core product idea is:
 

@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { CaseManagementModal } from "../components/CaseManagementModal";
+import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { getSharedReadinessActions } from "../components/SharedReadinessCard";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { applyDecision } from "../engine/applyDecision";
@@ -352,7 +353,7 @@ test("shared readiness actions open reusable setup and module paths for operativ
   assert.deepEqual(isolationEntries, [undefined]);
 });
 
-test("workflow launcher exposes operative setup entry for manual readiness review", () => {
+test("workflow launcher exposes operative runner entry", () => {
   const noop = () => {};
   const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
     caseData: baseCase(),
@@ -371,7 +372,50 @@ test("workflow launcher exposes operative setup entry for manual readiness revie
   }));
 
   assert.equal(markup.includes("Operative direct restoration"), true);
-  assert.equal(markup.includes("Open setup"), true);
+  assert.equal(markup.includes("Start / resume workflow"), true);
+  assert.equal(markup.includes("Model only"), false);
+});
+
+test("operative runner renders setup readiness record and completion states without endodontic controls", () => {
+  const caseData = baseCase({ tooth: "36" });
+  const setup = {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+  const completionEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_runner_complete",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      ...setup,
+      outcome: "placed",
+      notes: "Occlusion checked by clinician",
+    },
+  });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(OperativeWorkflowRunner, {
+    caseData,
+    setup,
+    capabilitySummary: getOperativeReadinessCapabilitySummary(caseData, setup),
+    latestRestorationEvent: completionEvent,
+    onSetupChange: noop,
+    onRecordRestoration: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Direct restoration"), true);
+  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Operative setup"), true);
+  assert.equal(markup.includes("Restoration record"), true);
+  assert.equal(markup.includes("Operative workflow complete"), true);
+  assert.equal(markup.includes("Record final restoration"), true);
+  assert.equal(markup.includes("Active canal status"), false);
+  assert.equal(markup.includes("WL/shape data"), false);
+  assert.equal(markup.includes("Decision"), false);
 });
 
 test("every protocol note event has a note fragment", () => {
@@ -2010,10 +2054,11 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), true);
-  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), false);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), true);
   assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
-  assert.equal(operativeEntry?.availability, "modelOnly");
+  assert.equal(operativeEntry?.availability, "ready");
+  assert.equal(operativeEntry?.launchLabel, "Start / resume workflow");
 });
 
 test("shared anesthesia phase 1 model parses typed details and preserves legacy events", () => {

@@ -21,7 +21,7 @@ export function OperativeWorkflowSetupPanel({
     <SectionCard title="Operative setup" className={className}>
       <div className="grid gap-3">
         <p className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
-          Capture the planned operative tooth and surface scope separately from endodontic canals. This setup is a workflow preview and does not record a restoration event yet.
+          Capture the planned operative tooth and surface scope separately from endodontic canals.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextInput label="Tooth" value={tooth} onChange={(value) => onSetupChange({ tooth: value })} placeholder="e.g., 36" />

@@ -7,6 +7,7 @@ import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
+import { OperativeWorkflowRunner } from "./components/OperativeWorkflowRunner";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { SharedReadinessCard } from "./components/SharedReadinessCard";
@@ -31,8 +32,10 @@ import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId
 import { endodonticRootWorkflowId } from "./workflow/registry";
 import {
   buildOperativeSetupEventDetails,
+  buildOperativeRestorationPlacedEvent,
   createOperativeSetupScope,
   createOperativeReadinessScopes,
+  getOperativeRestorationEvents,
   getLatestOperativeWorkflowSetup,
   getOperativeReadinessCapabilitySummary,
   operativeDirectRestorationWorkflowId,
@@ -167,6 +170,7 @@ export default function NodeDentApp() {
   const hasActivePrimaryWorkflow = Boolean(activePrimaryWorkflowId);
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
   const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
+  const latestOperativeRestorationEvent = useMemo(() => getOperativeRestorationEvents(caseData).at(-1), [caseData.globalEvents]);
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
   const activeReadinessSummary = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId ? operativeReadinessSummary : caseCapabilitySummary;
@@ -389,6 +393,7 @@ export default function NodeDentApp() {
     if (workflowId !== endodonticRootWorkflowId && workflowId !== operativeDirectRestorationWorkflowId) return;
     setActivePrimaryWorkflowId(workflowId);
     setCasePanelWorkflowId(workflowId);
+    setRootWorkflowRunId(makeWorkflowRunId(workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"));
     setIsWorkflowLauncherOpen(false);
   }
 
@@ -414,6 +419,30 @@ export default function NodeDentApp() {
         globalEvents: upsertOperativeScopeRecordedEvent(prev.globalEvents, event),
       };
     });
+    setValidationMessage(null);
+  }
+
+  function recordOperativeRestoration(record: { outcome: string; notes: string }) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const { eventId, timestamp } = createRuntimeEventArgs();
+    const event = buildOperativeRestorationPlacedEvent({
+      id: eventId,
+      timestamp,
+      record: {
+        ...operativeSetup,
+        tooth: operativeSetup.tooth || caseData.tooth,
+        outcome: record.outcome,
+        notes: record.notes,
+      },
+      fallbackTooth: caseData.tooth,
+      workflowRunId: rootWorkflowRunId,
+    });
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
     setValidationMessage(null);
   }
 
@@ -863,7 +892,7 @@ export default function NodeDentApp() {
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-navy">NodeDent Clinical Workspace</h1>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">
                 {hasActivePrimaryWorkflow
-                  ? `Active workflow: ${isEndodonticWorkflowActive ? "Endodontic decision guide" : "Operative direct restoration setup"}. Shared modules, setup, notes, and case history stay available around the workflow.`
+                  ? `Active workflow: ${isEndodonticWorkflowActive ? "Endodontic decision guide" : "Operative direct restoration"}. Shared modules, setup, notes, and case history stay available around the workflow.`
                   : "Choose a primary workflow or open shared setup and module capture."}
               </p>
             </div>
@@ -1022,33 +1051,17 @@ export default function NodeDentApp() {
               />
             </>
           ) : (
-            <section className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
-              <div className="rounded-2xl border border-brand-light-node bg-white p-5 shadow-sm">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Operative workflow</p>
-                <h2 className="mt-1 text-xl font-bold text-brand-navy">Direct restoration setup</h2>
-                <p className="mt-2 text-sm leading-6 text-brand-slate">
-                  Set up tooth and surface scope, then use shared readiness for diagnosis, radiographs, anesthesia, and isolation. The operative chairside decision runner is not enabled yet.
-                </p>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Tooth</p>
-                    <p className="mt-1 text-sm font-semibold text-brand-navy">{operativeSetup.tooth || caseData.tooth || "Not set"}</p>
-                  </div>
-                  <div className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Surfaces</p>
-                    <p className="mt-1 text-sm font-semibold text-brand-navy">{operativeSetup.surfaces || "Not set"}</p>
-                  </div>
-                  <div className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Intent</p>
-                    <p className="mt-1 text-sm font-semibold text-brand-navy">{operativeSetup.restorationIntent || "Not set"}</p>
-                  </div>
-                  <div className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Material / shade</p>
-                    <p className="mt-1 text-sm font-semibold text-brand-navy">{[operativeSetup.material, operativeSetup.shade].filter(Boolean).join(" / ") || "Not set"}</p>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <OperativeWorkflowRunner
+              caseData={caseData}
+              setup={operativeSetup}
+              capabilitySummary={operativeReadinessSummary}
+              latestRestorationEvent={latestOperativeRestorationEvent}
+              onSetupChange={updateOperativeSetup}
+              onRecordRestoration={recordOperativeRestoration}
+              onOpenCaseSetupStatus={openCasePanel}
+              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+              onOpenIsolationWorkflow={openIsolationWorkflow}
+            />
           )}
 
           <aside className="order-4 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-3 xl:col-start-1 xl:row-start-2 2xl:col-span-1 2xl:col-start-4 2xl:row-start-1 2xl:block 2xl:space-y-4">

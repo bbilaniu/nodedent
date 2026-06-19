@@ -13,7 +13,6 @@ This folder separates clinical source material, active product specs, architectu
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
-- [Operative direct restoration workflow](specs/operative-direct-restoration-workflow.md)
 - [Shared radiology module](specs/shared-radiology-module.md)
 
 ## Engineering Guides
@@ -31,6 +30,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0003: Adopt NodeDent Brand Identity](adr/0003-adopt-nodedent-brand-identity.md)
 - [ADR 0004: Generalize Clinical Workflow Nodes Through Reusable Workflow Modules](adr/0004-generalize-clinical-workflow-nodes.md)
 - [ADR 0005: Support Seeded Customizable Clinical Documentation Catalogs](adr/0005-support-seeded-customizable-documentation-catalogs.md)
+- [ADR 0006: Define Autosave And Draft Workflow State Policy](adr/0006-define-autosave-and-draft-workflow-state-policy.md)
 
 ## Archived Implemented Specs
 
@@ -41,6 +41,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Final shaping terminology update](specs/archive/codex_final_shapping.md)
 - [Generalized workflow nodes](specs/archive/generalized-workflow-nodes.md)
 - [Main workspace shell cleanup proposal](specs/archive/main-workspace-shell-cleanup.md)
+- [Operative direct restoration workflow](specs/archive/operative-direct-restoration-workflow.md)
 - [Phase-aware canal switch menus](specs/archive/codex_multicanal_paralelle.md)
 - [Shared anesthesia module](specs/archive/shared-anesthesia-module.md)
 - [Shared isolation module](specs/archive/shared-isolation-module.md)

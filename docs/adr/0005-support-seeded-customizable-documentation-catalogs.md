@@ -48,6 +48,8 @@ The architecture must separate app-core vocabulary from seed, user, clinic, and 
 
 Catalog-backed fields must remain editable free-text fields through datalist/autocomplete behavior unless a future ADR explicitly justifies a closed vocabulary.
 
+New clinical documentation fields should prefer free text with optional suggestions until real records show stable repeated values worth structuring. For example, operative restoration outcome should remain free text in the first direct restoration workflow; a small enum or catalog can be introduced later if the vocabulary proves stable and useful.
+
 Product or catalog selections must not infer:
 
 - adequacy
@@ -83,6 +85,7 @@ Snapshotting event details protects historical notes and audit behavior. The cli
 ## Consequences
 
 - Catalog-backed fields should use free-text inputs with suggestions by default.
+- New enums should be added only when they improve documentation, querying, or interoperability enough to justify the closed vocabulary.
 - Product catalogs should not be used to calculate anesthesia adequacy, expiry, dose, amount, timing, or treatment recommendations.
 - Current seed catalogs can stay intentionally small and non-prescriptive.
 - Future catalog storage should distinguish app-core values from seed, user, clinic, and template-owned values.
