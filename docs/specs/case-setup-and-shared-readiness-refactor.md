@@ -103,11 +103,17 @@ Non-goals for the first radiology slice:
 
 ### Phase 1: Layout Boundary And Names
 
+Reasoning level needed: medium. This phase is mostly structural naming and component boundary work, but it needs enough design reasoning to avoid baking endodontic assumptions into shared setup labels.
+
+Status: implemented by splitting the case setup panel into named local sections for case identity, visit status, diagnosis readiness, radiograph readiness, endodontic workflow setup, shared clinical readiness, and shared module capture areas while preserving the existing modal entry point and update handlers.
+
 - Rename or split local components so the current panel distinguishes case identity, shared readiness, workflow setup, and shared modules.
 - Keep the existing modal entry point for now.
 - Preserve current field behavior and event output.
 
 ### Phase 2: Case Setup Focus Targets
+
+Reasoning level needed: medium. The mapping should be explicit and maintainable, with careful attention to how shared readiness deep-links into setup without spreading string ids across the codebase.
 
 - Keep `CaseSetupFocusTarget` explicit for shared readiness rows.
 - Ensure diagnosis, radiographs, anesthesia, and isolation focus actions are stable.
@@ -115,15 +121,21 @@ Non-goals for the first radiology slice:
 
 ### Phase 3: Endodontic Workflow Setup Extraction
 
+Reasoning level needed: high. This phase changes ownership boundaries for endodontic-specific setup, so it needs deliberate review of workflow behavior, measurement state, and future operative isolation.
+
 - Move active canal and endodontic measurement setup into an endodontic-specific workflow setup component.
 - Keep `MeasurementPanel` and `EndodonticTargetPanel` aligned so canal details do not leak into operative setup.
 
 ### Phase 4: Shared Radiology Module Spec
 
+Reasoning level needed: high. Radiology boundaries affect shared clinical documentation and future event semantics, and any clinical behavior must remain limited to source-backed or explicitly clinician-entered documentation.
+
 - Decide whether radiographs remain as case setup fields for one more cycle or become a shared `shared.radiology` module.
 - If split out, write a dedicated shared radiology module spec before implementation.
 
 ### Phase 5: Operative Readiness Review
+
+Reasoning level needed: medium. This phase is a compatibility review, but it still requires careful workflow reasoning to confirm the shared surfaces work without exposing endodontic-only fields.
 
 - Confirm the refactored setup can support operative teeth/surfaces without displaying active-canal fields.
 - Confirm shared readiness can open diagnosis, radiographs, anesthesia, and isolation from an operative workflow context.
