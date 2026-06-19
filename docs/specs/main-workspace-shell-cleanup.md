@@ -197,11 +197,12 @@ Completed first pass:
 - The phase/canal map is available from the endodontic progress panel.
 - The decision card no longer carries broad saved-workflow, prior-visit, anesthesia, and isolation launch controls. Those remain available from NodeDent Home and Case Setup & Status.
 - A small active-workflow target-panel slot now routes `endo.rct` to the endodontic target panel without making the canal model generic.
+- The shell visual pass now uses shared local button styles for the main header, decision card actions, and endodontic progress actions.
+- Dark-mode overrides now cover the opacity-based status and action classes used by the shell cleanup surfaces.
 
 Still open:
 
 - Decide whether the endodontic progress panel should remain visible in the secondary column or move behind a drawer/button.
-- Complete a visual pass for dark-mode warning/status panels and duplicated button styling.
 - Review the shell with the operative direct restoration model before enabling an operative runner.
 
 ## Open Decisions

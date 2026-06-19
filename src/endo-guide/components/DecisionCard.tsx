@@ -5,6 +5,7 @@ import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
+import { cx, panelActionButton } from "./uiStyles";
 
 const sharedReadinessNodeIds = new Set(["preop", "access-chamber", "confirm-chamber"]);
 
@@ -94,7 +95,7 @@ export function DecisionCard({
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-brand-navy">Endodontic decision guide</h3>
-        <button onClick={onUndo} disabled={!historyLength} className="rounded-xl border border-brand-light-node px-3 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-slate disabled:cursor-not-allowed disabled:opacity-40">Undo last decision</button>
+        <button onClick={onUndo} disabled={!historyLength} className={cx(panelActionButton.secondaryMuted, "disabled:cursor-not-allowed disabled:opacity-40")}>Undo last decision</button>
       </div>
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-slate">Phase : {currentNode.phase}</p>
@@ -116,7 +117,7 @@ export function DecisionCard({
                 <button
                   type="button"
                   onClick={() => onOpenCaseSetupStatus()}
-                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+                  className={panelActionButton.primary}
                 >
                   Open Case Setup
                 </button>
@@ -166,7 +167,7 @@ export function DecisionCard({
                 <button
                   type="button"
                   onClick={() => onOpenCaseSetupStatus()}
-                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-navy-deep"
+                  className={panelActionButton.primaryCompact}
                 >
                   Open Case Setup
                 </button>
@@ -218,7 +219,12 @@ export function DecisionCard({
                 type="button"
                 disabled={target.disabled}
                 onClick={() => onContinueCanal(target)}
-                className={`rounded-xl border p-3 text-left text-sm font-semibold transition ${target.disabled ? "cursor-not-allowed border-brand-light-node bg-white/70 text-brand-slate/60" : "border-brand-blue-light/70 bg-white text-brand-navy hover:-translate-y-0.5 hover:border-brand-blue hover:shadow-sm"}`}
+                className={cx(
+                  "rounded-xl border p-3 text-left text-sm font-semibold transition",
+                  target.disabled
+                    ? "cursor-not-allowed border-brand-light-node bg-white/70 text-brand-slate/60"
+                    : "border-brand-blue-light/70 bg-white text-brand-navy hover:-translate-y-0.5 hover:border-brand-blue hover:shadow-sm"
+                )}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span>{target.label}</span>
@@ -236,7 +242,7 @@ export function DecisionCard({
             <button
               type="button"
               onClick={onCreateNewCanal}
-              className="w-full rounded-xl border border-dashed border-brand-blue bg-white px-3 py-3 text-sm font-bold text-brand-navy transition hover:bg-brand-blue-light/30"
+              className={cx(panelActionButton.infoLarge, "w-full")}
             >
               Add new canal
             </button>

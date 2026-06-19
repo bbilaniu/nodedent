@@ -10,6 +10,7 @@ import { NotePreview } from "./components/NotePreview";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "./components/WorkflowLauncher";
+import { cx, headerActionButton } from "./components/uiStyles";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
@@ -808,7 +809,7 @@ export default function EndoChairsideGuide() {
               <button
                 type="button"
                 onClick={() => setIsWorkflowLauncherOpen(true)}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-mint/50 bg-brand-mint/15 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-mint/25"
+                className={headerActionButton.mint}
               >
                 NodeDent Home
               </button>
@@ -816,7 +817,7 @@ export default function EndoChairsideGuide() {
                 type="button"
                 aria-pressed={themeMode === "dark"}
                 onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
-                className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full border border-brand-light-node bg-white px-3 py-1.5 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
+                className={cx(headerActionButton.secondaryCompact, "gap-2")}
               >
                 <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
                 {themeMode === "dark" ? "Dark" : "Light"} mode
@@ -824,28 +825,28 @@ export default function EndoChairsideGuide() {
               <button
                 type="button"
                 onClick={() => openCasePanel()}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold leading-none text-white transition hover:bg-brand-navy-deep"
+                className={headerActionButton.primary}
               >
                 Case Setup & Status
               </button>
               <button
                 type="button"
                 onClick={openSavedCases}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-blue-light bg-brand-blue-light/20 px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-blue-light/30"
+                className={headerActionButton.info}
               >
                 Resume saved workflow
               </button>
               <button
                 type="button"
                 onClick={openPriorVisit}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold leading-none text-amber-950 transition hover:bg-amber-100"
+                className={headerActionButton.warning}
               >
                 Prior visit
               </button>
               <button
                 type="button"
                 onClick={openNewCaseConfirm}
-                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold leading-none text-brand-navy transition hover:bg-brand-light-slate"
+                className={headerActionButton.secondary}
               >
                 New case
               </button>

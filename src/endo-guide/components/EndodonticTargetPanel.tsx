@@ -3,6 +3,7 @@ import type { DifficultyFlag, EndoCase } from "../types";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
+import { cx, panelActionButton } from "./uiStyles";
 
 export type EndodonticTargetPanelProps = {
   caseData: EndoCase;
@@ -75,7 +76,7 @@ export function EndodonticTargetPanel({
       <button
         type="button"
         onClick={onOpenPhaseMap}
-        className="mb-3 w-full rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+        className={cx(panelActionButton.info, "mb-3 w-full")}
       >
         Open phase/canal map
       </button>
@@ -111,7 +112,7 @@ export function EndodonticTargetPanel({
               className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
               placeholder="blank = New"
             />
-            <button onClick={addCanalAndCollapse} className="w-full rounded-xl bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep">Add new canal</button>
+            <button onClick={addCanalAndCollapse} className={cx(panelActionButton.primary, "w-full")}>Add new canal</button>
           </div>
         </details>
 
@@ -128,11 +129,11 @@ export function EndodonticTargetPanel({
               className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
               placeholder="e.g., B, L, P"
             />
-            <button onClick={renameActiveCanalAndCollapse} className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate">Rename active canal</button>
+            <button onClick={renameActiveCanalAndCollapse} className={cx(panelActionButton.secondaryMuted, "w-full")}>Rename active canal</button>
             <button
               type="button"
               onClick={requestDeleteActiveCanal}
-              className="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-100"
+              className={cx(panelActionButton.danger, "w-full")}
             >
               Delete active canal
             </button>
@@ -146,14 +147,14 @@ export function EndodonticTargetPanel({
               <button
                 type="button"
                 onClick={() => setIsDeleteConfirmOpen(false)}
-                className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate"
+                className={panelActionButton.secondaryMuted}
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={confirmDeleteActiveCanal}
-                className="rounded-xl border border-red-700 bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800"
+                className={panelActionButton.destructive}
               >
                 Confirm delete
               </button>
@@ -166,11 +167,11 @@ export function EndodonticTargetPanel({
             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
           </div>
           <div className="grid gap-2 text-sm">
-            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className="rounded-xl border border-brand-mint/50 bg-brand-mint/15 px-3 py-2 font-semibold text-brand-navy hover:bg-brand-mint/25">Mark {activeCanalName} complete</button>
-            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 font-semibold text-brand-slate hover:bg-brand-light-node">Pause {activeCanalName}</button>
-            <button onClick={() => onManualEvent("canal.medicated", `Medicate ${activeCanalName}`, "temporary-closure", "high")} className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 font-semibold text-amber-900 hover:bg-amber-100">Medicate {activeCanalName}</button>
-            <button onClick={() => onManualEvent("canal.referred", `Refer ${activeCanalName}`, "refer-pathway", "refer")} className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 font-semibold text-red-800 hover:bg-red-100">Refer {activeCanalName}</button>
-            <button onClick={onResetManualStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 font-semibold text-brand-navy hover:bg-brand-light-slate">Return {activeCanalName} to automatic status</button>
+            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.success}>Mark {activeCanalName} complete</button>
+            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className={panelActionButton.muted}>Pause {activeCanalName}</button>
+            <button onClick={() => onManualEvent("canal.medicated", `Medicate ${activeCanalName}`, "temporary-closure", "high")} className={panelActionButton.warning}>Medicate {activeCanalName}</button>
+            <button onClick={() => onManualEvent("canal.referred", `Refer ${activeCanalName}`, "refer-pathway", "refer")} className={panelActionButton.danger}>Refer {activeCanalName}</button>
+            <button onClick={onResetManualStatus} className={panelActionButton.secondary}>Return {activeCanalName} to automatic status</button>
           </div>
         </div>
       </div>
