@@ -11,6 +11,7 @@ This folder separates clinical source material, active product specs, architectu
 
 - [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
+- [NodeDent vision](specs/nodedent-vision.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 - [Operative direct restoration workflow](specs/operative-direct-restoration-workflow.md)
 - [Shared radiology module](specs/shared-radiology-module.md)

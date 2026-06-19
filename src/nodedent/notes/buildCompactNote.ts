@@ -1,6 +1,12 @@
 import type { EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
+import {
+  formatOperativeRestorationEventFragment,
+  formatOperativeSetupEventFragment,
+  getOperativeRestorationEvents,
+  isOperativeScopeRecordedEvent,
+} from "../workflow/operative";
 import { getPriorVisitLines } from "./priorVisit";
 
 export function buildCompactNote(caseData: EndoCase) {
@@ -8,6 +14,8 @@ export function buildCompactNote(caseData: EndoCase) {
   const located = canals.map((canal) => canal.name).filter(Boolean);
   const measurements = canals.map(formatCanalMeasurements).filter(Boolean);
   const events = (caseData.globalEvents || []).map((event) => event.type);
+  const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
+  const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const note = [];
   note.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}.`);
   if (caseData.patientNumber) note.push(`Patient #: ${caseData.patientNumber}.`);
@@ -29,6 +37,8 @@ export function buildCompactNote(caseData: EndoCase) {
   if (events.includes("closure.temporary")) note.push("Access closed with sponge and temporary restorative material.");
   if (events.includes("closure.orificeBarrierTemporary")) note.push("Orifice barrier and temporary restoration placed.");
   if (events.includes("closure.finalRestoration")) note.push("Final restoration placed.");
+  if (latestOperativeSetupEvent) note.push(formatOperativeSetupEventFragment(latestOperativeSetupEvent));
+  operativeRestorationEvents.forEach((event) => note.push(formatOperativeRestorationEventFragment(event)));
   if (caseData.nextVisitPlan) note.push(`Next visit/plan: ${caseData.nextVisitPlan}.`);
   if (caseData.difficulty !== "none") note.push(`Difficulty flag: ${caseData.difficulty}.`);
   note.push("POIG.");

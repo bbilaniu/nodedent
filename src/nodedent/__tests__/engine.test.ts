@@ -1767,6 +1767,124 @@ test("operative final restoration capability satisfies only matching surface tar
   assert.deepEqual(getOperativeRestorationEvents(caseData).map((event) => event.id), ["evt_operative_restoration_match"]);
 });
 
+test("operative setup and restoration records appear in notes and JSON export", () => {
+  const setupEvent = {
+    id: "evt_operative_setup_note",
+    timestamp: "2026-01-01T10:50:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" }),
+    details: {
+      tooth: "36",
+      surfaces: ["M", "O"],
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    },
+  };
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_note",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+      outcome: "placed",
+      notes: "Occlusion checked by clinician",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    procedureType: "Direct restoration",
+    globalEvents: [setupEvent, restorationEvent],
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "operative-restoration-complete");
+
+  assert.match(eventFragment(setupEvent), /Operative setup recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2/);
+  assert.match(eventFragment(restorationEvent), /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
+  assert.match(compact, /Operative setup recorded: tooth 36; surfaces M O/);
+  assert.match(compact, /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
+  assert.match(full, /Operative:/);
+  assert.match(full, /Operative setup recorded: tooth 36; surfaces M O/);
+  assert.match(full, /Final restoration recorded: tooth 36; surfaces M O/);
+  assert.equal(exported.operative?.setup?.eventId, "evt_operative_setup_note");
+  assert.deepEqual(exported.operative?.setup?.record, {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  });
+  assert.equal(exported.operative?.restorations.length, 1);
+  assert.deepEqual(exported.operative?.restorations[0].record, {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  });
+  assert.equal(exported.operative?.restorations[0].capabilitiesSatisfied[0].name, "finalRestoration.placed");
+  assert.equal(exported.events.length, 2);
+});
+
+test("operative note and export handle partially documented records without inferred wording", () => {
+  const setupEvent = {
+    id: "evt_operative_setup_partial",
+    timestamp: "2026-01-01T10:50:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "O" }),
+    details: {
+      tooth: "36",
+      surfaces: ["O"],
+    },
+  };
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_partial",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "O",
+      restorationIntent: "",
+      material: "",
+      shade: "",
+      outcome: "",
+      notes: "",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [setupEvent, restorationEvent],
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "operative-restoration-record");
+
+  assert.match(eventFragment(setupEvent), /^Operative setup recorded: tooth 36; surfaces O\.$/);
+  assert.match(eventFragment(restorationEvent), /^Final restoration recorded: tooth 36; surfaces O\.$/);
+  assert.match(compact, /Operative setup recorded: tooth 36; surfaces O\./);
+  assert.match(full, /Final restoration recorded: tooth 36; surfaces O\./);
+  assert.doesNotMatch(`${compact}\n${full}`, /recommend|adequate|successful/i);
+  assert.deepEqual(exported.operative?.restorations[0].record, {
+    tooth: "36",
+    surfaces: "O",
+    restorationIntent: "",
+    material: "",
+    shade: "",
+    outcome: "",
+    notes: "",
+  });
+});
+
 test("operative surface queries can compare against tooth-level isolation coverage", () => {
   const surfaceScope = createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"], procedureId: "op_36_mo" });
   const unrelatedSurfaceScope = createOperativeSurfaceScope({ tooth: "46", surface: "O", procedureId: "op_46_o" });

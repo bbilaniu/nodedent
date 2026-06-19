@@ -311,6 +311,38 @@ export function getOperativeRestorationEvents(caseData: Pick<EndoCase, "globalEv
   return (caseData.globalEvents || []).filter(isOperativeRestorationPlacedEvent);
 }
 
+function formatOperativeParts(parts: Array<string | undefined>) {
+  return parts.filter(Boolean).join("; ");
+}
+
+export function formatOperativeSetupEventFragment(event: ClinicalEvent) {
+  const setup = getOperativeSetupFromEvent(event);
+  const details = formatOperativeParts([
+    setup.tooth ? `tooth ${setup.tooth}` : undefined,
+    setup.surfaces ? `surfaces ${setup.surfaces}` : undefined,
+    setup.restorationIntent ? `intent ${setup.restorationIntent}` : undefined,
+    setup.material ? `material ${setup.material}` : undefined,
+    setup.shade ? `shade ${setup.shade}` : undefined,
+  ]);
+
+  return `Operative setup recorded${details ? `: ${details}` : ""}.`;
+}
+
+export function formatOperativeRestorationEventFragment(event: ClinicalEvent) {
+  const record = getOperativeRestorationRecordFromEvent(event);
+  const details = formatOperativeParts([
+    record.tooth ? `tooth ${record.tooth}` : undefined,
+    record.surfaces ? `surfaces ${record.surfaces}` : undefined,
+    record.restorationIntent ? `intent ${record.restorationIntent}` : undefined,
+    record.material ? `material ${record.material}` : undefined,
+    record.shade ? `shade ${record.shade}` : undefined,
+    record.outcome ? `outcome ${record.outcome}` : undefined,
+    record.notes ? `notes ${record.notes}` : undefined,
+  ]);
+
+  return `Final restoration recorded${details ? `: ${details}` : ""}.`;
+}
+
 export function getOperativeSetupFromEvent(event?: ClinicalEvent | null): OperativeWorkflowSetupState {
   if (!isOperativeScopeRecordedEvent(event)) return { ...blankOperativeWorkflowSetup };
 

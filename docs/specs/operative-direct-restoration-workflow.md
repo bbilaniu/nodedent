@@ -169,7 +169,7 @@ Status: implemented by adding typed helpers for `finalRestoration.placed` operat
 
 Reasoning level needed: medium. Operative note output should be useful without inventing clinical wording beyond what was explicitly recorded.
 
-Status: planned.
+Status: implemented by adding operative setup and restoration event fragments, including operative records in compact and full notes, adding normalized operative setup/restoration output to JSON export while preserving raw events, and covering complete and partially documented operative records with regression tests.
 
 - Add event fragments for operative scope and restoration events.
 - Include operative restoration records in compact note, full note, and JSON export output.

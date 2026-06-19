@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-06-19
+---
+
 # Nodedent Direction: UI Cleanup, Shared Modules, and Workflow Architecture
 
 ## Current UI Quirks and Proposed Changes
