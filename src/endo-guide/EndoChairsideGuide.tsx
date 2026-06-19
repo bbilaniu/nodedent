@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { DecisionCard } from "./components/DecisionCard";
-import { CanalSelector } from "./components/CanalSelector";
+import { EndodonticTargetPanel } from "./components/EndodonticTargetPanel";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
@@ -794,9 +794,9 @@ export default function EndoChairsideGuide() {
         <header className="rounded-3xl border border-brand-light-node bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate">Chairside guide · clinical workflow</p>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-navy">Endodontic Chairside Decision Guide</h1>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">State-machine chairside workflow with event-based notes and local case persistence.</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate">NodeDent · clinical workspace</p>
+              <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-navy">NodeDent Clinical Workspace</h1>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">Active workflow: Endodontic decision guide. Shared modules, setup, notes, and case history stay available around the workflow.</p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
@@ -864,7 +864,7 @@ export default function EndoChairsideGuide() {
 
         <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
           <aside className="contents">
-            <CanalSelector
+            <EndodonticTargetPanel
               caseData={caseData}
               newCanalName={newCanalName}
               renameCanalName={renameCanalName}
@@ -876,6 +876,10 @@ export default function EndoChairsideGuide() {
               onDeleteActiveCanal={deleteActiveCanal}
               onManualEvent={addManualCanalEvent}
               onResetManualStatus={resetActiveCanalManualStatus}
+              onOpenPhaseMap={() => {
+                setSelectedProgressPhase(currentNode.phase);
+                setIsProgressDetailOpen(true);
+              }}
               className="order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1"
             />
           </aside>
@@ -894,10 +898,6 @@ export default function EndoChairsideGuide() {
               onContinueCanal={continueCanal}
               onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
               onOpenCaseSetupStatus={openCasePanel}
-              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
-              onOpenIsolationWorkflow={openIsolationWorkflow}
-              onOpenSavedWorkflow={openSavedCases}
-              onOpenPriorVisit={openPriorVisit}
             />
           </section>
 

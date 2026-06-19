@@ -58,10 +58,6 @@ export function DecisionCard({
   onContinueCanal,
   onCreateNewCanal,
   onOpenCaseSetupStatus,
-  onOpenAnesthesiaWorkflow,
-  onOpenIsolationWorkflow,
-  onOpenSavedWorkflow,
-  onOpenPriorVisit,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -75,10 +71,6 @@ export function DecisionCard({
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
-  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
-  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
-  onOpenSavedWorkflow: () => void;
-  onOpenPriorVisit: () => void;
 }) {
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
@@ -86,8 +78,6 @@ export function DecisionCard({
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const showSharedReadiness = sharedReadinessNodeIds.has(currentNode.id);
-  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
-  const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
   const readinessItems = [
     { label: "Diagnosis", status: capabilitySummary.diagnosis },
     { label: "Radiographs", status: capabilitySummary.radiographs },
@@ -103,7 +93,7 @@ export function DecisionCard({
   return (
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold text-brand-navy">Decision card</h3>
+        <h3 className="text-sm font-semibold text-brand-navy">Endodontic decision guide</h3>
         <button onClick={onUndo} disabled={!historyLength} className="rounded-xl border border-brand-light-node px-3 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-slate disabled:cursor-not-allowed disabled:opacity-40">Undo last decision</button>
       </div>
       <div className="mb-4">
@@ -122,7 +112,7 @@ export function DecisionCard({
           <div className="grid gap-3">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <h4 className="text-sm font-bold text-brand-navy">Pre-access readiness</h4>
-              <div className="grid gap-2 sm:grid-cols-3 lg:w-auto">
+              <div className="lg:w-auto">
                 <button
                   type="button"
                   onClick={() => onOpenCaseSetupStatus()}
@@ -130,36 +120,8 @@ export function DecisionCard({
                 >
                   Open Case Setup
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenAnesthesiaWorkflow(capabilitySummary.anesthesia.needsReassessment ? "anesthesia-needs-reassessment" : undefined)}
-                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
-                >
-                  {anesthesiaIsEstablished ? "Add anesthesia event" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Run anesthesia"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenIsolationWorkflow(isolationIsEstablished ? "isolation-needs-reassessment" : undefined)}
-                  className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
-                >
-                  {isolationIsEstablished ? "Review isolation" : "Run isolation"}
-                </button>
               </div>
             </div>
-            {isolationIsEstablished ? (
-              <div className="rounded-xl border border-brand-mint/40 bg-white px-3 py-2 text-sm leading-6 text-brand-navy">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p><strong>Isolation already recorded</strong>{caseData.tooth ? ` for tooth ${caseData.tooth}` : ""} this visit.</p>
-                  <button
-                    type="button"
-                    onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
-                    className="shrink-0 rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
-                  >
-                    Revise / add event
-                  </button>
-                </div>
-              </div>
-            ) : null}
             <div className="grid gap-2 sm:grid-cols-2 2xl:grid-cols-4">
               {readinessItems.map(({ label, status }) => (
                 <div key={label} className={`min-w-0 rounded-xl border px-3 py-2 ${readinessStatusClass(status.satisfied, status.needsReassessment)}`}>
@@ -183,30 +145,7 @@ export function DecisionCard({
       ) : null}
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <button
-              type="button"
-              onClick={() => onOpenCaseSetupStatus()}
-              className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
-            >
-              Open Case Setup & Status
-            </button>
-            <button
-              type="button"
-              onClick={onOpenSavedWorkflow}
-              className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
-            >
-              Resume saved workflow
-            </button>
-            <button
-              type="button"
-              onClick={onOpenPriorVisit}
-              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
-            >
-              Set up prior visit
-            </button>
-          </div>
-          <div className="mt-4 rounded-xl border border-brand-light-node bg-white p-3">
+          <div className="rounded-xl border border-brand-light-node bg-white p-3">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h4 className="text-sm font-bold text-brand-navy">Case setup summary</h4>
@@ -220,9 +159,18 @@ export function DecisionCard({
                   Shared status: diagnosis {compactStatusLabel(capabilitySummary.diagnosis.satisfied, capabilitySummary.diagnosis.needsReassessment)} · radiographs {compactStatusLabel(capabilitySummary.radiographs.satisfied, capabilitySummary.radiographs.needsReassessment)} · anesthesia {compactStatusLabel(capabilitySummary.anesthesia.satisfied, capabilitySummary.anesthesia.needsReassessment)} · isolation {compactStatusLabel(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}
                 </p>
               </div>
-              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${preOpMissing.length ? "border-red-200 bg-red-50 text-red-800" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
-                {preOpMissing.length ? `${preOpMissing.length} setup item${preOpMissing.length === 1 ? "" : "s"} missing` : "Setup ready"}
-              </span>
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${preOpMissing.length ? "border-red-200 bg-red-50 text-red-800" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
+                  {preOpMissing.length ? `${preOpMissing.length} setup item${preOpMissing.length === 1 ? "" : "s"} missing` : "Setup ready"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onOpenCaseSetupStatus()}
+                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-navy-deep"
+                >
+                  Open Case Setup
+                </button>
+              </div>
             </div>
             {preOpMissing.length ? (
               <ul className="mt-3 list-inside list-disc space-y-1 text-xs text-red-800">

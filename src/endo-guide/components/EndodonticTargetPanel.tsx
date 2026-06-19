@@ -4,7 +4,7 @@ import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCana
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
 
-export function CanalSelector({
+export function EndodonticTargetPanel({
   caseData,
   newCanalName,
   renameCanalName,
@@ -16,6 +16,7 @@ export function CanalSelector({
   onDeleteActiveCanal,
   onManualEvent,
   onResetManualStatus,
+  onOpenPhaseMap,
   className = "",
 }: {
   caseData: EndoCase;
@@ -29,6 +30,7 @@ export function CanalSelector({
   onDeleteActiveCanal: () => void;
   onManualEvent: (type: string, label: string, nextNodeId?: string | null, difficultyFlag?: DifficultyFlag | null) => void;
   onResetManualStatus: () => void;
+  onOpenPhaseMap: () => void;
   className?: string;
 }) {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -64,10 +66,17 @@ export function CanalSelector({
   }
 
   return (
-    <SectionCard title="Canal selector" className={className}>
+    <SectionCard title="Endodontic progress" className={className}>
       <p className="mb-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
-        Add or rename canals here. Pre-op completion uses the estimated WL recorded for the active canal.
+        Manage canals for the active endodontic workflow. Operative teeth and surfaces will use their own target panel.
       </p>
+      <button
+        type="button"
+        onClick={onOpenPhaseMap}
+        className="mb-3 w-full rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+      >
+        Open phase/canal map
+      </button>
       <div className="mb-3 grid gap-2">
         {caseData.canals.map((canal) => {
           const status = getCanalStatus(canal);
