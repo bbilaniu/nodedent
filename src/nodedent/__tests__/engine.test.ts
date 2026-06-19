@@ -51,8 +51,10 @@ import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem,
 import {
   blankOperativeWorkflowSetup,
   buildOperativeSetupEventDetails,
+  createOperativeReadinessScopes,
   getLatestOperativeWorkflowSetup,
   getOperativeSetupFromEvent,
+  getOperativeReadinessCapabilitySummary,
   normalizeOperativeSurfaces,
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
@@ -1715,6 +1717,66 @@ test("operative surface queries can compare against tooth-level isolation covera
   assert.equal(compromisedStatus.needsReassessment, true);
   assert.equal(getIsolationEventDetails(rubberDamEvent).exposedTeeth?.includes("36"), true);
   assert.equal("surfaces" in (rubberDamEvent.details as Record<string, unknown>), false);
+});
+
+test("operative readiness summary targets planned tooth and surfaces", () => {
+  const setup = {
+    ...blankOperativeWorkflowSetup,
+    tooth: "36",
+    surfaces: "MO",
+  };
+  const scopes = createOperativeReadinessScopes(setup, "30");
+  const anesthesiaEvent = {
+    id: "evt_operative_ready_anesthesia",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    scope: { kind: "tooth" as const, tooth: "36" },
+    tooth: "36",
+    details: { response: "adequate" as const, tooth: "36" },
+  };
+  const isolationEvent = {
+    id: "evt_operative_ready_isolation",
+    timestamp: "2026-01-01T10:01:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflow.workflowId,
+    scope: { kind: "custom" as const, teeth: ["36"], regionLabel: "Q3" },
+    details: { method: "rubberDam" as const, exposedTeeth: ["36"] },
+  };
+  const caseData = baseCase({
+    tooth: "30",
+    diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
+    preOp: { ...initialCase.preOp, paReviewed: true },
+    globalEvents: [
+      {
+        ...anesthesiaEvent,
+        capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(anesthesiaEvent)],
+      },
+      {
+        ...isolationEvent,
+        capabilitiesSatisfied: [buildIsolationEstablishedCapability(isolationEvent)],
+      },
+    ],
+  });
+  const summary = getOperativeReadinessCapabilitySummary(caseData, setup);
+
+  assert.deepEqual(scopes.toothScope, { kind: "tooth", tooth: "36" });
+  assert.deepEqual(scopes.treatmentScope, {
+    kind: "surface",
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+  assert.equal(summary.diagnosis.satisfied, false);
+  assert.equal(summary.diagnosis.reason, "Recorded diagnosis is for a different tooth.");
+  assert.equal(summary.radiographs.satisfied, false);
+  assert.equal(summary.radiographs.reason, "Recorded radiograph review is for a different tooth.");
+  assert.equal(summary.anesthesia.satisfied, true);
+  assert.equal(summary.isolation.satisfied, true);
+  assert.equal(isCapabilitySatisfied(caseData, "anesthesia.adequate", scopes.treatmentScope), true);
+  assert.equal(isCapabilitySatisfied(caseData, "isolation.established", scopes.treatmentScope), true);
 });
 
 test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {

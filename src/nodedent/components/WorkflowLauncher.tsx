@@ -1,6 +1,7 @@
 import React from "react";
 import type { EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
+import type { CaseCapabilitySummary } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import {
   endodonticRootWorkflowId,
@@ -29,6 +30,7 @@ function compactScopeList(scopes: readonly string[]) {
 
 export function WorkflowLauncher({
   caseData,
+  capabilitySummary: providedCapabilitySummary,
   currentNodeTitle,
   currentNodePhase,
   savedCaseCount,
@@ -44,6 +46,7 @@ export function WorkflowLauncher({
   onOpenIsolationWorkflow,
 }: {
   caseData: EndoCase;
+  capabilitySummary?: CaseCapabilitySummary;
   currentNodeTitle: string;
   currentNodePhase: string;
   savedCaseCount: number;
@@ -60,7 +63,7 @@ export function WorkflowLauncher({
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
-  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
   const anesthesiaStatus = capabilitySummary.anesthesia.needsReassessment ? "Review" : capabilitySummary.anesthesia.satisfied ? "Ready" : "Pending";
   const isolationStatus = capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending";
   const activeCaseFacts = [

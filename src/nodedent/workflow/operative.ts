@@ -1,6 +1,8 @@
 import type { CapabilityName, CapabilityRequirement, ClinicalEvent, EndoCase, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
 import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
+import type { CaseCapabilitySummary } from "./selectors";
+import { getCapabilityStatus } from "./selectors";
 
 export const sharedDiagnosisWorkflowId = "shared.diagnosis";
 export const operativeDirectRestorationWorkflowId = "operative.direct-restoration";
@@ -135,6 +137,33 @@ export function createOperativeSetupScope(setup: OperativeWorkflowSetupState, fa
     tooth: normalizeString(setup.tooth) || normalizeString(fallbackTooth),
     surfaces: setup.surfaces,
   });
+}
+
+export function createOperativeReadinessScopes(setup: OperativeWorkflowSetupState, fallbackTooth = ""): {
+  toothScope?: WorkflowScope;
+  treatmentScope?: WorkflowScope;
+} {
+  const tooth = normalizeString(setup.tooth) || normalizeString(fallbackTooth);
+  const surfaces = normalizeOperativeSurfaces(setup.surfaces);
+
+  return {
+    toothScope: tooth ? { kind: "tooth", tooth } : undefined,
+    treatmentScope: surfaces.length ? createOperativeSurfaceScope({ tooth, surfaces }) : tooth ? { kind: "tooth", tooth } : undefined,
+  };
+}
+
+export function getOperativeReadinessCapabilitySummary(
+  caseData: EndoCase,
+  setup = getLatestOperativeWorkflowSetup(caseData)
+): CaseCapabilitySummary {
+  const scopes = createOperativeReadinessScopes(setup, caseData.tooth);
+
+  return {
+    diagnosis: getCapabilityStatus(caseData, "diagnosis.recorded", scopes.toothScope),
+    radiographs: getCapabilityStatus(caseData, "radiographs.reviewed", scopes.toothScope),
+    anesthesia: getCapabilityStatus(caseData, "anesthesia.adequate", scopes.treatmentScope),
+    isolation: getCapabilityStatus(caseData, "isolation.established", scopes.treatmentScope),
+  };
 }
 
 export function buildOperativeSetupEventDetails(setup: OperativeWorkflowSetupState, fallbackTooth = ""): OperativeScopeRecordedDetails {

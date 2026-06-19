@@ -42,6 +42,7 @@ export function AnesthesiaWorkflowRunner({
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
   const completion = workflow.completionNodeIds.includes(currentNode.id);
   const defaultAction = currentNode.id === "anesthesia-needs-reassessment" ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered;
+  const targetTooth = launch.targetTooth || caseData.tooth;
 
   function recordEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) {
     const label = getAnesthesiaEventLabel(eventType);
@@ -87,7 +88,7 @@ export function AnesthesiaWorkflowRunner({
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <AnesthesiaEventForm
             key={moduleNodeId}
-            tooth={caseData.tooth}
+            tooth={targetTooth}
             latestEvent={latestAnesthesiaEvent}
             defaultAction={defaultAction}
             userCatalogItems={userCatalogItems}

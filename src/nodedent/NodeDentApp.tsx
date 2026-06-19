@@ -32,7 +32,9 @@ import { endodonticRootWorkflowId } from "./workflow/registry";
 import {
   buildOperativeSetupEventDetails,
   createOperativeSetupScope,
+  createOperativeReadinessScopes,
   getLatestOperativeWorkflowSetup,
+  getOperativeReadinessCapabilitySummary,
   operativeDirectRestorationWorkflowId,
   operativeDirectRestorationWorkflowVersion,
   operativeScopeRecordedEventType,
@@ -166,6 +168,11 @@ export default function NodeDentApp() {
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
   const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
+  const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
+  const activeReadinessSummary = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId ? operativeReadinessSummary : caseCapabilitySummary;
+  const activeSharedModuleTargetTooth = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId || casePanelWorkflowId === operativeDirectRestorationWorkflowId
+    ? createOperativeReadinessScopes(operativeSetup, caseData.tooth).toothScope?.tooth
+    : caseData.tooth;
   const latestAnesthesiaEvent = useMemo(
     () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
     [caseData.globalEvents]
@@ -259,9 +266,10 @@ export default function NodeDentApp() {
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
+    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || caseData.tooth;
     const event = makeRuntimeEvent({
       type: eventType,
-      tooth: caseData.tooth,
+      tooth: eventTooth,
       canal: "All",
       nodeId: context?.nodeId || currentNode.id,
       label: context?.label || eventType,
@@ -293,9 +301,10 @@ export default function NodeDentApp() {
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getIsolationScopeFromDetails(details, caseData.tooth);
+    const eventTooth = details.exposedTeeth?.[0] || scope.tooth || caseData.tooth;
     const event = makeRuntimeEvent({
       type: eventType,
-      tooth: caseData.tooth,
+      tooth: eventTooth,
       canal: "All",
       nodeId: context?.nodeId || currentNode.id,
       label: context?.label || eventType,
@@ -416,6 +425,7 @@ export default function NodeDentApp() {
       workflowId: sharedIsolationWorkflowId,
       entryNodeId,
       workflowRunId: makeWorkflowRunId("shared_isolation"),
+      targetTooth: activeSharedModuleTargetTooth,
     });
   }
 
@@ -427,6 +437,7 @@ export default function NodeDentApp() {
       workflowId: sharedAnesthesiaWorkflowId,
       entryNodeId,
       workflowRunId: makeWorkflowRunId("shared_anesthesia"),
+      targetTooth: activeSharedModuleTargetTooth,
     });
   }
 
@@ -916,6 +927,7 @@ export default function NodeDentApp() {
           <main>
             <WorkflowLauncher
               caseData={caseData}
+              capabilitySummary={activeReadinessSummary}
               currentNodeTitle={currentNode.title}
               currentNodePhase={currentNode.phase}
               savedCaseCount={savedCases.length}
@@ -949,6 +961,7 @@ export default function NodeDentApp() {
           <aside className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
             <SharedReadinessCard
               caseData={caseData}
+              capabilitySummary={activeReadinessSummary}
               onOpenCaseSetupStatus={openCasePanel}
               onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
               onOpenIsolationWorkflow={openIsolationWorkflow}
@@ -1055,6 +1068,7 @@ export default function NodeDentApp() {
         {isWorkflowLauncherOpen ? (
           <WorkflowLauncher
             caseData={caseData}
+            capabilitySummary={activeReadinessSummary}
             currentNodeTitle={currentNode.title}
             currentNodePhase={currentNode.phase}
             savedCaseCount={savedCases.length}
@@ -1105,8 +1119,12 @@ export default function NodeDentApp() {
             caseData={caseData}
             parentNodeTitle={currentNode.title}
             parentWorkflowRunId={rootWorkflowRunId}
-            latestAnesthesiaEvent={latestAnesthesiaEvent}
-            latestIsolationEvent={caseCapabilitySummary.isolation.sourceEvent}
+            latestAnesthesiaEvent={
+              activePrimaryWorkflowId === operativeDirectRestorationWorkflowId
+                ? activeReadinessSummary.anesthesia.sourceEvent
+                : activeReadinessSummary.anesthesia.sourceEvent || latestAnesthesiaEvent
+            }
+            latestIsolationEvent={activeReadinessSummary.isolation.sourceEvent}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             userIsolationCatalogItems={userIsolationCatalogItems}

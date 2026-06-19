@@ -262,4 +262,5 @@ export type EmbeddedWorkflowLaunch = {
   workflowId: string;
   entryNodeId?: string;
   workflowRunId: string;
+  targetTooth?: string;
 };

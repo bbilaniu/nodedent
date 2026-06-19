@@ -64,20 +64,22 @@ export function getSharedReadinessActions({
 
 export function SharedReadinessCard({
   caseData,
+  capabilitySummary,
   onOpenCaseSetupStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   className = "",
 }: {
   caseData: EndoCase;
+  capabilitySummary?: CaseCapabilitySummary;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   className?: string;
 }) {
-  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const summary = capabilitySummary || getCaseCapabilitySummary(caseData);
   const items = getSharedReadinessActions({
-    capabilitySummary,
+    capabilitySummary: summary,
     onOpenCaseSetupStatus,
     onOpenAnesthesiaWorkflow,
     onOpenIsolationWorkflow,

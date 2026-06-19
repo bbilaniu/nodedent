@@ -150,20 +150,23 @@ function eventTime(event?: ClinicalEvent) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function diagnosisStatus(caseData: EndoCase): CapabilityStatus {
+function diagnosisStatus(caseData: EndoCase, queryScope?: WorkflowScope): CapabilityStatus {
   const hasDiagnosis = !isBlank(caseData.diagnosis?.pulpal) || !isBlank(caseData.diagnosis?.apical);
+  const caseScope: WorkflowScope | undefined = caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined;
+  const scopeMatched = scopeMatches(caseScope, queryScope, "diagnosis.recorded");
+  const satisfied = hasDiagnosis && scopeMatched;
   return {
     name: "diagnosis.recorded",
-    satisfied: hasDiagnosis,
+    satisfied,
     needsReassessment: false,
-    source: hasDiagnosis ? "caseField" : "none",
-    scope: caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined,
-    summary: hasDiagnosis ? "Diagnosis recorded" : "Diagnosis not recorded",
-    reason: hasDiagnosis ? undefined : "No pulpal or apical diagnosis is recorded.",
+    source: satisfied ? "caseField" : "none",
+    scope: satisfied ? caseScope : queryScope || caseScope,
+    summary: satisfied ? "Diagnosis recorded" : "Diagnosis not recorded",
+    reason: hasDiagnosis && !scopeMatched ? "Recorded diagnosis is for a different tooth." : hasDiagnosis ? undefined : "No pulpal or apical diagnosis is recorded.",
   };
 }
 
-function radiographStatus(caseData: EndoCase): CapabilityStatus {
+function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope): CapabilityStatus {
   const hasRadiographs = Boolean(
     caseData.preOp?.paReviewed ||
       caseData.preOp?.radiographsReviewed ||
@@ -171,14 +174,17 @@ function radiographStatus(caseData: EndoCase): CapabilityStatus {
       caseData.preOp?.cbctReviewed ||
       caseData.priorVisit?.priorRadiographsAvailable
   );
+  const caseScope: WorkflowScope | undefined = caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined;
+  const scopeMatched = scopeMatches(caseScope, queryScope, "radiographs.reviewed");
+  const satisfied = hasRadiographs && scopeMatched;
   return {
     name: "radiographs.reviewed",
-    satisfied: hasRadiographs,
+    satisfied,
     needsReassessment: false,
-    source: hasRadiographs ? "caseField" : "none",
-    scope: caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined,
-    summary: hasRadiographs ? "Radiographs reviewed" : "Radiographs not recorded",
-    reason: hasRadiographs ? undefined : "No pre-op or prior radiograph review is recorded.",
+    source: satisfied ? "caseField" : "none",
+    scope: satisfied ? caseScope : queryScope || caseScope,
+    summary: satisfied ? "Radiographs reviewed" : "Radiographs not recorded",
+    reason: hasRadiographs && !scopeMatched ? "Recorded radiograph review is for a different tooth." : hasRadiographs ? undefined : "No pre-op or prior radiograph review is recorded.",
   };
 }
 
@@ -218,8 +224,8 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
 }
 
 export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityName, queryScope?: WorkflowScope, now = new Date()): CapabilityStatus {
-  if (name === "diagnosis.recorded") return diagnosisStatus(caseData);
-  if (name === "radiographs.reviewed") return radiographStatus(caseData);
+  if (name === "diagnosis.recorded") return diagnosisStatus(caseData, queryScope);
+  if (name === "radiographs.reviewed") return radiographStatus(caseData, queryScope);
 
   const events = collectClinicalEvents(caseData);
   const explicitStatus = events
@@ -249,8 +255,10 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
   };
 }
 
-export function getCaseCapabilitySummary(caseData: EndoCase, tooth = caseData.tooth): CaseCapabilitySummary {
-  const toothScope: WorkflowScope | undefined = tooth ? { kind: "tooth", tooth } : undefined;
+export function getCaseCapabilitySummary(caseData: EndoCase, toothOrScope: string | WorkflowScope | undefined = caseData.tooth): CaseCapabilitySummary {
+  const toothScope: WorkflowScope | undefined = typeof toothOrScope === "string"
+    ? toothOrScope ? { kind: "tooth", tooth: toothOrScope } : undefined
+    : toothOrScope;
   return {
     diagnosis: getCapabilityStatus(caseData, "diagnosis.recorded", toothScope),
     radiographs: getCapabilityStatus(caseData, "radiographs.reviewed", toothScope),

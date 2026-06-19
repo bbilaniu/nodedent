@@ -145,7 +145,7 @@ Status: implemented by moving operative setup normalization and surface-scope cr
 
 Reasoning level needed: medium. The shared selectors already support cross-workflow capability lookup, but operative UI must target the planned tooth/surface scope without making readiness a hard clinical gate.
 
-Status: planned.
+Status: implemented by deriving an operative readiness summary from the persisted setup event, querying diagnosis/radiographs against the planned operative tooth, querying anesthesia/isolation against the planned tooth/surface treatment scope, passing that summary into operative readiness UI, defaulting embedded shared module forms to the operative tooth, and adding regression tests for matching tooth-level shared readiness and non-matching tooth-specific case fields.
 
 - Query diagnosis and radiograph readiness against the planned operative tooth.
 - Query anesthesia and isolation readiness against the planned tooth/surface context while preserving reassessment actions.

@@ -147,8 +147,9 @@ export function IsolationWorkflowRunner({
   const [moduleNodeId, setModuleNodeId] = useState(launch.entryNodeId || workflow.entryNodeIds[0]);
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
   const defaultEventType = getDefaultEventType(currentNode);
+  const targetTooth = launch.targetTooth || caseData.tooth;
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
-  const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, caseData.tooth));
+  const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, targetTooth));
   const visibleOptions = useMemo(() => currentNode.options || [], [currentNode.options]);
   const hasRecordableOptions = visibleOptions.some((option) => option.noteEvent?.type);
   const completion = workflow.completionNodeIds.includes(currentNode.id) && !hasRecordableOptions;
