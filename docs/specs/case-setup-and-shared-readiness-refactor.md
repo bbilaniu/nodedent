@@ -134,6 +134,8 @@ Status: implemented by extracting active-canal chamber depth and estimated WL se
 
 Reasoning level needed: high. Radiology boundaries affect shared clinical documentation and future event semantics, and any clinical behavior must remain limited to source-backed or explicitly clinician-entered documentation.
 
+Status: implemented by creating [Shared Radiology Module](shared-radiology-module.md). The staged decision is to keep current radiograph case setup fields for one more cycle, define `shared.radiology` as the future module identity, and preserve `radiographs.reviewed` as the compatibility capability.
+
 - Decide whether radiographs remain as case setup fields for one more cycle or become a shared `shared.radiology` module.
 - If split out, write a dedicated shared radiology module spec before implementation.
 
@@ -149,11 +151,10 @@ Reasoning level needed: medium. This phase is a compatibility review, but it sti
 - Case identity and procedure-specific setup should be separated conceptually.
 - The shared readiness card remains the cross-workflow summary surface.
 - Endodontic canal and measurement fields remain endodontic workflow setup, not platform setup.
-- Radiology/radiographs should be treated as a likely shared module, but a dedicated spec should define that boundary before implementation.
+- Radiology/radiographs should be treated as the future `shared.radiology` module, with current case setup radiograph fields retained for one more compatibility cycle before implementation.
 
 ## Open Decisions
 
 - Should Case Setup & Status remain one modal with grouped sections, or become separate Case Identity and Workflow Setup panels?
 - Should diagnosis become a shared module or remain case fields backed by capability selectors?
-- Should radiographs become `shared.radiology`, `shared.radiographs`, or remain part of case setup for the next release?
 - Where should future operative procedure setup live relative to the shared readiness card?
