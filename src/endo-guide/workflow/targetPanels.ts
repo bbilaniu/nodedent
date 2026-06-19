@@ -1,10 +1,11 @@
 import { operativeDirectRestorationWorkflowId } from "./operative";
 import { endodonticRootWorkflowId } from "./registry";
 
-export type WorkflowTargetPanelKind = "endodontic" | "none";
+export type WorkflowTargetPanelKind = "endodontic" | "operative" | "none";
 
 export function getWorkflowTargetPanelKind(workflowId?: string | null): WorkflowTargetPanelKind {
   if (workflowId === endodonticRootWorkflowId) return "endodontic";
+  if (workflowId === operativeDirectRestorationWorkflowId) return "operative";
   return "none";
 }
 
@@ -13,5 +14,5 @@ export function workflowHasEndodonticTargetPanel(workflowId?: string | null) {
 }
 
 export function workflowHasOperativeTargetPanel(workflowId?: string | null) {
-  return workflowId === operativeDirectRestorationWorkflowId && getWorkflowTargetPanelKind(workflowId) !== "none";
+  return getWorkflowTargetPanelKind(workflowId) === "operative";
 }

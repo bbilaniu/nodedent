@@ -1,5 +1,6 @@
 import React from "react";
 import type { CaseSetupFocusTarget, EndoCase } from "../types";
+import type { CaseCapabilitySummary, CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { panelActionButton } from "./uiStyles";
 
@@ -14,26 +15,30 @@ function statusClass(satisfied: boolean, needsReassessment: boolean) {
   return "border-brand-light-node bg-white text-brand-slate";
 }
 
-export function SharedReadinessCard({
-  caseData,
+export type SharedReadinessAction = {
+  label: string;
+  status: CapabilityStatus;
+  onClick: () => void;
+};
+
+export function getSharedReadinessActions({
+  capabilitySummary,
   onOpenCaseSetupStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
-  className = "",
 }: {
-  caseData: EndoCase;
+  capabilitySummary: CaseCapabilitySummary;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
-  className?: string;
-}) {
-  const capabilitySummary = getCaseCapabilitySummary(caseData);
+}): SharedReadinessAction[] {
   const anesthesiaEntryNodeId = capabilitySummary.anesthesia.needsReassessment ? "anesthesia-needs-reassessment" : undefined;
   const isolationEntryNodeId =
     capabilitySummary.isolation.satisfied || capabilitySummary.isolation.needsReassessment
       ? "isolation-needs-reassessment"
       : undefined;
-  const items = [
+
+  return [
     {
       label: "Diagnosis",
       status: capabilitySummary.diagnosis,
@@ -55,6 +60,28 @@ export function SharedReadinessCard({
       onClick: () => onOpenIsolationWorkflow(isolationEntryNodeId),
     },
   ];
+}
+
+export function SharedReadinessCard({
+  caseData,
+  onOpenCaseSetupStatus,
+  onOpenAnesthesiaWorkflow,
+  onOpenIsolationWorkflow,
+  className = "",
+}: {
+  caseData: EndoCase;
+  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  className?: string;
+}) {
+  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const items = getSharedReadinessActions({
+    capabilitySummary,
+    onOpenCaseSetupStatus,
+    onOpenAnesthesiaWorkflow,
+    onOpenIsolationWorkflow,
+  });
 
   return (
     <section className={`min-w-0 rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm ${className}`}>

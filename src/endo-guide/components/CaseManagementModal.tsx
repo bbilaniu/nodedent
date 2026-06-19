@@ -10,6 +10,7 @@ import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
+import { workflowHasEndodonticTargetPanel } from "../workflow/targetPanels";
 import { SelectInput, TextInput } from "./FormControls";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
 
@@ -26,6 +27,7 @@ type SavedCaseSummary = {
 export function CaseManagementModal({
   caseData,
   activeCanal,
+  activeWorkflowId,
   currentNodeId,
   onClose,
   onUpdateCase,
@@ -46,6 +48,7 @@ export function CaseManagementModal({
 }: {
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
+  activeWorkflowId: string;
   currentNodeId: string;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
@@ -68,6 +71,7 @@ export function CaseManagementModal({
     ? caseData.closure.type.replace("closure.", "").replace(/([A-Z])/g, " $1").toLowerCase()
     : "not recorded";
   const currentNodeTitle = protocolNodes[currentNodeId]?.title || currentNodeId || "Not recorded";
+  const showEndodonticCaseAudit = workflowHasEndodonticTargetPanel(activeWorkflowId);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
@@ -92,7 +96,7 @@ export function CaseManagementModal({
               </p>
               {caseData.nextVisitPlan ? <p className="mt-1 text-sm text-brand-slate">Next visit: <strong>{caseData.nextVisitPlan}</strong></p> : null}
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[24rem]">
+            {showEndodonticCaseAudit ? <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[24rem]">
               {(caseData.canals || []).map((canal) => {
                 const status = getCanalStatus(canal);
                 const facts = [
@@ -111,7 +115,7 @@ export function CaseManagementModal({
                   </div>
                 );
               })}
-            </div>
+            </div> : null}
           </div>
         </div>
 
@@ -119,6 +123,7 @@ export function CaseManagementModal({
           <CaseSetupStatusPanel
             caseData={caseData}
             activeCanal={activeCanal}
+            activeWorkflowId={activeWorkflowId}
             onUpdateCase={onUpdateCase}
             onUpdateDiagnosis={onUpdateDiagnosis}
             onUpdatePreOp={onUpdatePreOp}

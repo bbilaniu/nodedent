@@ -143,6 +143,8 @@ Status: implemented by creating [Shared Radiology Module](shared-radiology-modul
 
 Reasoning level needed: medium. This phase is a compatibility review, but it still requires careful workflow reasoning to confirm the shared surfaces work without exposing endodontic-only fields.
 
+Status: implemented by threading active workflow identity into Case Setup & Status, gating endodontic canal audit/setup surfaces to endodontic workflows, adding a NodeDent Home path that switches the main workspace into operative setup, and adding regression coverage that operative context keeps diagnosis/radiograph/anesthesia/isolation readiness available without active-canal setup fields.
+
 - Confirm the refactored setup can support operative teeth/surfaces without displaying active-canal fields.
 - Confirm shared readiness can open diagnosis, radiographs, anesthesia, and isolation from an operative workflow context.
 

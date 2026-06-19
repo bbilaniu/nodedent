@@ -38,6 +38,7 @@ export function WorkflowLauncher({
   onOpenSavedCases,
   onOpenPriorVisit,
   onOpenNewCaseConfirm,
+  onOpenPrimaryWorkflowSetup,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
 }: {
@@ -51,6 +52,7 @@ export function WorkflowLauncher({
   onOpenSavedCases: () => void;
   onOpenPriorVisit: () => void;
   onOpenNewCaseConfirm: () => void;
+  onOpenPrimaryWorkflowSetup: (workflowId: string) => void;
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
 }) {
@@ -180,11 +182,10 @@ export function WorkflowLauncher({
                     </div>
                     <button
                       type="button"
-                      onClick={isEndo ? onContinueEndodonticWorkflow : undefined}
-                      disabled={!isEndo}
+                      onClick={isEndo ? onContinueEndodonticWorkflow : () => onOpenPrimaryWorkflowSetup(entry.workflowId)}
                       className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
                     >
-                      {entry.launchLabel}
+                      {isEndo ? entry.launchLabel : "Open setup"}
                     </button>
                   </div>
                 );

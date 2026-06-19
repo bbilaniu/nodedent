@@ -17,6 +17,7 @@ import type { IsolationCatalogField } from "../workflow/isolationCatalog";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
+import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
@@ -630,6 +631,7 @@ function SharedClinicalReadinessSection({
 export function CaseSetupStatusPanel({
   caseData,
   activeCanal,
+  activeWorkflowId,
   onUpdateCase,
   onUpdateDiagnosis,
   onUpdatePreOp,
@@ -647,6 +649,7 @@ export function CaseSetupStatusPanel({
 }: {
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
+  activeWorkflowId: string;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
@@ -664,6 +667,7 @@ export function CaseSetupStatusPanel({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
+  const showEndodonticWorkflowSetup = getWorkflowTargetPanelKind(activeWorkflowId) === "endodontic";
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
@@ -808,7 +812,9 @@ export function CaseSetupStatusPanel({
       <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
       <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
       <RadiographReadinessSection caseData={caseData} paReviewed={paReviewed} bwReviewed={bwReviewed} onUpdatePreOp={onUpdatePreOp} sectionRef={radiographsSectionRef} />
-      <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
+      {showEndodonticWorkflowSetup ? (
+        <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
+      ) : null}
       <SharedClinicalReadinessSection statusItems={statusItems} />
 
       <section ref={anesthesiaSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">

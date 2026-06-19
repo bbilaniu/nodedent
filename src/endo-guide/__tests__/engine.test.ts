@@ -2,7 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { EndoCase } from "../types";
+import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
+import { CaseManagementModal } from "../components/CaseManagementModal";
+import { getSharedReadinessActions } from "../components/SharedReadinessCard";
+import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
@@ -231,9 +237,124 @@ test("workflow target panel routing keeps operative workflows out of the endodon
   assert.equal(getWorkflowTargetPanelKind(endodonticRootWorkflowId), "endodontic");
   assert.equal(workflowHasEndodonticTargetPanel(endodonticRootWorkflowId), true);
 
-  assert.equal(getWorkflowTargetPanelKind(operativeDirectRestorationWorkflowId), "none");
+  assert.equal(getWorkflowTargetPanelKind(operativeDirectRestorationWorkflowId), "operative");
   assert.equal(workflowHasEndodonticTargetPanel(operativeDirectRestorationWorkflowId), false);
-  assert.equal(workflowHasOperativeTargetPanel(operativeDirectRestorationWorkflowId), false);
+  assert.equal(workflowHasOperativeTargetPanel(operativeDirectRestorationWorkflowId), true);
+});
+
+test("case setup hides endodontic active-canal setup for operative workflows", () => {
+  const caseData = baseCase();
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+    caseData,
+    activeCanal: caseData.canals[0],
+    activeWorkflowId: operativeDirectRestorationWorkflowId,
+    currentNodeId: "operative-readiness",
+    onClose: noop,
+    onUpdateCase: noop,
+    onUpdateDiagnosis: noop,
+    onUpdatePreOp: noop,
+    onUpdateActiveCanal: noop,
+    onApplySuggestedCaseStatus: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onDownloadCaseJson: noop,
+  }));
+
+  assert.equal(markup.includes("Diagnosis readiness"), true);
+  assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Endodontic workflow setup"), false);
+  assert.equal(markup.includes("Estimated WL for"), false);
+  assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("active workflow target panel renders operative setup without canal controls", () => {
+  const caseData = baseCase({ tooth: "36" });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(ActiveWorkflowTargetPanel, {
+    activeWorkflowId: operativeDirectRestorationWorkflowId,
+    endodonticProps: {
+      caseData,
+      newCanalName: "",
+      renameCanalName: "",
+      onNewCanalNameChange: noop,
+      onRenameCanalNameChange: noop,
+      onSelectCanal: noop,
+      onAddCanal: noop,
+      onRenameActiveCanal: noop,
+      onDeleteActiveCanal: noop,
+      onManualEvent: noop,
+      onResetManualStatus: noop,
+      onOpenPhaseMap: noop,
+    },
+    operativeProps: {
+      caseData,
+      setup: {
+        tooth: "36",
+        surfaces: "M O",
+        restorationIntent: "direct restoration",
+        material: "composite",
+        shade: "A2",
+      },
+      onSetupChange: noop,
+    },
+  }));
+
+  assert.equal(markup.includes("Operative setup"), true);
+  assert.equal(markup.includes("Current operative scope"), true);
+  assert.equal(markup.includes("36 MO"), true);
+  assert.equal(markup.includes("Endodontic progress"), false);
+  assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("shared readiness actions open reusable setup and module paths for operative context", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
+    preOp: { ...initialCase.preOp, paReviewed: true },
+  });
+  const caseSetupTargets: string[] = [];
+  const anesthesiaEntries: Array<string | undefined> = [];
+  const isolationEntries: Array<string | undefined> = [];
+  const actions = getSharedReadinessActions({
+    capabilitySummary: getCaseCapabilitySummary(caseData),
+    onOpenCaseSetupStatus: (focusTarget) => caseSetupTargets.push(focusTarget || ""),
+    onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
+    onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
+  });
+
+  assert.deepEqual(actions.map((action) => action.label), ["Diagnosis", "Radiographs", "Anesthesia", "Isolation"]);
+  actions.find((action) => action.label === "Diagnosis")?.onClick();
+  actions.find((action) => action.label === "Radiographs")?.onClick();
+  actions.find((action) => action.label === "Anesthesia")?.onClick();
+  actions.find((action) => action.label === "Isolation")?.onClick();
+
+  assert.deepEqual(caseSetupTargets, ["diagnosis", "radiographs"]);
+  assert.deepEqual(anesthesiaEntries, [undefined]);
+  assert.deepEqual(isolationEntries, [undefined]);
+});
+
+test("workflow launcher exposes operative setup entry for manual readiness review", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: baseCase(),
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Operative direct restoration"), true);
+  assert.equal(markup.includes("Open setup"), true);
 });
 
 test("every protocol note event has a note fragment", () => {
