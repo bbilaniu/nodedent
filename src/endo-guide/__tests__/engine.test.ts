@@ -46,6 +46,7 @@ import {
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
   isOperativeSurfaceScope,
+  operativeDirectRestorationWorkflowId,
   operativeDirectRestorationWorkflow,
   operativeReadinessCapabilityRequirements,
   operativeRestorationOutputCapabilities,
@@ -60,6 +61,7 @@ import {
   workflowLauncherEntries,
 } from "../workflow/registry";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
+import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowHasOperativeTargetPanel } from "../workflow/targetPanels";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -223,6 +225,15 @@ test("handoff nodes are intentional and resolvable", () => {
   expectedHandoffs.forEach((nodeId) => {
     assert.ok(protocolNodes[nodeId], `Handoff node ${nodeId} should exist`);
   });
+});
+
+test("workflow target panel routing keeps operative workflows out of the endodontic canal panel", () => {
+  assert.equal(getWorkflowTargetPanelKind(endodonticRootWorkflowId), "endodontic");
+  assert.equal(workflowHasEndodonticTargetPanel(endodonticRootWorkflowId), true);
+
+  assert.equal(getWorkflowTargetPanelKind(operativeDirectRestorationWorkflowId), "none");
+  assert.equal(workflowHasEndodonticTargetPanel(operativeDirectRestorationWorkflowId), false);
+  assert.equal(workflowHasOperativeTargetPanel(operativeDirectRestorationWorkflowId), false);
 });
 
 test("every protocol note event has a note fragment", () => {

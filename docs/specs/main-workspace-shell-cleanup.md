@@ -199,15 +199,20 @@ Completed first pass:
 - A small active-workflow target-panel slot now routes `endo.rct` to the endodontic target panel without making the canal model generic.
 - The shell visual pass now uses shared local button styles for the main header, decision card actions, and endodontic progress actions.
 - Dark-mode overrides now cover the opacity-based status and action classes used by the shell cleanup surfaces.
+- The first Phase 5 slice adds testable workflow target-panel routing so `operative.direct-restoration` resolves to no canal panel until an operative teeth/surfaces panel exists.
 
 Still open:
 
-- Decide whether the endodontic progress panel should remain visible in the secondary column or move behind a drawer/button.
 - Review the shell with the operative direct restoration model before enabling an operative runner.
+
+Placement decision:
+
+- Keep `Endodontic progress` visible in the secondary column for the active endodontic workflow.
+- Rationale: canal status and phase progress are useful chairside, the panel is now scoped through the active-workflow target-panel slot, and it no longer has to appear for non-endodontic workflows.
+- Revisit when operative dentistry has a real runner and teeth/surfaces target panel, because that workflow may need a different density or placement pattern.
 
 ## Open Decisions
 
-- Should the endodontic progress panel be always visible in the secondary column, or hidden behind an `Endo progress` button?
 - Should NodeDent Home become the first screen immediately, or remain a modal until there is a second primary workflow?
 - Which shared module controls should remain in the pre-op readiness card during the transition?
-- Should the active workflow target panel live in the secondary column, inside the active workflow card, or in Case Setup & Status?
+- Should non-endodontic workflow target panels live in the secondary column, inside the active workflow card, or in Case Setup & Status?

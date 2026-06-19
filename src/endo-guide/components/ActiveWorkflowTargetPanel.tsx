@@ -1,5 +1,5 @@
 import React from "react";
-import { endodonticRootWorkflowId } from "../workflow/registry";
+import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import { EndodonticTargetPanel, type EndodonticTargetPanelProps } from "./EndodonticTargetPanel";
 
 export function ActiveWorkflowTargetPanel({
@@ -9,7 +9,7 @@ export function ActiveWorkflowTargetPanel({
   activeWorkflowId: string;
   endodonticProps: EndodonticTargetPanelProps;
 }) {
-  if (activeWorkflowId === endodonticRootWorkflowId) {
+  if (getWorkflowTargetPanelKind(activeWorkflowId) === "endodontic") {
     return <EndodonticTargetPanel {...endodonticProps} />;
   }
 
