@@ -1,2 +1,2 @@
-export { default } from "./src/nodedent/EndoChairsideGuide";
-export { getNextRecommendedNodeForCanal } from "./src/nodedent/EndoChairsideGuide";
+export { default } from "./src/nodedent/NodeDentApp";
+export { getNextRecommendedNodeForCanal } from "./src/nodedent/NodeDentApp";

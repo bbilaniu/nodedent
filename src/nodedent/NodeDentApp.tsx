@@ -104,7 +104,7 @@ function createRuntimeEventArgs() {
   };
 }
 
-export default function EndoChairsideGuide() {
+export default function NodeDentApp() {
   const [caseData, setCaseData] = useState<EndoCase>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -133,10 +133,10 @@ export default function EndoChairsideGuide() {
   const [validationMessage, setValidationMessage] = useState<ValidationMessage | null>(null);
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
-  const [activePrimaryWorkflowId, setActivePrimaryWorkflowId] = useState<PrimaryWorkflowId>(endodonticRootWorkflowId);
+  const [activePrimaryWorkflowId, setActivePrimaryWorkflowId] = useState<PrimaryWorkflowId | null>(null);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
   const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
-  const [casePanelWorkflowId, setCasePanelWorkflowId] = useState(endodonticRootWorkflowId);
+  const [casePanelWorkflowId, setCasePanelWorkflowId] = useState("");
   const [operativeSetup, setOperativeSetup] = useState<OperativeWorkflowSetupState>({
     tooth: "",
     surfaces: "",
@@ -161,6 +161,7 @@ export default function EndoChairsideGuide() {
     [caseData.canals, caseData.currentCanal]
   );
   const activeCanalStatus = getCanalStatus(activeCanal);
+  const hasActivePrimaryWorkflow = Boolean(activePrimaryWorkflowId);
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const latestAnesthesiaEvent = useMemo(
@@ -357,8 +358,8 @@ export default function EndoChairsideGuide() {
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
-    setCasePanelWorkflowId(endodonticRootWorkflowId);
-    setActivePrimaryWorkflowId(endodonticRootWorkflowId);
+    setCasePanelWorkflowId("");
+    setActivePrimaryWorkflowId(null);
     setOperativeSetup({ tooth: "", surfaces: "", restorationIntent: "", material: "", shade: "" });
     setEmbeddedWorkflowLaunch(null);
     setIsWorkflowLauncherOpen(false);
@@ -367,7 +368,7 @@ export default function EndoChairsideGuide() {
     setIsPriorVisitOpen(false);
   }
 
-  function openCasePanel(focusTarget?: CaseSetupFocusTarget, workflowId = activePrimaryWorkflowId) {
+  function openCasePanel(focusTarget?: CaseSetupFocusTarget, workflowId = activePrimaryWorkflowId || "") {
     setIsWorkflowLauncherOpen(false);
     setCasePanelFocusTarget(focusTarget || null);
     setCasePanelWorkflowId(workflowId);
@@ -827,7 +828,11 @@ export default function EndoChairsideGuide() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-slate">NodeDent · clinical workspace</p>
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-brand-navy">NodeDent Clinical Workspace</h1>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">Active workflow: Endodontic decision guide. Shared modules, setup, notes, and case history stay available around the workflow.</p>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">
+                {hasActivePrimaryWorkflow
+                  ? `Active workflow: ${isEndodonticWorkflowActive ? "Endodontic decision guide" : "Operative direct restoration setup"}. Shared modules, setup, notes, and case history stay available around the workflow.`
+                  : "Choose a primary workflow or open shared setup and module capture."}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
@@ -835,13 +840,15 @@ export default function EndoChairsideGuide() {
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{caseData.procedureType || "RCT"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
-              <button
-                type="button"
-                onClick={() => setIsWorkflowLauncherOpen(true)}
-                className={headerActionButton.mint}
-              >
-                NodeDent Home
-              </button>
+              {hasActivePrimaryWorkflow ? (
+                <button
+                  type="button"
+                  onClick={() => setIsWorkflowLauncherOpen(true)}
+                  className={headerActionButton.mint}
+                >
+                  NodeDent Home
+                </button>
+              ) : null}
               <button
                 type="button"
                 aria-pressed={themeMode === "dark"}
@@ -883,19 +890,40 @@ export default function EndoChairsideGuide() {
           </div>
         </header>
 
-        {isEndodonticWorkflowActive ? (
-          <DifficultyBanner
-            caseData={caseData}
-            currentPhase={currentNode.phase}
-            activeCanal={activeCanal}
-            onOpenPhaseMap={() => {
-              setSelectedProgressPhase(currentNode.phase);
-              setIsProgressDetailOpen(true);
-            }}
-          />
-        ) : null}
+        {!hasActivePrimaryWorkflow ? (
+          <main>
+            <WorkflowLauncher
+              caseData={caseData}
+              currentNodeTitle={currentNode.title}
+              currentNodePhase={currentNode.phase}
+              savedCaseCount={savedCases.length}
+              presentation="page"
+              onClose={() => undefined}
+              onContinueEndodonticWorkflow={() => activatePrimaryWorkflow(endodonticRootWorkflowId)}
+              onOpenCaseSetupStatus={() => openCasePanel()}
+              onOpenSavedCases={openSavedCases}
+              onOpenPriorVisit={openPriorVisit}
+              onOpenNewCaseConfirm={openNewCaseConfirm}
+              onOpenPrimaryWorkflowSetup={activatePrimaryWorkflow}
+              onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
+              onOpenIsolationWorkflow={() => openIsolationWorkflow()}
+            />
+          </main>
+        ) : (
+          <>
+            {isEndodonticWorkflowActive ? (
+              <DifficultyBanner
+                caseData={caseData}
+                currentPhase={currentNode.phase}
+                activeCanal={activeCanal}
+                onOpenPhaseMap={() => {
+                  setSelectedProgressPhase(currentNode.phase);
+                  setIsProgressDetailOpen(true);
+                }}
+              />
+            ) : null}
 
-        <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
+            <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
           <aside className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
             <SharedReadinessCard
               caseData={caseData}
@@ -904,7 +932,7 @@ export default function EndoChairsideGuide() {
               onOpenIsolationWorkflow={openIsolationWorkflow}
             />
             <ActiveWorkflowTargetPanel
-              activeWorkflowId={activePrimaryWorkflowId}
+              activeWorkflowId={activePrimaryWorkflowId || endodonticRootWorkflowId}
               endodonticProps={{
                 caseData,
                 newCanalName,
@@ -998,7 +1026,9 @@ export default function EndoChairsideGuide() {
             />
             <EventLog events={caseData.globalEvents} />
           </aside>
-        </main>
+            </main>
+          </>
+        )}
 
         {isWorkflowLauncherOpen ? (
           <WorkflowLauncher
@@ -1023,11 +1053,11 @@ export default function EndoChairsideGuide() {
             caseData={caseData}
             activeCanal={activeCanal}
             activeWorkflowId={casePanelWorkflowId}
-            currentNodeId={casePanelWorkflowId === endodonticRootWorkflowId ? currentNodeId : "operative-readiness"}
+            currentNodeId={casePanelWorkflowId === operativeDirectRestorationWorkflowId ? "operative-readiness" : currentNodeId}
             onClose={() => {
               setIsCasePanelOpen(false);
               setCasePanelFocusTarget(null);
-              setCasePanelWorkflowId(activePrimaryWorkflowId);
+              setCasePanelWorkflowId(activePrimaryWorkflowId || "");
             }}
             onUpdateCase={updateCase}
             onUpdateDiagnosis={updateDiagnosis}

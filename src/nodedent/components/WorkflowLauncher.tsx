@@ -32,6 +32,7 @@ export function WorkflowLauncher({
   currentNodeTitle,
   currentNodePhase,
   savedCaseCount,
+  presentation = "modal",
   onClose,
   onContinueEndodonticWorkflow,
   onOpenCaseSetupStatus,
@@ -46,6 +47,7 @@ export function WorkflowLauncher({
   currentNodeTitle: string;
   currentNodePhase: string;
   savedCaseCount: number;
+  presentation?: "modal" | "page";
   onClose: () => void;
   onContinueEndodonticWorkflow: () => void;
   onOpenCaseSetupStatus: () => void;
@@ -68,22 +70,23 @@ export function WorkflowLauncher({
     getCaseStatus(caseData),
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
-      <section className="mt-6 w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
+  const content = (
+      <section className={`${presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm"} w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5`}>
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Clinical workspace</p>
             <h2 className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
             <p className="mt-1 text-sm text-brand-slate">{activeCaseFacts.join(" · ")}</p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-node"
-          >
-            Close
-          </button>
+          {presentation === "modal" ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-node"
+            >
+              Close
+            </button>
+          ) : null}
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
@@ -227,6 +230,15 @@ export function WorkflowLauncher({
           </section>
         </div>
       </section>
+  );
+
+  if (presentation === "page") {
+    return <div className="flex justify-center">{content}</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
+      {content}
     </div>
   );
 }

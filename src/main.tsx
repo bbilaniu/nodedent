@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import EndoChairsideGuide from "./nodedent/EndoChairsideGuide";
+import NodeDentApp from "./nodedent/NodeDentApp";
 import "./styles.css";
 
 const rootElement = document.getElementById("root");
@@ -11,6 +11,6 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <EndoChairsideGuide />
+    <NodeDentApp />
   </React.StrictMode>
 );
