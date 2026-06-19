@@ -125,6 +125,24 @@ Anesthesia and isolation should have parallel entry behavior:
 
 The endodontic pre-op decision card should eventually stop carrying broad shared-module launch controls once equivalent controls are available in NodeDent Home and Case Setup.
 
+### 5A. Shared Readiness Card Pattern
+
+A cross-workflow readiness card should replace workflow-specific readiness clusters over time.
+
+Recommended behavior:
+
+- Render a side-card style readiness surface that can be used by endodontic and operative workflows.
+- Include diagnosis, radiographs, anesthesia, and isolation readiness rows.
+- Make each row actionable:
+  - Diagnosis opens Case Setup & Status focused to diagnosis.
+  - Radiographs opens Case Setup & Status focused to radiographs.
+  - Anesthesia opens the anesthesia workflow or the anesthesia section in Case Setup & Status, depending on context.
+  - Isolation opens the isolation workflow or the isolation section in Case Setup & Status, depending on context.
+- Keep the card workflow-aware but not workflow-owned. It should summarize reusable shared context, not endodontic-only progress.
+- Use the same event-backed capability summaries as the current pre-access readiness block.
+
+This card should live in the side workspace rather than inside the active decision card once equivalent deep links exist. The current code can focus Case Setup & Status to anesthesia or isolation, but not yet to diagnosis or radiographs, so the first implementation should expand `CaseSetupFocusTarget` before replacing the pre-access readiness block.
+
 ### 6. Fix Visual And Theme Drift
 
 Before adding operative dentistry, clean up current UI drift:
@@ -204,6 +222,8 @@ Completed first pass:
 Still open:
 
 - Review the shell with the operative direct restoration model before enabling an operative runner.
+- Manual visual confirmation that operative renders without canal UI is not possible while `operative.direct-restoration` remains model-only and disabled in the launcher. Current confirmation is code-level through target-panel routing tests.
+- Consider a cross-workflow shared readiness card for diagnosis, radiographs, anesthesia, and isolation once Case Setup & Status supports diagnosis/radiograph focus targets.
 
 Placement decision:
 
