@@ -7,7 +7,6 @@ import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
-import type { OperativeWorkflowSetupState } from "./components/OperativeWorkflowSetupPanel";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { SharedReadinessCard } from "./components/SharedReadinessCard";
@@ -30,7 +29,16 @@ import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import { endodonticRootWorkflowId } from "./workflow/registry";
-import { operativeDirectRestorationWorkflowId } from "./workflow/operative";
+import {
+  buildOperativeSetupEventDetails,
+  createOperativeSetupScope,
+  getLatestOperativeWorkflowSetup,
+  operativeDirectRestorationWorkflowId,
+  operativeDirectRestorationWorkflowVersion,
+  operativeScopeRecordedEventType,
+  type OperativeWorkflowSetupState,
+  upsertOperativeScopeRecordedEvent,
+} from "./workflow/operative";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
   anesthesiaEventTypes,
@@ -137,13 +145,6 @@ export default function NodeDentApp() {
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
   const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
   const [casePanelWorkflowId, setCasePanelWorkflowId] = useState("");
-  const [operativeSetup, setOperativeSetup] = useState<OperativeWorkflowSetupState>({
-    tooth: "",
-    surfaces: "",
-    restorationIntent: "",
-    material: "",
-    shade: "",
-  });
   const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
   const [rootWorkflowRunId, setRootWorkflowRunId] = useState(() => makeWorkflowRunId("endo_root"));
   const [isWorkflowLauncherOpen, setIsWorkflowLauncherOpen] = useState(false);
@@ -163,6 +164,7 @@ export default function NodeDentApp() {
   const activeCanalStatus = getCanalStatus(activeCanal);
   const hasActivePrimaryWorkflow = Boolean(activePrimaryWorkflowId);
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
+  const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const latestAnesthesiaEvent = useMemo(
     () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
@@ -360,7 +362,6 @@ export default function NodeDentApp() {
     setCasePanelFocusTarget(null);
     setCasePanelWorkflowId("");
     setActivePrimaryWorkflowId(null);
-    setOperativeSetup({ tooth: "", surfaces: "", restorationIntent: "", material: "", shade: "" });
     setEmbeddedWorkflowLaunch(null);
     setIsWorkflowLauncherOpen(false);
     setRootWorkflowRunId(makeWorkflowRunId("endo_root"));
@@ -383,7 +384,28 @@ export default function NodeDentApp() {
   }
 
   function updateOperativeSetup(updates: Partial<OperativeWorkflowSetupState>) {
-    setOperativeSetup((prev) => ({ ...prev, ...updates }));
+    setCaseData((prev) => {
+      const nextSetup = { ...getLatestOperativeWorkflowSetup(prev), ...updates };
+      const scope = createOperativeSetupScope(nextSetup, prev.tooth);
+      const details = buildOperativeSetupEventDetails(nextSetup, prev.tooth);
+      const event = makeRuntimeEvent({
+        type: operativeScopeRecordedEventType,
+        tooth: scope.tooth || prev.tooth,
+        canal: "N/A",
+        nodeId: "operative-surface-scope",
+        label: "Operative setup recorded",
+        workflowId: operativeDirectRestorationWorkflowId,
+        workflowVersion: operativeDirectRestorationWorkflowVersion,
+        scope,
+      });
+      event.details = { ...event.details, ...details };
+
+      return {
+        ...prev,
+        globalEvents: upsertOperativeScopeRecordedEvent(prev.globalEvents, event),
+      };
+    });
+    setValidationMessage(null);
   }
 
   function openIsolationWorkflow(entryNodeId?: string) {

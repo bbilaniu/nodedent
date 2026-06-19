@@ -133,7 +133,7 @@ Surface parsing should remain simple and explicit at first. User-entered values 
 
 Reasoning level needed: high. This phase creates the first durable non-endodontic workflow state, so it must avoid leaking canal assumptions into operative surfaces or putting reusable shared module data under operative ownership.
 
-Status: planned.
+Status: implemented by moving operative setup normalization and surface-scope creation into reusable workflow helpers, storing setup as an upserted `operative.scope.recorded` event, hydrating the setup panel from the latest setup event, preserving case tooth as a fallback target, and adding regression tests for parsing, scope creation, setup hydration, and setup-event upsert.
 
 - Move operative setup normalization and scope creation into reusable workflow helpers.
 - Persist operative setup through event-backed state or another explicit workflow-state boundary.

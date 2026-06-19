@@ -49,6 +49,11 @@ import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabili
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
+  blankOperativeWorkflowSetup,
+  buildOperativeSetupEventDetails,
+  getLatestOperativeWorkflowSetup,
+  getOperativeSetupFromEvent,
+  normalizeOperativeSurfaces,
   createOperativeSurfaceScope,
   isEndodonticCanalScope,
   isOperativeSurfaceScope,
@@ -56,8 +61,10 @@ import {
   operativeDirectRestorationWorkflow,
   operativeReadinessCapabilityRequirements,
   operativeRestorationOutputCapabilities,
+  operativeScopeRecordedEventType,
   scopesTargetDifferentToothSubstructures,
   sharedDiagnosisWorkflowId,
+  upsertOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import {
   endodonticRootWorkflow,
@@ -1516,6 +1523,87 @@ test("operative direct restoration workflow reuses shared context and owns resto
   assert.equal(restorationNode.moduleCalls, undefined);
   assert.deepEqual(operativeRestorationOutputCapabilities, ["finalRestoration.placed"]);
   assert.deepEqual(completionNode.capabilityRequirements?.map((requirement) => requirement.name), ["finalRestoration.placed"]);
+});
+
+test("operative setup helpers normalize surfaces and scope details", () => {
+  assert.deepEqual(normalizeOperativeSurfaces("M O"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces("M,O"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces("MO"), ["M", "O"]);
+  assert.deepEqual(normalizeOperativeSurfaces(["M/O", "O"]), ["M", "O"]);
+
+  const setup = {
+    ...blankOperativeWorkflowSetup,
+    tooth: "36",
+    surfaces: "MO",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+
+  assert.deepEqual(buildOperativeSetupEventDetails(setup, "30"), {
+    tooth: "36",
+    surfaces: ["M", "O"],
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  });
+  assert.deepEqual(buildOperativeSetupEventDetails({ ...blankOperativeWorkflowSetup, surfaces: "D" }, "37"), {
+    tooth: "37",
+    surfaces: ["D"],
+  });
+  assert.deepEqual(createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" }), {
+    kind: "surface",
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  });
+});
+
+test("operative setup hydrates from the latest setup event", () => {
+  const olderEvent = {
+    id: "evt_operative_scope_old",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "O" }),
+    details: { tooth: "36", surfaces: ["O"], material: "composite" },
+  };
+  const latestEvent = {
+    id: "evt_operative_scope_latest",
+    timestamp: "2026-01-01T10:05:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: "0.1.0",
+    nodeId: "operative-surface-scope",
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: ["M", "O"] }),
+    details: {
+      tooth: "36",
+      surfaces: ["M", "O"],
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    },
+  };
+  const unrelatedEvent = {
+    id: "evt_unrelated",
+    timestamp: "2026-01-01T10:03:00.000Z",
+    type: "case.note",
+  };
+  const expectedSetup = {
+    tooth: "36",
+    surfaces: "M O",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+
+  assert.deepEqual(getOperativeSetupFromEvent(latestEvent), expectedSetup);
+  assert.deepEqual(getLatestOperativeWorkflowSetup(baseCase({ tooth: "36", globalEvents: [olderEvent, unrelatedEvent, latestEvent] })), expectedSetup);
+  assert.deepEqual(upsertOperativeScopeRecordedEvent([unrelatedEvent, olderEvent], latestEvent).map((event) => event.id), ["evt_unrelated", "evt_operative_scope_latest"]);
 });
 
 test("operative surface scope stays separate from endodontic canal scope", () => {

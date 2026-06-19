@@ -1,7 +1,8 @@
 import React from "react";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
+import type { OperativeWorkflowSetupState } from "../workflow/operative";
 import { EndodonticTargetPanel, type EndodonticTargetPanelProps } from "./EndodonticTargetPanel";
-import { OperativeWorkflowSetupPanel, type OperativeWorkflowSetupState } from "./OperativeWorkflowSetupPanel";
+import { OperativeWorkflowSetupPanel } from "./OperativeWorkflowSetupPanel";
 
 export function ActiveWorkflowTargetPanel({
   activeWorkflowId,

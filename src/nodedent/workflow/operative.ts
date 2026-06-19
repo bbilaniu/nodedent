@@ -1,17 +1,42 @@
-import type { CapabilityName, CapabilityRequirement, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
+import type { CapabilityName, CapabilityRequirement, ClinicalEvent, EndoCase, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
 import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
 
 export const sharedDiagnosisWorkflowId = "shared.diagnosis";
 export const operativeDirectRestorationWorkflowId = "operative.direct-restoration";
 export const operativeDirectRestorationWorkflowVersion = "0.1.0";
+export const operativeScopeRecordedEventType = "operative.scope.recorded";
+
+export type OperativeWorkflowSetupState = {
+  tooth: string;
+  surfaces: string;
+  restorationIntent: string;
+  material: string;
+  shade: string;
+};
+
+export type OperativeScopeRecordedDetails = {
+  tooth?: string;
+  surfaces?: string[];
+  restorationIntent?: string;
+  material?: string;
+  shade?: string;
+};
 
 export type OperativeSurfaceScopeInput = {
   tooth?: string;
   surface?: string;
-  surfaces?: string[];
+  surfaces?: string | string[];
   procedureId?: string;
   label?: string;
+};
+
+export const blankOperativeWorkflowSetup: OperativeWorkflowSetupState = {
+  tooth: "",
+  surfaces: "",
+  restorationIntent: "",
+  material: "",
+  shade: "",
 };
 
 export const operativeReadinessCapabilityRequirements: CapabilityRequirement[] = [
@@ -47,22 +72,117 @@ export const operativeRestorationCompletionRequirements: CapabilityRequirement[]
   { name: "finalRestoration.placed", scopeKind: "surface", message: "Final restoration recorded for the planned tooth and surface scope" },
 ];
 
-function normalizeSurfaces(input: OperativeSurfaceScopeInput) {
-  const values = input.surfaces?.length ? input.surfaces : input.surface ? [input.surface] : [];
-  return values.map((surface) => surface.trim()).filter(Boolean);
+function normalizeString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function normalizeStringArray(value: unknown) {
+  return Array.isArray(value) ? value.flatMap((item) => normalizeString(item)).filter(Boolean) : [];
+}
+
+const compactSurfaceCodeCharacters = new Set(["M", "O", "D", "B", "L", "I", "F", "P"]);
+
+function splitSurfaceToken(token: string) {
+  const trimmed = token.trim();
+  if (!trimmed) return [];
+
+  const upper = trimmed.toUpperCase();
+  const isCompactNotation = /^[A-Z]{2,6}$/.test(upper) && Array.from(upper).every((character) => compactSurfaceCodeCharacters.has(character));
+  if (isCompactNotation) return Array.from(upper);
+
+  return /^[A-Za-z]$/.test(trimmed) ? [upper] : [trimmed];
+}
+
+export function normalizeOperativeSurfaces(input?: string | readonly string[] | null) {
+  const tokens = Array.isArray(input)
+    ? input.flatMap((value) => String(value || "").split(/[,\s/]+/))
+    : String(input || "").split(/[,\s/]+/);
+  const seen = new Set<string>();
+
+  return tokens
+    .flatMap(splitSurfaceToken)
+    .filter((surface) => {
+      if (!surface || seen.has(surface)) return false;
+      seen.add(surface);
+      return true;
+    });
+}
+
+function displaySurfaces(surfaces: readonly string[]) {
+  return surfaces.join(" ");
+}
+
+function scopeLabel(tooth: string, surfaces: readonly string[]) {
+  return [tooth, surfaces.join("")].filter(Boolean).join(" ");
 }
 
 export function createOperativeSurfaceScope(input: OperativeSurfaceScopeInput): WorkflowScope {
-  const surfaces = normalizeSurfaces(input);
+  const tooth = normalizeString(input.tooth);
+  const surfaces = normalizeOperativeSurfaces(input.surfaces?.length ? input.surfaces : input.surface);
 
   return {
     kind: "surface",
-    tooth: input.tooth,
+    tooth: tooth || undefined,
     procedureId: input.procedureId,
     surface: surfaces[0],
     surfaces: surfaces.length > 1 ? surfaces : undefined,
-    label: input.label || [input.tooth, surfaces.join("")].filter(Boolean).join(" "),
+    label: input.label || scopeLabel(tooth, surfaces),
   };
+}
+
+export function createOperativeSetupScope(setup: OperativeWorkflowSetupState, fallbackTooth = "") {
+  return createOperativeSurfaceScope({
+    tooth: normalizeString(setup.tooth) || normalizeString(fallbackTooth),
+    surfaces: setup.surfaces,
+  });
+}
+
+export function buildOperativeSetupEventDetails(setup: OperativeWorkflowSetupState, fallbackTooth = ""): OperativeScopeRecordedDetails {
+  const tooth = normalizeString(setup.tooth) || normalizeString(fallbackTooth);
+  const surfaces = normalizeOperativeSurfaces(setup.surfaces);
+  const details: OperativeScopeRecordedDetails = {};
+
+  if (tooth) details.tooth = tooth;
+  if (surfaces.length) details.surfaces = surfaces;
+  if (normalizeString(setup.restorationIntent)) details.restorationIntent = normalizeString(setup.restorationIntent);
+  if (normalizeString(setup.material)) details.material = normalizeString(setup.material);
+  if (normalizeString(setup.shade)) details.shade = normalizeString(setup.shade);
+
+  return details;
+}
+
+export function isOperativeScopeRecordedEvent(
+  event?: ClinicalEvent | null
+): event is ClinicalEvent & { type: typeof operativeScopeRecordedEventType; workflowId: typeof operativeDirectRestorationWorkflowId } {
+  return event?.type === operativeScopeRecordedEventType && event.workflowId === operativeDirectRestorationWorkflowId;
+}
+
+export function getOperativeSetupFromEvent(event?: ClinicalEvent | null): OperativeWorkflowSetupState {
+  if (!isOperativeScopeRecordedEvent(event)) return { ...blankOperativeWorkflowSetup };
+
+  const details = event.details && typeof event.details === "object" ? event.details : {};
+  const surfaces = normalizeOperativeSurfaces(
+    Array.isArray(details.surfaces)
+      ? normalizeStringArray(details.surfaces)
+      : normalizeString(details.surfaces) || event.scope?.surfaces || event.scope?.surface
+  );
+
+  return {
+    tooth: normalizeString(details.tooth) || normalizeString(event.scope?.tooth),
+    surfaces: displaySurfaces(surfaces),
+    restorationIntent: normalizeString(details.restorationIntent),
+    material: normalizeString(details.material),
+    shade: normalizeString(details.shade),
+  };
+}
+
+export function getLatestOperativeWorkflowSetup(caseData: Pick<EndoCase, "globalEvents">): OperativeWorkflowSetupState {
+  const latestEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
+  return getOperativeSetupFromEvent(latestEvent);
+}
+
+export function upsertOperativeScopeRecordedEvent(events: ClinicalEvent[] = [], nextEvent: ClinicalEvent) {
+  return [...events.filter((event) => !isOperativeScopeRecordedEvent(event)), nextEvent];
 }
 
 export function isOperativeSurfaceScope(scope?: WorkflowScope | null) {

@@ -1,15 +1,7 @@
 import React from "react";
 import type { EndoCase } from "../types";
-import { createOperativeSurfaceScope } from "../workflow/operative";
+import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
 import { SectionCard, TextInput } from "./FormControls";
-
-export type OperativeWorkflowSetupState = {
-  tooth: string;
-  surfaces: string;
-  restorationIntent: string;
-  material: string;
-  shade: string;
-};
 
 export function OperativeWorkflowSetupPanel({
   caseData,
@@ -23,12 +15,7 @@ export function OperativeWorkflowSetupPanel({
   className?: string;
 }) {
   const tooth = setup.tooth || caseData.tooth;
-  const surfaces = setup.surfaces.split(/[,\s]+/).map((surface) => surface.trim()).filter(Boolean);
-  const scope = createOperativeSurfaceScope({
-    tooth,
-    surfaces,
-    label: [tooth, surfaces.join("")].filter(Boolean).join(" "),
-  });
+  const scope = createOperativeSetupScope(setup, caseData.tooth);
 
   return (
     <SectionCard title="Operative setup" className={className}>
