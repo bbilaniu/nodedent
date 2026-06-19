@@ -115,6 +115,8 @@ Status: implemented by splitting the case setup panel into named local sections 
 
 Reasoning level needed: medium. The mapping should be explicit and maintainable, with careful attention to how shared readiness deep-links into setup without spreading string ids across the codebase.
 
+Status: implemented by keeping `CaseSetupFocusTarget` as the typed focus contract and routing modal section focus through a single target-to-ref mapping/helper in the case setup panel.
+
 - Keep `CaseSetupFocusTarget` explicit for shared readiness rows.
 - Ensure diagnosis, radiographs, anesthesia, and isolation focus actions are stable.
 - Avoid using stringly-typed section ids outside a single mapping/helper.

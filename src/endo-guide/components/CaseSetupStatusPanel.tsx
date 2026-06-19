@@ -433,6 +433,8 @@ type IsolationFormState = {
   note: string;
 };
 
+type CaseSetupFocusRefs = Record<CaseSetupFocusTarget, React.RefObject<HTMLElement | null>>;
+
 function defaultIsolationFormState(tooth: string, action: IsolationEventType = isolationEventTypes.rubberDamPlaced): IsolationFormState {
   return {
     action,
@@ -484,6 +486,13 @@ function formatEventTimestamp(timestamp?: string) {
   const date = new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return "";
   return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+}
+
+function focusCaseSetupSection(focusTarget: CaseSetupFocusTarget | null | undefined, focusRefs: CaseSetupFocusRefs) {
+  if (!focusTarget) return;
+  const section = focusRefs[focusTarget].current;
+  section?.scrollIntoView({ behavior: "smooth", block: "start" });
+  section?.focus({ preventScroll: true });
 }
 
 function CaseIdentitySection({
@@ -697,6 +706,12 @@ export function CaseSetupStatusPanel({
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
   const radiographsSectionRef = useRef<HTMLElement | null>(null);
+  const focusRefs: CaseSetupFocusRefs = {
+    diagnosis: diagnosisSectionRef,
+    radiographs: radiographsSectionRef,
+    anesthesia: anesthesiaSectionRef,
+    isolation: isolationSectionRef,
+  };
   const capabilitySummary = getCaseCapabilitySummary(caseData);
   const anesthesiaEvents = (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType));
   const latestAnesthesiaEvent = anesthesiaEvents.at(-1);
@@ -757,24 +772,7 @@ export function CaseSetupStatusPanel({
   }, [caseData.tooth]);
 
   useEffect(() => {
-    if (initialFocusSection === "diagnosis") {
-      diagnosisSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      diagnosisSectionRef.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (initialFocusSection === "radiographs") {
-      radiographsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      radiographsSectionRef.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (initialFocusSection === "anesthesia") {
-      anesthesiaSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      anesthesiaSectionRef.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (initialFocusSection !== "isolation") return;
-    isolationSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    isolationSectionRef.current?.focus({ preventScroll: true });
+    focusCaseSetupSection(initialFocusSection, focusRefs);
   }, [initialFocusSection]);
 
   function updateIsolationForm(updates: Partial<IsolationFormState>) {
