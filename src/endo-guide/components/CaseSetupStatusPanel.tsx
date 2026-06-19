@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { CanalRecord, CaseSetupFocusTarget, ClinicalEvent, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
-import { isBlank, isPositiveMeasurement } from "../engine/measurements";
+import { isBlank } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
@@ -18,6 +18,7 @@ import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem,
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
+import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
 
 function statusClass(satisfied: boolean, needsReassessment: boolean) {
@@ -600,43 +601,6 @@ function RadiographReadinessSection({
   );
 }
 
-function EndodonticWorkflowSetupSection({
-  caseData,
-  activeCanal,
-  onUpdatePreOp,
-  onUpdateActiveCanal,
-}: {
-  caseData: EndoCase;
-  activeCanal?: CanalRecord | null;
-  onUpdatePreOp: (field: string, value: string | boolean) => void;
-  onUpdateActiveCanal: (field: string, value: string) => void;
-}) {
-  return (
-    <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 lg:col-span-2">
-      <h3 className="text-sm font-semibold text-brand-navy">Endodontic workflow setup</h3>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <TextInput
-          label="Estimated chamber depth"
-          value={caseData.preOp?.estimatedChamberDepth}
-          onChange={(value) => onUpdatePreOp("estimatedChamberDepth", value)}
-          placeholder="mm"
-          inputMode="decimal"
-          invalid={!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)}
-        />
-        <TextInput
-          label={`Estimated WL for ${activeCanal?.name || "active canal"}`}
-          value={activeCanal?.estimatedWorkingLength}
-          onChange={(value) => onUpdateActiveCanal("estimatedWorkingLength", value)}
-          placeholder="mm"
-          inputMode="decimal"
-          invalid={!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)}
-          helperText="This field is for the active canal. Add or rename canals in the canal selector before working on additional canals."
-        />
-      </div>
-    </section>
-  );
-}
-
 function SharedClinicalReadinessSection({
   statusItems,
 }: {
@@ -844,7 +808,7 @@ export function CaseSetupStatusPanel({
       <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
       <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
       <RadiographReadinessSection caseData={caseData} paReviewed={paReviewed} bwReviewed={bwReviewed} onUpdatePreOp={onUpdatePreOp} sectionRef={radiographsSectionRef} />
-      <EndodonticWorkflowSetupSection caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
+      <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
       <SharedClinicalReadinessSection statusItems={statusItems} />
 
       <section ref={anesthesiaSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">

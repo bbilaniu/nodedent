@@ -125,6 +125,8 @@ Status: implemented by keeping `CaseSetupFocusTarget` as the typed focus contrac
 
 Reasoning level needed: high. This phase changes ownership boundaries for endodontic-specific setup, so it needs deliberate review of workflow behavior, measurement state, and future operative isolation.
 
+Status: implemented by extracting active-canal chamber depth and estimated WL setup into `EndodonticWorkflowSetupPanel`, using the same canal status and measurement summary helpers as the endodontic target panel while leaving detailed measurement capture in `MeasurementPanel`.
+
 - Move active canal and endodontic measurement setup into an endodontic-specific workflow setup component.
 - Keep `MeasurementPanel` and `EndodonticTargetPanel` aligned so canal details do not leak into operative setup.
 
