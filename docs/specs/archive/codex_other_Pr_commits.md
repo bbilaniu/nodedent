@@ -1,9 +1,12 @@
 ---
-status: active
+status: deprecated
 created_on: 2026-06-07
+deprecated_on: 2026-06-19
 ---
 
 # Endodontic Guide Continued Development Roadmap
+
+Archived historical roadmap. Completed PR-history remains here for context; remaining active work has moved to `docs/specs/endodontic-continuation-and-usability-roadmap.md`.
 
 Use this file to continue developing the app after the MVP/refactor work. The next phase should stay focused on making the **endodontic chairside guide** clinically complete, testable, and usable. Do not generalize into a broader clinical-guide framework until the endodontic workflow works end-to-end.
 

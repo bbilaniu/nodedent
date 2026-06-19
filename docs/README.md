@@ -9,7 +9,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Active Product And Implementation Specs
 
-- [Endodontic guide continued development roadmap](specs/codex_other_Pr_commits.md)
+- [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
@@ -38,6 +38,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Codex refactor instructions](specs/archive/codex-endo-guide-refactor.md)
 - [Case setup and shared readiness refactor](specs/archive/case-setup-and-shared-readiness-refactor.md)
 - [Endo chairside decision guide proposal](specs/archive/endo-chairside-decision-guide-proposal.md)
+- [Endodontic guide continued development roadmap](specs/archive/codex_other_Pr_commits.md)
 - [Final shaping terminology update](specs/archive/codex_final_shapping.md)
 - [Generalized workflow nodes](specs/archive/generalized-workflow-nodes.md)
 - [Main workspace shell cleanup proposal](specs/archive/main-workspace-shell-cleanup.md)
