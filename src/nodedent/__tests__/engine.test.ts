@@ -50,14 +50,22 @@ import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIs
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
   blankOperativeWorkflowSetup,
+  buildFinalRestorationPlacedCapability,
   buildOperativeSetupEventDetails,
+  buildOperativeRestorationEventDetails,
+  buildOperativeRestorationPlacedEvent,
   createOperativeReadinessScopes,
+  createOperativeRestorationScope,
   getLatestOperativeWorkflowSetup,
   getOperativeSetupFromEvent,
   getOperativeReadinessCapabilitySummary,
+  getOperativeRestorationEvents,
+  getOperativeRestorationRecordFromEvent,
   normalizeOperativeSurfaces,
   createOperativeSurfaceScope,
+  finalRestorationPlacedEventType,
   isEndodonticCanalScope,
+  isOperativeRestorationPlacedEvent,
   isOperativeSurfaceScope,
   operativeDirectRestorationWorkflowId,
   operativeDirectRestorationWorkflow,
@@ -1664,6 +1672,99 @@ test("operative surface scope stays separate from endodontic canal scope", () =>
   });
 
   assert.equal(isCapabilitySatisfied(toothScopedRestorationCase, "finalRestoration.placed", surfaceScope), false);
+});
+
+test("operative restoration event helpers build a surface-scoped final restoration capability", () => {
+  const record = {
+    tooth: "36",
+    surfaces: "MO",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  };
+  const event = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record,
+    fallbackTooth: "30",
+    workflowRunId: "run_operative_1",
+  });
+  const expectedScope = {
+    kind: "surface" as const,
+    tooth: "36",
+    procedureId: undefined,
+    surface: "M",
+    surfaces: ["M", "O"],
+    label: "36 MO",
+  };
+
+  assert.equal(event.type, finalRestorationPlacedEventType);
+  assert.equal(event.workflowId, operativeDirectRestorationWorkflowId);
+  assert.equal(event.workflowVersion, "0.1.0");
+  assert.equal(event.nodeId, "operative-restoration-record");
+  assert.deepEqual(event.scope, expectedScope);
+  assert.deepEqual(createOperativeRestorationScope(record, "30"), expectedScope);
+  assert.deepEqual(buildOperativeRestorationEventDetails(record, "30"), {
+    tooth: "36",
+    surfaces: ["M", "O"],
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+    outcome: "placed",
+    notes: "Occlusion checked by clinician",
+  });
+  assert.deepEqual(event.capabilitiesSatisfied, [
+    {
+      name: "finalRestoration.placed",
+      scope: expectedScope,
+      sourceEventId: "evt_operative_restoration",
+      workflowId: operativeDirectRestorationWorkflowId,
+      workflowRunId: "run_operative_1",
+      satisfiedAt: "2026-01-01T11:00:00.000Z",
+    },
+  ]);
+  assert.deepEqual(buildFinalRestorationPlacedCapability(event), event.capabilitiesSatisfied?.[0]);
+  assert.equal(isOperativeRestorationPlacedEvent(event), true);
+  assert.deepEqual(getOperativeRestorationRecordFromEvent(event), { ...record, surfaces: "M O" });
+  assert.equal(ClinicalEventSchema.safeParse(event).success, true);
+});
+
+test("operative final restoration capability satisfies only matching surface targets", () => {
+  const restorationEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_restoration_match",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "36",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+      outcome: "placed",
+      notes: "",
+    },
+  });
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      restorationEvent,
+      {
+        id: "evt_endo_closure",
+        timestamp: "2026-01-01T11:05:00.000Z",
+        type: "closure.finalRestoration",
+        tooth: "36",
+        canal: "All",
+      },
+    ],
+  });
+
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" })), true);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "M" })), true);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "36", surfaces: "DO" })), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", createOperativeSurfaceScope({ tooth: "46", surfaces: "MO" })), false);
+  assert.equal(isCapabilitySatisfied(caseData, "finalRestoration.placed", { kind: "tooth", tooth: "36" }), false);
+  assert.deepEqual(getOperativeRestorationEvents(caseData).map((event) => event.id), ["evt_operative_restoration_match"]);
 });
 
 test("operative surface queries can compare against tooth-level isolation coverage", () => {

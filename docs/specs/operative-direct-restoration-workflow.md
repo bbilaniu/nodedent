@@ -157,7 +157,7 @@ Status: implemented by deriving an operative readiness summary from the persiste
 
 Reasoning level needed: high. This phase defines the durable output contract for operative workflows and must keep final restoration capability semantics distinct from endodontic canal closure.
 
-Status: planned.
+Status: implemented by adding typed helpers for `finalRestoration.placed` operative events, restoration documentation details, surface-scope creation and hydration, `finalRestoration.placed` capability output, operative restoration event filtering, and regression tests proving only matching surface-scoped operative events satisfy completion checks.
 
 - Add typed helpers for building and reading `finalRestoration.placed` operative events.
 - Attach `workflowId`, `nodeId`, surface scope, and `capabilitiesSatisfied` to restoration events.

@@ -1,4 +1,4 @@
-import type { CapabilityName, CapabilityRequirement, ClinicalEvent, EndoCase, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
+import type { CapabilityName, CapabilityRequirement, CapabilitySatisfaction, ClinicalEvent, EndoCase, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
 import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
 import type { CaseCapabilitySummary } from "./selectors";
@@ -8,6 +8,7 @@ export const sharedDiagnosisWorkflowId = "shared.diagnosis";
 export const operativeDirectRestorationWorkflowId = "operative.direct-restoration";
 export const operativeDirectRestorationWorkflowVersion = "0.1.0";
 export const operativeScopeRecordedEventType = "operative.scope.recorded";
+export const finalRestorationPlacedEventType = "finalRestoration.placed";
 
 export type OperativeWorkflowSetupState = {
   tooth: string;
@@ -25,6 +26,16 @@ export type OperativeScopeRecordedDetails = {
   shade?: string;
 };
 
+export type OperativeRestorationRecordState = OperativeWorkflowSetupState & {
+  outcome: string;
+  notes: string;
+};
+
+export type OperativeRestorationPlacedDetails = OperativeScopeRecordedDetails & {
+  outcome?: string;
+  notes?: string;
+};
+
 export type OperativeSurfaceScopeInput = {
   tooth?: string;
   surface?: string;
@@ -39,6 +50,12 @@ export const blankOperativeWorkflowSetup: OperativeWorkflowSetupState = {
   restorationIntent: "",
   material: "",
   shade: "",
+};
+
+export const blankOperativeRestorationRecord: OperativeRestorationRecordState = {
+  ...blankOperativeWorkflowSetup,
+  outcome: "",
+  notes: "",
 };
 
 export const operativeReadinessCapabilityRequirements: CapabilityRequirement[] = [
@@ -69,9 +86,9 @@ export const operativeReadinessModuleCalls: WorkflowModuleCall[] = [
   },
 ];
 
-export const operativeRestorationOutputCapabilities = ["finalRestoration.placed"] as const satisfies readonly CapabilityName[];
+export const operativeRestorationOutputCapabilities = [finalRestorationPlacedEventType] as const satisfies readonly CapabilityName[];
 export const operativeRestorationCompletionRequirements: CapabilityRequirement[] = [
-  { name: "finalRestoration.placed", scopeKind: "surface", message: "Final restoration recorded for the planned tooth and surface scope" },
+  { name: finalRestorationPlacedEventType, scopeKind: "surface", message: "Final restoration recorded for the planned tooth and surface scope" },
 ];
 
 function normalizeString(value: unknown) {
@@ -180,10 +197,118 @@ export function buildOperativeSetupEventDetails(setup: OperativeWorkflowSetupSta
   return details;
 }
 
+export function buildOperativeRestorationEventDetails(
+  record: OperativeRestorationRecordState,
+  fallbackTooth = ""
+): OperativeRestorationPlacedDetails {
+  const details: OperativeRestorationPlacedDetails = buildOperativeSetupEventDetails(record, fallbackTooth);
+
+  if (normalizeString(record.outcome)) details.outcome = normalizeString(record.outcome);
+  if (normalizeString(record.notes)) details.notes = normalizeString(record.notes);
+
+  return details;
+}
+
+export function createOperativeRestorationScope(record: OperativeRestorationRecordState, fallbackTooth = "") {
+  return createOperativeSurfaceScope({
+    tooth: normalizeString(record.tooth) || normalizeString(fallbackTooth),
+    surfaces: record.surfaces,
+  });
+}
+
+export function getOperativeRestorationScopeFromEvent(event: ClinicalEvent): WorkflowScope {
+  const details = event.details && typeof event.details === "object" ? event.details : {};
+  const tooth = normalizeString(details.tooth) || normalizeString(event.scope?.tooth) || normalizeString(event.tooth);
+  const surfaces = normalizeOperativeSurfaces(
+    Array.isArray(details.surfaces)
+      ? normalizeStringArray(details.surfaces)
+      : normalizeString(details.surfaces) || event.scope?.surfaces || event.scope?.surface
+  );
+
+  return createOperativeSurfaceScope({ tooth, surfaces });
+}
+
+export function buildFinalRestorationPlacedCapability(event: ClinicalEvent): CapabilitySatisfaction {
+  return {
+    name: finalRestorationPlacedEventType,
+    scope: getOperativeRestorationScopeFromEvent(event),
+    sourceEventId: event.id,
+    workflowId: event.workflowId || operativeDirectRestorationWorkflowId,
+    workflowRunId: event.workflowRunId,
+    satisfiedAt: event.timestamp,
+  };
+}
+
+export function buildOperativeRestorationPlacedEvent({
+  id,
+  timestamp,
+  record,
+  fallbackTooth = "",
+  workflowRunId,
+  parentWorkflowRunId,
+}: {
+  id: string;
+  timestamp: string;
+  record: OperativeRestorationRecordState;
+  fallbackTooth?: string;
+  workflowRunId?: string;
+  parentWorkflowRunId?: string | null;
+}): ClinicalEvent {
+  const scope = createOperativeRestorationScope(record, fallbackTooth);
+  const event: ClinicalEvent = {
+    id,
+    timestamp,
+    type: finalRestorationPlacedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowVersion: operativeDirectRestorationWorkflowVersion,
+    workflowRunId,
+    parentWorkflowRunId,
+    nodeId: "operative-restoration-record",
+    scope,
+    tooth: scope.tooth,
+    canal: "N/A",
+    details: buildOperativeRestorationEventDetails(record, fallbackTooth),
+  };
+
+  event.capabilitiesSatisfied = [buildFinalRestorationPlacedCapability(event)];
+  return event;
+}
+
 export function isOperativeScopeRecordedEvent(
   event?: ClinicalEvent | null
 ): event is ClinicalEvent & { type: typeof operativeScopeRecordedEventType; workflowId: typeof operativeDirectRestorationWorkflowId } {
   return event?.type === operativeScopeRecordedEventType && event.workflowId === operativeDirectRestorationWorkflowId;
+}
+
+export function isOperativeRestorationPlacedEvent(
+  event?: ClinicalEvent | null
+): event is ClinicalEvent & { type: typeof finalRestorationPlacedEventType; workflowId: typeof operativeDirectRestorationWorkflowId } {
+  return event?.type === finalRestorationPlacedEventType && event.workflowId === operativeDirectRestorationWorkflowId;
+}
+
+export function getOperativeRestorationRecordFromEvent(event?: ClinicalEvent | null): OperativeRestorationRecordState {
+  if (!isOperativeRestorationPlacedEvent(event)) return { ...blankOperativeRestorationRecord };
+
+  const details = event.details && typeof event.details === "object" ? event.details : {};
+  const surfaces = normalizeOperativeSurfaces(
+    Array.isArray(details.surfaces)
+      ? normalizeStringArray(details.surfaces)
+      : normalizeString(details.surfaces) || event.scope?.surfaces || event.scope?.surface
+  );
+
+  return {
+    tooth: normalizeString(details.tooth) || normalizeString(event.scope?.tooth) || normalizeString(event.tooth),
+    surfaces: displaySurfaces(surfaces),
+    restorationIntent: normalizeString(details.restorationIntent),
+    material: normalizeString(details.material),
+    shade: normalizeString(details.shade),
+    outcome: normalizeString(details.outcome),
+    notes: normalizeString(details.notes),
+  };
+}
+
+export function getOperativeRestorationEvents(caseData: Pick<EndoCase, "globalEvents">) {
+  return (caseData.globalEvents || []).filter(isOperativeRestorationPlacedEvent);
 }
 
 export function getOperativeSetupFromEvent(event?: ClinicalEvent | null): OperativeWorkflowSetupState {
