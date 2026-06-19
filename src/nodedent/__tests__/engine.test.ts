@@ -185,7 +185,7 @@ function postShapingCase(overrides: Partial<EndoCase> = {}): EndoCase {
 }
 
 test("engine and notes modules stay free of React, DOM, and browser storage dependencies", () => {
-  const moduleRoots = [join(process.cwd(), "src/endo-guide/engine"), join(process.cwd(), "src/endo-guide/notes")];
+  const moduleRoots = [join(process.cwd(), "src/nodedent/engine"), join(process.cwd(), "src/nodedent/notes")];
   const forbiddenPatterns = [
     /from ["']react["']/,
     /\bwindow\b/,

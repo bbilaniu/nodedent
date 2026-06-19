@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "docs:check": "node scripts/check-doc-lifecycle.mjs",
     "docs:workflow-graph": "tsx scripts/export-protocol-graph.ts",
-    "test": "node --import tsx --test src/endo-guide/__tests__/engine.test.ts",
+    "test": "node --import tsx --test src/nodedent/__tests__/engine.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

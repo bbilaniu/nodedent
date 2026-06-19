@@ -49,10 +49,10 @@ PS implemented:
 - Engine tests cover the allowed and blocked branches.
 
 Implemented files:
-- `src/endo-guide/engine/validateDecision.ts`
-- `src/endo-guide/protocol/nodes.ts`
-- `src/endo-guide/components/DecisionCard.tsx`
-- `src/endo-guide/__tests__/engine.test.ts`
+- `src/nodedent/engine/validateDecision.ts`
+- `src/nodedent/protocol/nodes.ts`
+- `src/nodedent/components/DecisionCard.tsx`
+- `src/nodedent/__tests__/engine.test.ts`
 
 ### P0 - Shaping Gauge Self-Loop Feedback
 
@@ -65,10 +65,10 @@ PS implemented:
 - Engine tests cover that the continue-gauging loop does not require final shaping file, while final gauge selection does.
 
 Implemented files:
-- `src/endo-guide/components/DecisionCard.tsx`
-- `src/endo-guide/protocol/nodes.ts`
-- `src/endo-guide/engine/validateDecision.ts`
-- `src/endo-guide/__tests__/engine.test.ts`
+- `src/nodedent/components/DecisionCard.tsx`
+- `src/nodedent/protocol/nodes.ts`
+- `src/nodedent/engine/validateDecision.ts`
+- `src/nodedent/__tests__/engine.test.ts`
 
 ### P1 - Pre-op Setup And Canal Naming Clarity
 
@@ -80,8 +80,8 @@ PS implemented:
 - Kept the current model with one default canal named `Main`; starting with zero canals remains deferred.
 
 Implemented files:
-- `src/endo-guide/components/DecisionCard.tsx`
-- `src/endo-guide/components/CanalSelector.tsx`
+- `src/nodedent/components/DecisionCard.tsx`
+- `src/nodedent/components/CanalSelector.tsx`
 
 ### P1 - Attach EAL To 10C Measurement Explanation
 
@@ -92,7 +92,7 @@ PS implemented:
 - Clarified that EAL-derived patency and shaping lengths take precedence when EAL 0 is established.
 
 Implemented files:
-- `src/endo-guide/components/MeasurementPanel.tsx`
+- `src/nodedent/components/MeasurementPanel.tsx`
 
 ### P1 - Touch Input For Measurements
 
@@ -104,9 +104,9 @@ PS implemented:
 - Non-measurement text fields such as reference point and master cone remain normal text inputs.
 
 Implemented files:
-- `src/endo-guide/components/FormControls.tsx`
-- `src/endo-guide/components/MeasurementPanel.tsx`
-- `src/endo-guide/components/DecisionCard.tsx`
+- `src/nodedent/components/FormControls.tsx`
+- `src/nodedent/components/MeasurementPanel.tsx`
+- `src/nodedent/components/DecisionCard.tsx`
 
 ### P1 - EAL-Derived Patency And Shaping Suggestions
 
@@ -118,9 +118,9 @@ PS implemented:
 - Users can still type different values manually.
 
 Implemented files:
-- `src/endo-guide/components/FormControls.tsx`
-- `src/endo-guide/components/MeasurementPanel.tsx`
-- `src/endo-guide/engine/measurements.ts`
+- `src/nodedent/components/FormControls.tsx`
+- `src/nodedent/components/MeasurementPanel.tsx`
+- `src/nodedent/engine/measurements.ts`
 
 ### P2 - Developer-Facing Workflow Visualization Export
 
@@ -164,7 +164,7 @@ Notes for future implementation:
 - Avoid changing historical notes if preferences change later.
 
 Likely files:
-- `src/endo-guide/protocol/nodes.ts`
+- `src/nodedent/protocol/nodes.ts`
 - New preferences state/storage module.
 - UI entry point in case/settings management.
 

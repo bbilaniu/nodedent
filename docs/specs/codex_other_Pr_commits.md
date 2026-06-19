@@ -12,7 +12,7 @@ Use this file to continue developing the app after the MVP/refactor work. The ne
 The app is already organized as a data-driven endodontic guide:
 
 ```text
-src/endo-guide/
+src/nodedent/
   protocol/
   engine/
   schemas/
@@ -48,7 +48,7 @@ a4cefb5 feat(endo-guide): add phase-aware canal handoffs
 Implemented and verified:
 
 ```text
-- Refactored guide architecture under src/endo-guide/.
+- Refactored guide architecture under src/nodedent/.
 - Engine/notes modules are separated from React/browser dependencies.
 - JSON export/import preserves canals, measurements, radiograph statuses, events, closure, difficulty, and next-visit plan.
 - Protocol graph integrity test ensures every option nextNodeId resolves.

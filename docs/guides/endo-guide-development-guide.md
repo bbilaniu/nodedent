@@ -6,17 +6,17 @@ This is living contributor guidance, not a lifecycle-tracked product spec. Keep 
 
 ## Module Map
 
-- `src/endo-guide/protocol/nodes.ts` contains the endodontic protocol nodes and decision options.
-- `src/endo-guide/protocol/phases.ts` contains phase ordering and phase-progress rules.
-- `src/endo-guide/protocol/guards.ts` evaluates structured guard metadata attached to decision options.
-- `src/endo-guide/protocol/continuation.ts` maps canal status to canal-aware continuation targets.
-- `src/endo-guide/engine/applyDecision.ts` contains the pure decision transition function. It has no React, DOM, localStorage, or browser API dependency.
-- `src/endo-guide/engine/validateDecision.ts` centralizes required-field and branch-consistency validation.
-- `src/endo-guide/engine/deriveCanalStatus.ts` and `src/endo-guide/engine/deriveCaseStatus.ts` derive workflow status from recorded data and events.
-- `src/endo-guide/schemas/` contains Zod schemas for case, canal, event, closure, option, guard, and protocol-node data.
-- `src/endo-guide/notes/` contains compact note, full note, patient summary, JSON export, and event-fragment builders.
-- `src/endo-guide/components/` renders UI panels and modals. Components should receive state and callbacks rather than duplicating clinical branching logic.
-- `src/endo-guide/state/persistence.ts` contains storage keys, blank/default case data, canal event hydration, and import normalization.
+- `src/nodedent/protocol/nodes.ts` contains the endodontic protocol nodes and decision options.
+- `src/nodedent/protocol/phases.ts` contains phase ordering and phase-progress rules.
+- `src/nodedent/protocol/guards.ts` evaluates structured guard metadata attached to decision options.
+- `src/nodedent/protocol/continuation.ts` maps canal status to canal-aware continuation targets.
+- `src/nodedent/engine/applyDecision.ts` contains the pure decision transition function. It has no React, DOM, localStorage, or browser API dependency.
+- `src/nodedent/engine/validateDecision.ts` centralizes required-field and branch-consistency validation.
+- `src/nodedent/engine/deriveCanalStatus.ts` and `src/nodedent/engine/deriveCaseStatus.ts` derive workflow status from recorded data and events.
+- `src/nodedent/schemas/` contains Zod schemas for case, canal, event, closure, option, guard, and protocol-node data.
+- `src/nodedent/notes/` contains compact note, full note, patient summary, JSON export, and event-fragment builders.
+- `src/nodedent/components/` renders UI panels and modals. Components should receive state and callbacks rather than duplicating clinical branching logic.
+- `src/nodedent/state/persistence.ts` contains storage keys, blank/default case data, canal event hydration, and import normalization.
 
 ## Adding A Protocol Node
 

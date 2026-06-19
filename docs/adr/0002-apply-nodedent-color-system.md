@@ -43,7 +43,7 @@ Preserving warning, high-difficulty, and referral colors protects chairside scan
 
 - React components should use token classes such as `bg-brand-navy`, `text-brand-slate`, `border-brand-light-node`, and `focus:ring-brand-mint/20` for branded UI roles.
 - Hardcoded brand hex values should stay in `src/styles.css`, not in React components.
-- Status style maps should remain centralized in `src/endo-guide/engine/deriveCanalStatus.ts`, `src/endo-guide/engine/deriveCaseStatus.ts`, and `src/endo-guide/engine/phaseProgress.ts`.
+- Status style maps should remain centralized in `src/nodedent/engine/deriveCanalStatus.ts`, `src/nodedent/engine/deriveCaseStatus.ts`, and `src/nodedent/engine/phaseProgress.ts`.
 - New status colors should be added by clinical meaning, not by visual preference alone.
 - Optional blue should be used sparingly for informational or secondary actions, not for primary CTAs, completion, warnings, or errors.
 - Dark mode should be maintained through the document-level theme override in `src/styles.css`; avoid duplicating every component class unless a component has a unique contrast problem.
