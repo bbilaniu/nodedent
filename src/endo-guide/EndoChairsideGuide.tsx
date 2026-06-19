@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
+import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
-import { EndodonticTargetPanel } from "./components/EndodonticTargetPanel";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
@@ -26,6 +26,7 @@ import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPrio
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
+import { endodonticRootWorkflowId } from "./workflow/registry";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
   anesthesiaEventTypes,
@@ -864,23 +865,26 @@ export default function EndoChairsideGuide() {
 
         <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
           <aside className="contents">
-            <EndodonticTargetPanel
-              caseData={caseData}
-              newCanalName={newCanalName}
-              renameCanalName={renameCanalName}
-              onNewCanalNameChange={setNewCanalName}
-              onRenameCanalNameChange={setRenameCanalName}
-              onSelectCanal={selectCanal}
-              onAddCanal={addCanal}
-              onRenameActiveCanal={renameActiveCanal}
-              onDeleteActiveCanal={deleteActiveCanal}
-              onManualEvent={addManualCanalEvent}
-              onResetManualStatus={resetActiveCanalManualStatus}
-              onOpenPhaseMap={() => {
-                setSelectedProgressPhase(currentNode.phase);
-                setIsProgressDetailOpen(true);
+            <ActiveWorkflowTargetPanel
+              activeWorkflowId={endodonticRootWorkflowId}
+              endodonticProps={{
+                caseData,
+                newCanalName,
+                renameCanalName,
+                onNewCanalNameChange: setNewCanalName,
+                onRenameCanalNameChange: setRenameCanalName,
+                onSelectCanal: selectCanal,
+                onAddCanal: addCanal,
+                onRenameActiveCanal: renameActiveCanal,
+                onDeleteActiveCanal: deleteActiveCanal,
+                onManualEvent: addManualCanalEvent,
+                onResetManualStatus: resetActiveCanalManualStatus,
+                onOpenPhaseMap: () => {
+                  setSelectedProgressPhase(currentNode.phase);
+                  setIsProgressDetailOpen(true);
+                },
+                className: "order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1",
               }}
-              className="order-1 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1"
             />
           </aside>
 

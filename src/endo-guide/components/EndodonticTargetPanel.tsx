@@ -4,6 +4,22 @@ import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCana
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
 
+export type EndodonticTargetPanelProps = {
+  caseData: EndoCase;
+  newCanalName: string;
+  renameCanalName: string;
+  onNewCanalNameChange: (value: string) => void;
+  onRenameCanalNameChange: (value: string) => void;
+  onSelectCanal: (canalName: string) => void;
+  onAddCanal: () => void;
+  onRenameActiveCanal: () => void;
+  onDeleteActiveCanal: () => void;
+  onManualEvent: (type: string, label: string, nextNodeId?: string | null, difficultyFlag?: DifficultyFlag | null) => void;
+  onResetManualStatus: () => void;
+  onOpenPhaseMap: () => void;
+  className?: string;
+};
+
 export function EndodonticTargetPanel({
   caseData,
   newCanalName,
@@ -18,21 +34,7 @@ export function EndodonticTargetPanel({
   onResetManualStatus,
   onOpenPhaseMap,
   className = "",
-}: {
-  caseData: EndoCase;
-  newCanalName: string;
-  renameCanalName: string;
-  onNewCanalNameChange: (value: string) => void;
-  onRenameCanalNameChange: (value: string) => void;
-  onSelectCanal: (canalName: string) => void;
-  onAddCanal: () => void;
-  onRenameActiveCanal: () => void;
-  onDeleteActiveCanal: () => void;
-  onManualEvent: (type: string, label: string, nextNodeId?: string | null, difficultyFlag?: DifficultyFlag | null) => void;
-  onResetManualStatus: () => void;
-  onOpenPhaseMap: () => void;
-  className?: string;
-}) {
+}: EndodonticTargetPanelProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);

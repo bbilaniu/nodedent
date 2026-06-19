@@ -188,10 +188,25 @@ Reasoning level: high.
 - A future operative workflow can add a teeth/surfaces target panel without modifying canal-specific code.
 - Light and dark mode remain readable for safety, warning, status, and action panels.
 
+## Implementation Progress
+
+Completed first pass:
+
+- The main header now presents NodeDent as the clinical workspace and names the endodontic decision guide as the active workflow.
+- The canal selector was renamed and framed as an endodontic progress/target panel instead of a platform-level selector.
+- The phase/canal map is available from the endodontic progress panel.
+- The decision card no longer carries broad saved-workflow, prior-visit, anesthesia, and isolation launch controls. Those remain available from NodeDent Home and Case Setup & Status.
+- A small active-workflow target-panel slot now routes `endo.rct` to the endodontic target panel without making the canal model generic.
+
+Still open:
+
+- Decide whether the endodontic progress panel should remain visible in the secondary column or move behind a drawer/button.
+- Complete a visual pass for dark-mode warning/status panels and duplicated button styling.
+- Review the shell with the operative direct restoration model before enabling an operative runner.
+
 ## Open Decisions
 
 - Should the endodontic progress panel be always visible in the secondary column, or hidden behind an `Endo progress` button?
 - Should NodeDent Home become the first screen immediately, or remain a modal until there is a second primary workflow?
 - Which shared module controls should remain in the pre-op readiness card during the transition?
 - Should the active workflow target panel live in the secondary column, inside the active workflow card, or in Case Setup & Status?
-
