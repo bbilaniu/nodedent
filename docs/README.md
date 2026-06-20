@@ -4,8 +4,10 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Source Material
 
+- [template-chairside-guide.md](source/template-chairside-guide.md) *Do Not Modify, unless changing template form*
 - [Systematic Endodontics 99-step algorithm](source/systematic-endodontics-99-step-algorithm.md)
 - [Endodontic chairside guide](source/endo-chairside-guide.md)
+- [dental-hygiene-chairside-guide.md](source/dental-hygiene-chairside-guide.md)
 
 ## Active Product And Implementation Specs
 
@@ -17,7 +19,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Engineering Guides
 
-- [Endodontic guide development guide](guides/endo-guide-development-guide.md)
+- [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 
 ## Generated Documentation
 
