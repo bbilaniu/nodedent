@@ -165,6 +165,10 @@ Procedure names can remain strings while NodeDent has one primary clinical workf
 
 Revisit this roadmap when:
 
+- `shared.isolation` or `shared.anesthesia` records structured events.
+- consider adding `shared.consent` for collecting written and or verbal consent, `shared.examination` for clinical exams, `shared.continuity` of care.
+- Case Setup & Status can summarize event-backed capabilities.
+- Multi-visit endodontic continuation is implemented.
 - `shared.radiology` records structured events and satisfies `radiographs.reviewed`.
 - Multi-visit endodontic continuation has end-to-end scenario fixtures and a reusable continuity/history boundary is ready to design.
 - A second non-endodontic primary workflow repeats the operative runner shape.
