@@ -2,7 +2,7 @@ import React from "react";
 import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import type { CaseCapabilitySummary, CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
-import { panelActionButton } from "./uiStyles";
+import { cx } from "./uiStyles";
 
 function statusLabel(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "Review";
@@ -68,6 +68,7 @@ export function SharedReadinessCard({
   onOpenCaseSetupStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  disabledActionLabels = [],
   className = "",
 }: {
   caseData: EndoCase;
@@ -75,6 +76,7 @@ export function SharedReadinessCard({
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  disabledActionLabels?: string[];
   className?: string;
 }) {
   const summary = capabilitySummary || getCaseCapabilitySummary(caseData);
@@ -87,32 +89,37 @@ export function SharedReadinessCard({
 
   return (
     <section className={`min-w-0 rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm ${className}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-brand-navy">Shared readiness</h3>
-          <p className="mt-1 text-xs leading-5 text-brand-slate">Reusable case context for the active workflow.</p>
-        </div>
-        <button type="button" onClick={() => onOpenCaseSetupStatus()} className={panelActionButton.secondaryMuted}>
-          Case Setup
-        </button>
+      <div>
+        <h3 className="text-sm font-semibold text-brand-navy">Shared readiness</h3>
+        <p className="mt-1 text-xs leading-5 text-brand-slate">Reusable diagnosis, radiographs, anesthesia, and isolation context for the active workflow.</p>
       </div>
-      <div className="mt-3 grid gap-2">
-        {items.map(({ label, status, onClick }) => (
-          <button
-            key={label}
-            type="button"
-            onClick={onClick}
-            className={`rounded-xl border px-3 py-2 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${statusClass(status.satisfied, status.needsReassessment)}`}
-          >
-            <span className="flex items-start justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
-              <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
-                {statusLabel(status.satisfied, status.needsReassessment)}
+      <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        {items.map(({ label, status, onClick }) => {
+          const disabled = disabledActionLabels.includes(label);
+          return (
+            <button
+              key={label}
+              type="button"
+              disabled={disabled}
+              onClick={onClick}
+              className={cx(
+                "min-h-[6.25rem] rounded-xl border px-3 py-2 text-left transition",
+                disabled ? "cursor-not-allowed opacity-60" : "hover:-translate-y-0.5 hover:shadow-sm",
+                statusClass(status.satisfied, status.needsReassessment),
+              )}
+            >
+              <span className="flex items-start justify-between gap-2">
+                <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
+                <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
+                  {disabled ? "Open" : statusLabel(status.satisfied, status.needsReassessment)}
+                </span>
               </span>
-            </span>
-            <span className="mt-1 block text-xs leading-5 opacity-85">{status.summary}</span>
-          </button>
-        ))}
+              <span className="mt-1 block text-xs leading-5 opacity-85">
+                {disabled ? "Currently open in the workspace." : status.summary}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
