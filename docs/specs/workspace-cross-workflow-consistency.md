@@ -206,6 +206,8 @@ Reasoning level needed: medium.
 
 Reasoning level needed: medium.
 
+Status: partially implemented by moving shared readiness into a full-width band below the header, removing the generic Case Setup action from the readiness surface, keeping row-specific readiness actions, disabling the currently open shared-module row to prevent recursive modal launch, and removing the duplicate operative-runner readiness block so the workspace band owns shared readiness.
+
 - Normalize NodeDent Home launcher labels and status text.
 - Normalize shared readiness row labels and actions across endodontic and operative contexts.
 - Move shared readiness toward a full-width band below the header.
@@ -216,6 +218,8 @@ Reasoning level needed: medium.
 ### Phase 3: Target Panel And Setup Guardrails
 
 Reasoning level needed: medium-high.
+
+Status: partially implemented by adding explicit routing coverage for endodontic, operative, shared-module, and unknown workflow IDs; confirming shared-module contexts render no workflow target setup in Case Setup & Status; grouping Case Setup & Status into Case identity, Shared readiness, Endodontic setup, and Operative setup surfaces; and wiring the operative setup group to the same event-backed operative setup state used by the active workflow panel.
 
 - Verify endodontic panels are hidden in operative and shared-module contexts.
 - Verify operative setup does not appear in endodontic-only contexts unless explicitly opened.

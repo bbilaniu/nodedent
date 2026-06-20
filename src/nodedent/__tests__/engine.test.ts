@@ -47,7 +47,7 @@ import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../wor
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
-import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow } from "../workflow/isolation";
+import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import {
   blankOperativeWorkflowSetup,
@@ -254,10 +254,17 @@ test("handoff nodes are intentional and resolvable", () => {
 test("workflow target panel routing keeps operative workflows out of the endodontic canal panel", () => {
   assert.equal(getWorkflowTargetPanelKind(endodonticRootWorkflowId), "endodontic");
   assert.equal(workflowHasEndodonticTargetPanel(endodonticRootWorkflowId), true);
+  assert.equal(workflowHasOperativeTargetPanel(endodonticRootWorkflowId), false);
 
   assert.equal(getWorkflowTargetPanelKind(operativeDirectRestorationWorkflowId), "operative");
   assert.equal(workflowHasEndodonticTargetPanel(operativeDirectRestorationWorkflowId), false);
   assert.equal(workflowHasOperativeTargetPanel(operativeDirectRestorationWorkflowId), true);
+
+  assert.equal(getWorkflowTargetPanelKind(sharedAnesthesiaWorkflowId), "none");
+  assert.equal(getWorkflowTargetPanelKind(sharedIsolationWorkflowId), "none");
+  assert.equal(getWorkflowTargetPanelKind("future.cleaning"), "none");
+  assert.equal(workflowHasEndodonticTargetPanel(sharedAnesthesiaWorkflowId), false);
+  assert.equal(workflowHasOperativeTargetPanel(sharedIsolationWorkflowId), false);
 });
 
 test("case setup hides endodontic active-canal setup for operative workflows", () => {
@@ -273,6 +280,14 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
     onUpdateDiagnosis: noop,
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
+    operativeSetup: {
+      tooth: "36",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    },
+    onOperativeSetupChange: noop,
     onApplySuggestedCaseStatus: noop,
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
@@ -281,11 +296,45 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
     onDownloadCaseJson: noop,
   }));
 
+  assert.equal(markup.includes("Case identity"), true);
+  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Operative setup"), true);
+  assert.equal(markup.includes("Current operative scope"), true);
   assert.equal(markup.includes("Diagnosis readiness"), true);
   assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Endodontic setup"), false);
   assert.equal(markup.includes("Endodontic workflow setup"), false);
   assert.equal(markup.includes("Estimated WL for"), false);
   assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("case setup hides workflow target setup for shared module contexts", () => {
+  const caseData = baseCase();
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+    caseData,
+    activeCanal: caseData.canals[0],
+    activeWorkflowId: sharedAnesthesiaWorkflowId,
+    currentNodeId: "anesthesia-select-route",
+    onClose: noop,
+    onUpdateCase: noop,
+    onUpdateDiagnosis: noop,
+    onUpdatePreOp: noop,
+    onUpdateActiveCanal: noop,
+    onApplySuggestedCaseStatus: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onDownloadCaseJson: noop,
+  }));
+
+  assert.equal(markup.includes("Case identity"), true);
+  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Endodontic setup"), false);
+  assert.equal(markup.includes("Endodontic workflow setup"), false);
+  assert.equal(markup.includes("Operative setup"), false);
+  assert.equal(markup.includes("Estimated WL for"), false);
 });
 
 test("active workflow target panel renders operative setup without canal controls", () => {
@@ -401,7 +450,7 @@ test("workflow launcher exposes operative runner entry", () => {
   assert.equal(markup.includes("Model only"), false);
 });
 
-test("operative runner renders setup readiness record and completion states without endodontic controls", () => {
+test("operative runner renders setup record and completion states without readiness duplication or endodontic controls", () => {
   const caseData = baseCase({ tooth: "36" });
   const setup = {
     tooth: "36",
@@ -423,17 +472,13 @@ test("operative runner renders setup readiness record and completion states with
   const markup = renderToStaticMarkup(React.createElement(OperativeWorkflowRunner, {
     caseData,
     setup,
-    capabilitySummary: getOperativeReadinessCapabilitySummary(caseData, setup),
     latestRestorationEvent: completionEvent,
     onSetupChange: noop,
     onRecordRestoration: noop,
-    onOpenCaseSetupStatus: noop,
-    onOpenAnesthesiaWorkflow: noop,
-    onOpenIsolationWorkflow: noop,
   }));
 
   assert.equal(markup.includes("Direct restoration"), true);
-  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Shared readiness"), false);
   assert.equal(markup.includes("Operative setup"), true);
   assert.equal(markup.includes("Restoration record"), true);
   assert.equal(markup.includes("Operative workflow complete"), true);

@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { CaseSetupFocusTarget, ClinicalEvent, EndoCase } from "../types";
-import type { CaseCapabilitySummary } from "../workflow/selectors";
+import type { ClinicalEvent, EndoCase } from "../types";
 import {
   getOperativeRestorationRecordFromEvent,
   operativeDirectRestorationWorkflow,
@@ -8,19 +7,7 @@ import {
 } from "../workflow/operative";
 import { panelActionButton } from "./uiStyles";
 import { TextInput } from "./FormControls";
-import { getSharedReadinessActions } from "./SharedReadinessCard";
 import { OperativeWorkflowSetupPanel } from "./OperativeWorkflowSetupPanel";
-
-function readinessLabel(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "Review";
-  return satisfied ? "Ready" : "Pending";
-}
-
-function readinessClass(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
-  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
-}
 
 function hasSetupScope(setup: OperativeWorkflowSetupState, fallbackTooth: string) {
   return Boolean((setup.tooth || fallbackTooth).trim() && setup.surfaces.trim());
@@ -35,23 +22,15 @@ function stepState(stepIndex: number, activeIndex: number) {
 export function OperativeWorkflowRunner({
   caseData,
   setup,
-  capabilitySummary,
   latestRestorationEvent,
   onSetupChange,
   onRecordRestoration,
-  onOpenCaseSetupStatus,
-  onOpenAnesthesiaWorkflow,
-  onOpenIsolationWorkflow,
 }: {
   caseData: EndoCase;
   setup: OperativeWorkflowSetupState;
-  capabilitySummary: CaseCapabilitySummary;
   latestRestorationEvent?: ClinicalEvent;
   onSetupChange: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onRecordRestoration: (record: { outcome: string; notes: string }) => void;
-  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
-  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
-  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
 }) {
   const [outcome, setOutcome] = useState("");
   const [notes, setNotes] = useState("");
@@ -60,12 +39,6 @@ export function OperativeWorkflowRunner({
   const completionRecord = getOperativeRestorationRecordFromEvent(latestRestorationEvent);
   const completed = Boolean(latestRestorationEvent);
   const activeStepIndex = completed ? 3 : setupReady ? 2 : 1;
-  const readinessActions = getSharedReadinessActions({
-    capabilitySummary,
-    onOpenCaseSetupStatus,
-    onOpenAnesthesiaWorkflow,
-    onOpenIsolationWorkflow,
-  });
   const nodeSequence = [
     operativeDirectRestorationWorkflow.nodes["operative-readiness"],
     operativeDirectRestorationWorkflow.nodes["operative-surface-scope"],
@@ -115,36 +88,6 @@ export function OperativeWorkflowRunner({
                 <p className="text-[11px] font-bold uppercase tracking-wide">{stepState(index, activeStepIndex)}</p>
                 <p className="mt-1 text-sm font-semibold">{node.title}</p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-brand-navy">Shared readiness</h3>
-              <p className="mt-1 text-xs leading-5 text-brand-slate">Status is shown for the planned operative target and remains clinician-reviewed context.</p>
-            </div>
-            <button type="button" onClick={() => onOpenCaseSetupStatus()} className={panelActionButton.secondaryMuted}>
-              Case Setup
-            </button>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {readinessActions.map(({ label, status, onClick }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={onClick}
-                className={`rounded-xl border px-3 py-2 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${readinessClass(status.satisfied, status.needsReassessment)}`}
-              >
-                <span className="flex items-start justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
-                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
-                    {readinessLabel(status.satisfied, status.needsReassessment)}
-                  </span>
-                </span>
-                <span className="mt-1 block text-xs leading-5 opacity-85">{status.summary}</span>
-              </button>
             ))}
           </div>
         </div>
