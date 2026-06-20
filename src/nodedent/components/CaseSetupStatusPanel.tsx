@@ -15,14 +15,14 @@ import type { IsolationEventDetails, IsolationEventType, IsolationMethod, Isolat
 import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel } from "../workflow/isolation";
 import type { IsolationCatalogField } from "../workflow/isolationCatalog";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
-import type { OperativeWorkflowSetupState } from "../workflow/operative";
+import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
-import { OperativeWorkflowSetupPanel } from "./OperativeWorkflowSetupPanel";
+import { cx, panelSurface, sectionText } from "./uiStyles";
 
 function statusClass(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
@@ -511,9 +511,9 @@ function CaseSetupGroup({
   return (
     <section className="grid gap-3 lg:col-span-2">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-slate">Case Setup & Status</p>
-        <h3 className="mt-1 text-base font-semibold text-brand-navy">{title}</h3>
-        <p className="mt-1 text-sm leading-6 text-brand-slate">{description}</p>
+        <p className={sectionText.eyebrow}>Case Setup & Status</p>
+        <h3 className={sectionText.title}>{title}</h3>
+        <p className={sectionText.description}>{description}</p>
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {children}
@@ -530,8 +530,8 @@ function CaseIdentitySection({
   onUpdateCase: (updates: Partial<EndoCase>) => void;
 }) {
   return (
-    <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-      <h3 className="text-sm font-semibold text-brand-navy">Patient and procedure</h3>
+    <section className={panelSurface.muted}>
+      <h3 className={sectionText.titleSmall}>Patient and procedure</h3>
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
@@ -551,8 +551,8 @@ function CaseVisitStatusSection({
   onApplySuggestedCaseStatus: () => void;
 }) {
   return (
-    <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-      <h3 className="text-sm font-semibold text-brand-navy">Case visit status</h3>
+    <section className={panelSurface.muted}>
+      <h3 className={sectionText.titleSmall}>Case visit status</h3>
       <div className="mt-3 grid gap-3">
         <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
         <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-slate">Use suggested status</button>
@@ -580,8 +580,8 @@ function DiagnosisReadinessSection({
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
-    <section ref={sectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2">
-      <h3 className="text-sm font-semibold text-brand-navy">Diagnosis readiness</h3>
+    <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
+      <h3 className={sectionText.titleSmall}>Diagnosis readiness</h3>
       <div className="mt-3 grid gap-3">
         <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
         <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
@@ -604,8 +604,8 @@ function RadiographReadinessSection({
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
-    <section ref={sectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2">
-      <h3 className="text-sm font-semibold text-brand-navy">Radiograph readiness</h3>
+    <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
+      <h3 className={sectionText.titleSmall}>Radiograph readiness</h3>
       <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>
         <div className="grid gap-2 sm:grid-cols-3">
@@ -633,8 +633,8 @@ function SharedClinicalReadinessSection({
   statusItems: Array<{ label: string; status: CapabilityStatus }>;
 }) {
   return (
-    <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 lg:col-span-2">
-      <h3 className="text-sm font-semibold text-brand-navy">Shared clinical readiness</h3>
+    <section className={cx(panelSurface.muted, "lg:col-span-2")}>
+      <h3 className={sectionText.titleSmall}>Shared clinical readiness</h3>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {statusItems.map(({ label, status }) => (
           <div key={label} className={`rounded-xl border px-3 py-2 ${statusClass(status.satisfied, status.needsReassessment)}`}>
@@ -653,6 +653,51 @@ function SharedClinicalReadinessSection({
   );
 }
 
+function OperativeWorkflowSetupSummary({
+  caseData,
+  setup,
+  onOpenOperativeWorkflowSetup,
+}: {
+  caseData: EndoCase;
+  setup: OperativeWorkflowSetupState;
+  onOpenOperativeWorkflowSetup?: () => void;
+}) {
+  const scope = createOperativeSetupScope(setup, caseData.tooth);
+  const rows = [
+    { label: "Scope", value: scope.label || "No tooth/surface scope yet" },
+    { label: "Restoration intent", value: setup.restorationIntent || "Not recorded" },
+    { label: "Material", value: setup.material || "Not recorded" },
+    { label: "Shade", value: setup.shade || "Not recorded" },
+  ];
+
+  return (
+    <section className={cx(panelSurface.muted, "lg:col-span-2")}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className={sectionText.titleSmall}>Operative setup summary</h3>
+          <p className={sectionText.descriptionSmall}>Edit tooth and surface scope in the active operative workflow.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenOperativeWorkflowSetup}
+          disabled={!onOpenOperativeWorkflowSetup}
+          className="shrink-0 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
+        >
+          Open operative workflow
+        </button>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {rows.map((row) => (
+          <div key={row.label} className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{row.label}</p>
+            <p className="mt-1 text-sm font-semibold text-brand-navy">{row.value}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function CaseSetupStatusPanel({
   caseData,
   activeCanal,
@@ -662,12 +707,12 @@ export function CaseSetupStatusPanel({
   onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
-  onOperativeSetupChange,
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenOperativeWorkflowSetup,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
   userIsolationCatalogItems = [],
@@ -682,12 +727,12 @@ export function CaseSetupStatusPanel({
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
-  onOperativeSetupChange?: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenOperativeWorkflowSetup?: () => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
   userIsolationCatalogItems?: CatalogItem[];
@@ -698,7 +743,7 @@ export function CaseSetupStatusPanel({
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
   const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic";
-  const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup && onOperativeSetupChange);
+  const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup);
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
@@ -856,17 +901,21 @@ export function CaseSetupStatusPanel({
         </CaseSetupGroup>
       ) : null}
 
-      {showOperativeWorkflowSetup && operativeSetup && onOperativeSetupChange ? (
+      {showOperativeWorkflowSetup && operativeSetup ? (
         <CaseSetupGroup title="Operative setup" description="Operative tooth, surface, material, and shade documentation for the active direct restoration workflow.">
-          <OperativeWorkflowSetupPanel caseData={caseData} setup={operativeSetup} onSetupChange={onOperativeSetupChange} />
+          <OperativeWorkflowSetupSummary
+            caseData={caseData}
+            setup={operativeSetup}
+            onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
+          />
         </CaseSetupGroup>
       ) : null}
 
-      <section ref={anesthesiaSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">
+      <section ref={anesthesiaSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-brand-navy">Anesthesia</h3>
-            <p className="mt-1 text-sm leading-6 text-brand-slate">{capabilitySummary.anesthesia.summary}</p>
+            <h3 className={sectionText.titleSmall}>Anesthesia</h3>
+            <p className={sectionText.description}>{capabilitySummary.anesthesia.summary}</p>
           </div>
           <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(capabilitySummary.anesthesia.satisfied, capabilitySummary.anesthesia.needsReassessment)}`}>
             {capabilitySummary.anesthesia.needsReassessment ? "Review" : capabilitySummary.anesthesia.satisfied ? "Ready" : "Pending"}
@@ -886,7 +935,7 @@ export function CaseSetupStatusPanel({
             onClick={() => onOpenAnesthesiaWorkflow(anesthesiaWorkflowEntryNodeId)}
             className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaIsEstablished ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
           >
-            {anesthesiaIsEstablished ? "Open workflow" : capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
+            {anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
           </button>
         </div>
         <AnesthesiaEventForm
@@ -901,11 +950,11 @@ export function CaseSetupStatusPanel({
         ) : null}
       </section>
 
-      <section ref={isolationSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">
+      <section ref={isolationSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-brand-navy">Isolation</h3>
-            <p className="mt-1 text-sm leading-6 text-brand-slate">{capabilitySummary.isolation.summary}</p>
+            <h3 className={sectionText.titleSmall}>Isolation</h3>
+            <p className={sectionText.description}>{capabilitySummary.isolation.summary}</p>
           </div>
           <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(capabilitySummary.isolation.satisfied, capabilitySummary.isolation.needsReassessment)}`}>
             {capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending"}
@@ -939,7 +988,7 @@ export function CaseSetupStatusPanel({
               onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
               className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
             >
-              Open workflow
+              Review isolation
             </button>
             <button
               type="button"

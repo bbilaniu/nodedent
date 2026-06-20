@@ -36,12 +36,12 @@ export function CaseManagementModal({
   onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
-  onOperativeSetupChange,
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenOperativeWorkflowSetup,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
   userIsolationCatalogItems = [],
@@ -59,12 +59,12 @@ export function CaseManagementModal({
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
-  onOperativeSetupChange?: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenOperativeWorkflowSetup?: () => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
   userIsolationCatalogItems?: CatalogItem[];
@@ -134,12 +134,12 @@ export function CaseManagementModal({
             onUpdateDiagnosis={onUpdateDiagnosis}
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
-            onOperativeSetupChange={onOperativeSetupChange}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
             onRecordIsolationEvent={onRecordIsolationEvent}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
+            onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
             userIsolationCatalogItems={userIsolationCatalogItems}

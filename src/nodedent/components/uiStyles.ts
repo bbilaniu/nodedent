@@ -33,3 +33,20 @@ export const panelActionButton = {
   danger: cx(panelButtonBase, panelButtonDefaultSize, "border-red-200 bg-red-50 text-red-800 hover:bg-red-100"),
   destructive: cx(panelButtonBase, panelButtonDefaultSize, "border-red-700 bg-red-700 text-white hover:bg-red-800"),
 };
+
+export const panelSurface = {
+  card: "rounded-2xl border border-brand-light-node bg-white shadow-sm",
+  cardPadded: "rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm",
+  cardPaddedLarge: "rounded-2xl border border-brand-light-node bg-white p-5 shadow-sm",
+  muted: "rounded-2xl border border-brand-light-node bg-brand-light-slate p-4",
+  mutedFocusable: "rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2",
+  success: "rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 shadow-sm",
+};
+
+export const sectionText = {
+  eyebrow: "text-xs font-bold uppercase tracking-[0.18em] text-brand-slate",
+  title: "mt-1 text-base font-semibold text-brand-navy",
+  titleSmall: "text-sm font-semibold text-brand-navy",
+  description: "mt-1 text-sm leading-6 text-brand-slate",
+  descriptionSmall: "mt-1 text-xs leading-5 text-brand-slate",
+};

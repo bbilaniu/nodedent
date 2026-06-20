@@ -5,7 +5,7 @@ import {
   operativeDirectRestorationWorkflow,
   type OperativeWorkflowSetupState,
 } from "../workflow/operative";
-import { panelActionButton } from "./uiStyles";
+import { cx, panelActionButton, panelSurface, sectionText } from "./uiStyles";
 import { TextInput } from "./FormControls";
 import { OperativeWorkflowSetupPanel } from "./OperativeWorkflowSetupPanel";
 
@@ -68,12 +68,12 @@ export function OperativeWorkflowRunner({
   return (
     <section className="order-2 min-w-0 lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="space-y-4">
-        <div className="rounded-2xl border border-brand-light-node bg-white p-5 shadow-sm">
+        <div className={panelSurface.cardPaddedLarge}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Operative workflow</p>
+              <p className={sectionText.eyebrow}>Operative workflow</p>
               <h2 className="mt-1 text-xl font-bold text-brand-navy">Direct restoration</h2>
-              <p className="mt-2 text-sm leading-6 text-brand-slate">
+              <p className={sectionText.description}>
                 Record operative scope, review shared readiness context, and document the final restoration event for the planned surfaces.
               </p>
             </div>
@@ -94,8 +94,8 @@ export function OperativeWorkflowRunner({
 
         <OperativeWorkflowSetupPanel caseData={caseData} setup={setup} onSetupChange={onSetupChange} />
 
-        <div className="rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-semibold text-brand-navy">Restoration record</h3>
+        <div className={panelSurface.cardPadded}>
+          <h3 className={sectionText.titleSmall}>Restoration record</h3>
           <div className="mt-3 grid gap-3">
             <TextInput label="Restoration outcome" value={outcome} onChange={setOutcome} placeholder="e.g., placed" />
             <label className="block">
@@ -118,8 +118,8 @@ export function OperativeWorkflowRunner({
         </div>
 
         {completed ? (
-          <div className="rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy shadow-sm">
-            <h3 className="text-sm font-semibold">Operative workflow complete</h3>
+          <div className={cx(panelSurface.success, "text-sm leading-6 text-brand-navy")}>
+            <h3 className={sectionText.titleSmall}>Operative workflow complete</h3>
             <p className="mt-1">
               Final restoration recorded for tooth {completionRecord.tooth || "not set"}
               {completionRecord.surfaces ? `, surfaces ${completionRecord.surfaces}` : ""}.
