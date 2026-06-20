@@ -16,6 +16,7 @@ This folder separates clinical source material, active product specs, architectu
 - [NodeDent vision](specs/nodedent-vision.md)
 - [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 - [Shared radiology module](specs/shared-radiology-module.md)
+- [Workspace cross-workflow consistency](specs/workspace-cross-workflow-consistency.md)
 
 ## Engineering Guides
 
