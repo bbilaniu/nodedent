@@ -15,12 +15,14 @@ import type { IsolationEventDetails, IsolationEventType, IsolationMethod, Isolat
 import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel } from "../workflow/isolation";
 import type { IsolationCatalogField } from "../workflow/isolationCatalog";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
+import type { OperativeWorkflowSetupState } from "../workflow/operative";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
+import { OperativeWorkflowSetupPanel } from "./OperativeWorkflowSetupPanel";
 
 function statusClass(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
@@ -497,6 +499,29 @@ function focusCaseSetupSection(focusTarget: CaseSetupFocusTarget | null | undefi
   section?.focus({ preventScroll: true });
 }
 
+function CaseSetupGroup({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="grid gap-3 lg:col-span-2">
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand-slate">Case Setup & Status</p>
+        <h3 className="mt-1 text-base font-semibold text-brand-navy">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-brand-slate">{description}</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {children}
+      </div>
+    </section>
+  );
+}
+
 function CaseIdentitySection({
   caseData,
   onUpdateCase,
@@ -506,7 +531,7 @@ function CaseIdentitySection({
 }) {
   return (
     <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-      <h3 className="text-sm font-semibold text-brand-navy">Case identity</h3>
+      <h3 className="text-sm font-semibold text-brand-navy">Patient and procedure</h3>
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
@@ -632,10 +657,12 @@ export function CaseSetupStatusPanel({
   caseData,
   activeCanal,
   activeWorkflowId,
+  operativeSetup,
   onUpdateCase,
   onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
+  onOperativeSetupChange,
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
@@ -650,10 +677,12 @@ export function CaseSetupStatusPanel({
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
   activeWorkflowId: string;
+  operativeSetup?: OperativeWorkflowSetupState;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
+  onOperativeSetupChange?: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
@@ -667,7 +696,9 @@ export function CaseSetupStatusPanel({
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
-  const showEndodonticWorkflowSetup = getWorkflowTargetPanelKind(activeWorkflowId) === "endodontic";
+  const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
+  const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic";
+  const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup && onOperativeSetupChange);
   const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
   const previousToothRef = useRef(caseData.tooth);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
@@ -807,15 +838,29 @@ export function CaseSetupStatusPanel({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <CaseIdentitySection caseData={caseData} onUpdateCase={onUpdateCase} />
-      <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
-      <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
-      <RadiographReadinessSection caseData={caseData} paReviewed={paReviewed} bwReviewed={bwReviewed} onUpdatePreOp={onUpdatePreOp} sectionRef={radiographsSectionRef} />
+    <div className="grid gap-6">
+      <CaseSetupGroup title="Case identity" description="Patient, tooth, procedure, visit status, and next-visit planning.">
+        <CaseIdentitySection caseData={caseData} onUpdateCase={onUpdateCase} />
+        <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
+      </CaseSetupGroup>
+
+      <CaseSetupGroup title="Shared readiness" description="Reusable diagnosis, radiograph, anesthesia, and isolation context for the current workflow.">
+        <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
+        <RadiographReadinessSection caseData={caseData} paReviewed={paReviewed} bwReviewed={bwReviewed} onUpdatePreOp={onUpdatePreOp} sectionRef={radiographsSectionRef} />
+        <SharedClinicalReadinessSection statusItems={statusItems} />
+      </CaseSetupGroup>
+
       {showEndodonticWorkflowSetup ? (
-        <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
+        <CaseSetupGroup title="Endodontic setup" description="Endodontic-only canal and measurement setup for the active RCT workflow.">
+          <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
+        </CaseSetupGroup>
       ) : null}
-      <SharedClinicalReadinessSection statusItems={statusItems} />
+
+      {showOperativeWorkflowSetup && operativeSetup && onOperativeSetupChange ? (
+        <CaseSetupGroup title="Operative setup" description="Operative tooth, surface, material, and shade documentation for the active direct restoration workflow.">
+          <OperativeWorkflowSetupPanel caseData={caseData} setup={operativeSetup} onSetupChange={onOperativeSetupChange} />
+        </CaseSetupGroup>
+      ) : null}
 
       <section ref={anesthesiaSectionRef} tabIndex={-1} className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 outline-none ring-brand-mint/30 focus:ring-2 lg:col-span-2">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">

@@ -4,6 +4,7 @@ import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/an
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
+import type { OperativeWorkflowSetupState } from "../workflow/operative";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
@@ -29,11 +30,13 @@ export function CaseManagementModal({
   activeCanal,
   activeWorkflowId,
   currentNodeId,
+  operativeSetup,
   onClose,
   onUpdateCase,
   onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
+  onOperativeSetupChange,
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
@@ -50,11 +53,13 @@ export function CaseManagementModal({
   activeCanal?: CanalRecord | null;
   activeWorkflowId: string;
   currentNodeId: string;
+  operativeSetup?: OperativeWorkflowSetupState;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
+  onOperativeSetupChange?: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
@@ -124,10 +129,12 @@ export function CaseManagementModal({
             caseData={caseData}
             activeCanal={activeCanal}
             activeWorkflowId={activeWorkflowId}
+            operativeSetup={operativeSetup}
             onUpdateCase={onUpdateCase}
             onUpdateDiagnosis={onUpdateDiagnosis}
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
+            onOperativeSetupChange={onOperativeSetupChange}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
             onRecordIsolationEvent={onRecordIsolationEvent}

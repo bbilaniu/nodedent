@@ -1062,13 +1062,9 @@ export default function NodeDentApp() {
                 <OperativeWorkflowRunner
                   caseData={caseData}
                   setup={operativeSetup}
-                  capabilitySummary={operativeReadinessSummary}
                   latestRestorationEvent={latestOperativeRestorationEvent}
                   onSetupChange={updateOperativeSetup}
                   onRecordRestoration={recordOperativeRestoration}
-                  onOpenCaseSetupStatus={openCasePanel}
-                  onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
-                  onOpenIsolationWorkflow={openIsolationWorkflow}
                 />
               )}
 
@@ -1111,6 +1107,7 @@ export default function NodeDentApp() {
             activeCanal={activeCanal}
             activeWorkflowId={casePanelWorkflowId}
             currentNodeId={casePanelWorkflowId === operativeDirectRestorationWorkflowId ? "operative-readiness" : currentNodeId}
+            operativeSetup={operativeSetup}
             onClose={() => {
               setIsCasePanelOpen(false);
               setCasePanelFocusTarget(null);
@@ -1120,6 +1117,7 @@ export default function NodeDentApp() {
             onUpdateDiagnosis={updateDiagnosis}
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
+            onOperativeSetupChange={updateOperativeSetup}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
