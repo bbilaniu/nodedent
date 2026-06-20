@@ -230,6 +230,8 @@ Status: partially implemented by adding explicit routing coverage for endodontic
 
 Reasoning level needed: medium.
 
+Status: partially implemented by changing shared-module runner dismiss actions from `Return to parent workflow` to `Close shared workflow`, keeping the modal header action as `Close`, and adding regression coverage so dismiss UI does not use return language reserved for modeled workflow options.
+
 - Normalize runner action labels and completion states.
 - Keep note and export output unchanged unless intentionally tested.
 - Confirm endodontic, operative, anesthesia, and isolation workflows all provide a clear route back to home/setup.
