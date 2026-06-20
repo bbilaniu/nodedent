@@ -177,6 +177,12 @@ export default function NodeDentApp() {
   const activeSharedModuleTargetTooth = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId || casePanelWorkflowId === operativeDirectRestorationWorkflowId
     ? createOperativeReadinessScopes(operativeSetup, caseData.tooth).toothScope?.tooth
     : caseData.tooth;
+  const disabledReadinessActionLabels =
+    embeddedWorkflowLaunch?.workflowId === sharedAnesthesiaWorkflowId
+      ? ["Anesthesia"]
+      : embeddedWorkflowLaunch?.workflowId === sharedIsolationWorkflowId
+        ? ["Isolation"]
+        : [];
   const latestAnesthesiaEvent = useMemo(
     () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
     [caseData.globalEvents]
@@ -974,6 +980,15 @@ export default function NodeDentApp() {
           </main>
         ) : (
           <>
+            <SharedReadinessCard
+              caseData={caseData}
+              capabilitySummary={activeReadinessSummary}
+              onOpenCaseSetupStatus={openCasePanel}
+              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+              onOpenIsolationWorkflow={openIsolationWorkflow}
+              disabledActionLabels={disabledReadinessActionLabels}
+            />
+
             {isEndodonticWorkflowActive ? (
               <DifficultyBanner
                 caseData={caseData}
@@ -987,82 +1002,75 @@ export default function NodeDentApp() {
             ) : null}
 
             <main className="grid items-start gap-4 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(360px,1fr)_320px] 2xl:grid-cols-[240px_minmax(360px,1fr)_320px_340px]">
-          <aside className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
-            <SharedReadinessCard
-              caseData={caseData}
-              capabilitySummary={activeReadinessSummary}
-              onOpenCaseSetupStatus={openCasePanel}
-              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
-              onOpenIsolationWorkflow={openIsolationWorkflow}
-            />
-            <ActiveWorkflowTargetPanel
-              activeWorkflowId={activePrimaryWorkflowId || endodonticRootWorkflowId}
-              endodonticProps={{
-                caseData,
-                newCanalName,
-                renameCanalName,
-                onNewCanalNameChange: setNewCanalName,
-                onRenameCanalNameChange: setRenameCanalName,
-                onSelectCanal: selectCanal,
-                onAddCanal: addCanal,
-                onRenameActiveCanal: renameActiveCanal,
-                onDeleteActiveCanal: deleteActiveCanal,
-                onManualEvent: addManualCanalEvent,
-                onResetManualStatus: resetActiveCanalManualStatus,
-                onOpenPhaseMap: () => {
-                  setSelectedProgressPhase(currentNode.phase);
-                  setIsProgressDetailOpen(true);
-                },
-              }}
-              operativeProps={{
-                caseData,
-                setup: operativeSetup,
-                onSetupChange: updateOperativeSetup,
-              }}
-            />
-          </aside>
-
-          {isEndodonticWorkflowActive ? (
-            <>
-              <section className="contents">
-                <DecisionCard
-                  currentNode={currentNode}
-                  caseData={caseData}
-                  activeCanal={activeCanal}
-                  historyLength={history.length}
-                  validationMessage={validationMessage}
-                  isHandoffNode={isHandoffNode}
-                  continuationTargets={continuationTargets}
-                  onUndo={undo}
-                  onApplyDecision={applyDecision}
-                  onContinueCanal={continueCanal}
-                  onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
-                  onOpenCaseSetupStatus={openCasePanel}
+              <aside className="order-1 min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 xl:col-start-1 xl:row-start-1">
+                <ActiveWorkflowTargetPanel
+                  activeWorkflowId={activePrimaryWorkflowId || endodonticRootWorkflowId}
+                  endodonticProps={{
+                    caseData,
+                    newCanalName,
+                    renameCanalName,
+                    onNewCanalNameChange: setNewCanalName,
+                    onRenameCanalNameChange: setRenameCanalName,
+                    onSelectCanal: selectCanal,
+                    onAddCanal: addCanal,
+                    onRenameActiveCanal: renameActiveCanal,
+                    onDeleteActiveCanal: deleteActiveCanal,
+                    onManualEvent: addManualCanalEvent,
+                    onResetManualStatus: resetActiveCanalManualStatus,
+                    onOpenPhaseMap: () => {
+                      setSelectedProgressPhase(currentNode.phase);
+                      setIsProgressDetailOpen(true);
+                    },
+                  }}
+                  operativeProps={{
+                    caseData,
+                    setup: operativeSetup,
+                    onSetupChange: updateOperativeSetup,
+                  }}
                 />
-              </section>
+              </aside>
 
-              <MeasurementPanel
-                caseData={caseData}
-                activeCanal={activeCanal}
-                currentNodeId={currentNodeId}
-                onUpdatePreOp={updatePreOp}
-                onUpdateActiveCanal={updateActiveCanal}
-                onApplyEalDerivedLengths={applyEalDerivedLengths}
-              />
-            </>
-          ) : (
-            <OperativeWorkflowRunner
-              caseData={caseData}
-              setup={operativeSetup}
-              capabilitySummary={operativeReadinessSummary}
-              latestRestorationEvent={latestOperativeRestorationEvent}
-              onSetupChange={updateOperativeSetup}
-              onRecordRestoration={recordOperativeRestoration}
-              onOpenCaseSetupStatus={openCasePanel}
-              onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
-              onOpenIsolationWorkflow={openIsolationWorkflow}
-            />
-          )}
+              {isEndodonticWorkflowActive ? (
+                <>
+                  <section className="contents">
+                    <DecisionCard
+                      currentNode={currentNode}
+                      caseData={caseData}
+                      activeCanal={activeCanal}
+                      historyLength={history.length}
+                      validationMessage={validationMessage}
+                      isHandoffNode={isHandoffNode}
+                      continuationTargets={continuationTargets}
+                      onUndo={undo}
+                      onApplyDecision={applyDecision}
+                      onContinueCanal={continueCanal}
+                      onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
+                      onOpenCaseSetupStatus={openCasePanel}
+                    />
+                  </section>
+
+                  <MeasurementPanel
+                    caseData={caseData}
+                    activeCanal={activeCanal}
+                    currentNodeId={currentNodeId}
+                    onUpdatePreOp={updatePreOp}
+                    onUpdateActiveCanal={updateActiveCanal}
+                    onApplyEalDerivedLengths={applyEalDerivedLengths}
+                  />
+                </>
+              ) : (
+                <OperativeWorkflowRunner
+                  caseData={caseData}
+                  setup={operativeSetup}
+                  capabilitySummary={operativeReadinessSummary}
+                  latestRestorationEvent={latestOperativeRestorationEvent}
+                  onSetupChange={updateOperativeSetup}
+                  onRecordRestoration={recordOperativeRestoration}
+                  onOpenCaseSetupStatus={openCasePanel}
+                  onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+                  onOpenIsolationWorkflow={openIsolationWorkflow}
+                />
+              )}
 
           <aside className="order-4 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-3 xl:col-start-1 xl:row-start-2 2xl:col-span-1 2xl:col-start-4 2xl:row-start-1 2xl:block 2xl:space-y-4">
             <NotePreview

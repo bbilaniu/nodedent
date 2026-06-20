@@ -64,7 +64,7 @@ export function SharedWorkflowRunnerModal({
             <p className="mt-1 text-sm text-brand-slate">Parent step: <strong>{parentNodeTitle}</strong></p>
           </div>
           <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
-            Return
+            Close
           </button>
         </div>
 

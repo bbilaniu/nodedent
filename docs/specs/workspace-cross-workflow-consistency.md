@@ -28,7 +28,7 @@ Known friction:
 - Endodontic workflow surfaces are more mature and visually denser than operative surfaces.
 - Case Setup & Status still contains mixed responsibilities: case identity, endodontic setup, operative setup, shared readiness, quick capture, saved-case lifecycle, and audit/history surfaces.
 - Shared module entry points work, but their labels and placement vary by context.
-- Operative workflow UI is usable, but it should be checked against the same side-workspace, target-panel, and action-label patterns as endodontic RCT.
+- Operative workflow UI is usable, but it should be checked against the same readiness-band, target-panel, and action-label patterns as endodontic RCT.
 
 ## Goals
 
@@ -86,7 +86,7 @@ Expected behavior:
 - Primary workflows show workflow name, brief status, availability, and a clear launch/resume action.
 - Shared modules show their reusable documentation purpose and a clear record/review action.
 - Unavailable or future workflows are clearly marked without appearing broken.
-- Launching a workflow updates active workflow context and preserves shared side-workspace behavior.
+- Launching a workflow updates active workflow context and preserves shared readiness behavior.
 - Returning home does not discard event-backed state.
 
 Implementation notes:
@@ -102,11 +102,7 @@ Review the shared readiness surface in endodontic and operative contexts.
 Expected behavior:
 
 - Diagnosis, radiographs, anesthesia, and isolation rows use consistent status language.
-- Each row exposes the same kind of action in both primary workflows.
-    - Diagnosis -> focus diagnosis, 
-    - Radiographs -> focus radiographs, 
-    - Anesthesia -> open anesthesia workflow, 
-    - Isolation -> open isolation workflow.
+- Each row exposes a focused action in primary workflow contexts: Diagnosis -> focus diagnosis, Radiographs -> focus radiographs, Anesthesia -> open anesthesia workflow, and Isolation -> open isolation workflow.
 - Readiness remains advisory/documentation-oriented, not a hard clinical gate.
 - Scope-sensitive readiness summaries name the relevant target when useful, such as tooth, canal, or operative surfaces.
 - Missing readiness rows provide a route to record or review the relevant shared data.
@@ -122,7 +118,7 @@ Implementation notes:
 - Use a compact horizontal row layout for the four readiness items at wider breakpoints instead of simply stretching the current narrow stacked card.
 - On small screens, allow the readiness band to stack before the active workflow and target/progress panels.
 - If diagnosis or radiographs still need Case Setup & Status as their editing surface, make those row actions open the relevant focused section instead of exposing a separate generic setup button.
-- Readiness band should show for primary workflow and shared modules, but should gray out or otherwise make a currently open shared module unable to open itself to avoid duplicating active workflows. 
+- The readiness band should show for primary workflows and shared modules, but should disable the currently open shared module row so that workflow cannot open itself recursively.
 
 ### 3. Workflow Target Panel Guardrails
 
@@ -248,9 +244,10 @@ Reasoning level needed: medium.
 - Shared readiness rows behave consistently in endodontic and operative contexts while preserving scope-sensitive summaries.
 - Shared readiness appears as a full-width workspace band on wider layouts, with workflow-specific target/progress panels below it in the active workflow grid.
 - Shared readiness does not duplicate the header's generic Case Setup & Status action; readiness actions are specific to diagnosis, radiographs, anesthesia, or isolation.
+- When a shared module is already open, its matching readiness row is disabled or otherwise non-recursive.
 - Endodontic canal UI does not appear in operative or shared-module contexts.
 - Operative tooth/surface setup does not get treated as an endodontic canal target.
-- Case Setup & Status clearly separates into section headings/groups for Case identity, Shared readiness, Endodontic setup, and Operative setup
+- Case Setup & Status clearly separates into section headings/groups for Case identity, Shared readiness, Endodontic setup, and Operative setup.
 - Workflow runner actions and completion states use predictable labels without changing clinical event semantics.
 - Light and dark mode remain readable for status, warning, readiness, and action surfaces.
 - Tests cover routing or rendering behavior that would allow cross-workflow leakage.

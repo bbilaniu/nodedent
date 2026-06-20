@@ -8,7 +8,7 @@ import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
-import { getSharedReadinessActions } from "../components/SharedReadinessCard";
+import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
@@ -351,6 +351,31 @@ test("shared readiness actions open reusable setup and module paths for operativ
   assert.deepEqual(caseSetupTargets, ["diagnosis", "radiographs"]);
   assert.deepEqual(anesthesiaEntries, [undefined]);
   assert.deepEqual(isolationEntries, [undefined]);
+});
+
+test("shared readiness band uses row-specific actions without a generic case setup action", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
+    preOp: { ...initialCase.preOp, paReviewed: true },
+  });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
+    caseData,
+    capabilitySummary: getCaseCapabilitySummary(caseData),
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    disabledActionLabels: ["Anesthesia"],
+  }));
+
+  assert.equal(markup.includes("Shared readiness"), true);
+  assert.equal(markup.includes("Diagnosis"), true);
+  assert.equal(markup.includes("Radiographs"), true);
+  assert.equal(markup.includes("Anesthesia"), true);
+  assert.equal(markup.includes("Isolation"), true);
+  assert.equal(markup.includes("Case Setup"), false);
+  assert.equal(markup.includes("Currently open in the workspace."), true);
+  assert.match(markup, /<button[^>]+disabled=""/);
 });
 
 test("workflow launcher exposes operative runner entry", () => {
