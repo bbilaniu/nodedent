@@ -240,9 +240,23 @@ Status: partially implemented by changing shared-module runner dismiss actions f
 
 Reasoning level needed: medium.
 
+Status: partially implemented by introducing shared panel and section-heading styles, applying them to the shared readiness band, Case Setup & Status groups and focus targets, and operative runner panels while leaving clinical event semantics and generated note behavior unchanged.
+
 - Apply a restrained visual cleanup across the touched workflow surfaces.
 - Check mobile and desktop layouts for text wrapping and overlapping controls.
 - Keep cards, buttons, and section headings consistent with the existing NodeDent visual system.
+
+### Phase 6: Answered Open Question Follow-Through
+
+Reasoning level needed: medium-high.
+
+Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, and changing shared module re-entry labels to `Review` when current anesthesia or isolation status already exists.
+
+- Treat NodeDent Home as the persistent first screen and keep the modal launcher as a quick-switcher, without duplicating workflow state or clearing event-backed state when switching.
+- Split Case Setup & Status conceptually and internally into global case setup, shared readiness/documentation capture, workflow setup summaries, saved-case lifecycle, and audit/history surfaces, without creating separate user-facing setup screens yet.
+- Move operative-specific setup ownership toward the active operative runner. Case Setup & Status should summarize the operative scope and provide a route back to the active operative workflow instead of being the primary duplicated editing surface.
+- Use `Review` for shared modules when a current event already exists. Reserve `Record` language for primary documentation actions and avoid `Add event` where it could imply duplicate creation.
+- Show scope metadata inline only when it prevents confusion, such as shared, global, cross-workflow, or mismatched readiness context. Avoid scope labels on obvious active-workflow rows.
 
 ## Acceptance Criteria
 
@@ -267,7 +281,13 @@ Reasoning level needed: medium.
 ## Open Questions
 
 - Should NodeDent Home become a persistent first screen now that there are two primary workflows, or remain available as the workspace launcher modal?
+- Yes. Make it a persistent first screen. Keep the launcher modal as a quick-switcher.
 - Should Case Setup & Status be split into separate global, shared-module, and workflow-setup components in this pass, or only relabeled and regrouped?
+- Split conceptually and internally, but not into separate user-facing screens yet.
 - Should operative setup live mainly in the active workflow runner, Case Setup & Status, or both?
+- The active workflow runner should own operative-specific setup. Case Setup & Status should summarize it and link into it.
 - Which action label should shared modules use when a current event already exists: `Review`, `Add event`, or `Record update`?
+- Add event sounds like creating a duplicate(which isn't always the case). Record update is useful only when the module is explicitly event-log based. Review is safest when something already exists.
 - Should readiness summaries show target scope inline for every row, or only when scope mismatch could confuse the user?
+- Only show scope inline when it prevents confusion.
+Showing scope on every row creates noise. Use scope chips/metadata for shared, global, cross-workflow, or mismatched items. Hide it for obvious active-workflow rows.

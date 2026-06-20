@@ -403,6 +403,12 @@ export default function NodeDentApp() {
     setIsWorkflowLauncherOpen(false);
   }
 
+  function openOperativeWorkflowSetupFromCasePanel() {
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    activatePrimaryWorkflow(operativeDirectRestorationWorkflowId);
+  }
+
   function updateOperativeSetup(updates: Partial<OperativeWorkflowSetupState>) {
     setCaseData((prev) => {
       const nextSetup = { ...getLatestOperativeWorkflowSetup(prev), ...updates };
@@ -1117,12 +1123,12 @@ export default function NodeDentApp() {
             onUpdateDiagnosis={updateDiagnosis}
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
-            onOperativeSetupChange={updateOperativeSetup}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
+            onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             userIsolationCatalogItems={userIsolationCatalogItems}

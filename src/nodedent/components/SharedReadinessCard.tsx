@@ -2,7 +2,7 @@ import React from "react";
 import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import type { CaseCapabilitySummary, CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
-import { cx } from "./uiStyles";
+import { cx, panelSurface, sectionText } from "./uiStyles";
 
 function statusLabel(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "Review";
@@ -88,10 +88,11 @@ export function SharedReadinessCard({
   });
 
   return (
-    <section className={`min-w-0 rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm ${className}`}>
+    <section className={cx("min-w-0", panelSurface.cardPadded, className)}>
       <div>
-        <h3 className="text-sm font-semibold text-brand-navy">Shared readiness</h3>
-        <p className="mt-1 text-xs leading-5 text-brand-slate">Reusable diagnosis, radiographs, anesthesia, and isolation context for the active workflow.</p>
+        <p className={sectionText.eyebrow}>Shared context</p>
+        <h3 className={sectionText.title}>Shared readiness</h3>
+        <p className={sectionText.descriptionSmall}>Reusable diagnosis, radiographs, anesthesia, and isolation context for the active workflow.</p>
       </div>
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
         {items.map(({ label, status, onClick }) => {

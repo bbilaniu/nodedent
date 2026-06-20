@@ -206,6 +206,10 @@ export function WorkflowLauncher({
                 const isIsolation = entry.workflowId === sharedIsolationWorkflowId;
                 const isAnesthesia = entry.workflowId === sharedAnesthesiaWorkflowId;
                 const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia);
+                const moduleStatus = isAnesthesia ? capabilitySummary.anesthesia : isIsolation ? capabilitySummary.isolation : null;
+                const launchLabel = moduleStatus?.satisfied || moduleStatus?.needsReassessment
+                  ? `Review ${isAnesthesia ? "anesthesia" : "isolation"}`
+                  : entry.launchLabel;
                 return (
                   <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -224,7 +228,7 @@ export function WorkflowLauncher({
                       disabled={!canLaunch}
                       className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {entry.launchLabel}
+                      {launchLabel}
                     </button>
                   </div>
                 );

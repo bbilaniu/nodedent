@@ -288,19 +288,23 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
       material: "composite",
       shade: "A2",
     },
-    onOperativeSetupChange: noop,
     onApplySuggestedCaseStatus: noop,
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenOperativeWorkflowSetup: noop,
     onDownloadCaseJson: noop,
   }));
 
   assert.equal(markup.includes("Case identity"), true);
   assert.equal(markup.includes("Shared readiness"), true);
   assert.equal(markup.includes("Operative setup"), true);
-  assert.equal(markup.includes("Current operative scope"), true);
+  assert.equal(markup.includes("Operative setup summary"), true);
+  assert.equal(markup.includes("Edit tooth and surface scope in the active operative workflow."), true);
+  assert.equal(markup.includes("Open operative workflow"), true);
+  assert.equal(markup.includes("36 MO"), true);
+  assert.equal(markup.includes("placeholder=\"e.g., M O\""), false);
   assert.equal(markup.includes("Diagnosis readiness"), true);
   assert.equal(markup.includes("Radiograph readiness"), true);
   assert.equal(markup.includes("Endodontic setup"), false);
@@ -449,6 +453,53 @@ test("workflow launcher exposes operative runner entry", () => {
   assert.equal(markup.includes("Operative direct restoration"), true);
   assert.equal(markup.includes("Start / resume workflow"), true);
   assert.equal(markup.includes("Model only"), false);
+});
+
+test("workflow launcher uses review labels for shared modules with current events", () => {
+  const noop = () => {};
+  const caseData = baseCase({
+    tooth: "30",
+    globalEvents: [
+      {
+        id: "evt_anesthesia_ready",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: anesthesiaEventTypes.adequacyConfirmed,
+        tooth: "30",
+        canal: "N/A",
+        details: { response: "adequate", tooth: "30" },
+        scope: { kind: "tooth", tooth: "30" },
+      },
+      {
+        id: "evt_isolation_ready",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: isolationEventTypes.rubberDamPlaced,
+        tooth: "30",
+        canal: "N/A",
+        details: { method: "rubberDam", exposedTeeth: ["30"] },
+        scope: { kind: "tooth", tooth: "30" },
+      },
+    ],
+  });
+  const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData,
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Review anesthesia"), true);
+  assert.equal(markup.includes("Review isolation"), true);
+  assert.equal(markup.includes("Open anesthesia workflow"), false);
+  assert.equal(markup.includes("Open isolation workflow"), false);
 });
 
 test("operative runner renders setup record and completion states without readiness duplication or endodontic controls", () => {
