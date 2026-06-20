@@ -9,6 +9,7 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
+import { SharedWorkflowRunnerModal } from "../components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
@@ -486,6 +487,44 @@ test("operative runner renders setup record and completion states without readin
   assert.equal(markup.includes("Active canal status"), false);
   assert.equal(markup.includes("WL/shape data"), false);
   assert.equal(markup.includes("Decision"), false);
+});
+
+test("shared workflow modal uses close labels instead of return labels for dismiss actions", () => {
+  const caseData = baseCase();
+  const noop = () => {};
+  const anesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-complete",
+      workflowRunId: "run_shared_anesthesia_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+  }));
+  const isolationMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedIsolationWorkflowId,
+      entryNodeId: "isolation-complete",
+      workflowRunId: "run_shared_isolation_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+  }));
+
+  assert.equal(anesthesiaMarkup.includes("Close"), true);
+  assert.equal(anesthesiaMarkup.includes("Close shared workflow"), true);
+  assert.equal(anesthesiaMarkup.includes("Return to parent workflow"), false);
+  assert.equal(isolationMarkup.includes("Close"), true);
+  assert.equal(isolationMarkup.includes("Close shared workflow"), true);
+  assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
 });
 
 test("every protocol note event has a note fragment", () => {

@@ -287,7 +287,7 @@ export function IsolationWorkflowRunner({
             onClick={onClose}
             className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
           >
-            Return to parent workflow
+            Close shared workflow
           </button>
         ) : selectedOption ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
