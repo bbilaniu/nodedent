@@ -277,10 +277,17 @@ test("shared radiology reviewed events satisfy radiograph readiness", () => {
     ],
   });
   const status = getCapabilityStatus(caseData, "radiographs.reviewed", { kind: "tooth", tooth: "36" });
+  const surfaceStatus = getCapabilityStatus(caseData, "radiographs.reviewed", {
+    kind: "surface",
+    tooth: "36",
+    surfaces: ["M", "O"],
+  });
 
   assert.equal(status.satisfied, true);
   assert.equal(status.source, "event");
   assert.equal(status.summary, "Radiographs reviewed");
+  assert.equal(surfaceStatus.satisfied, true);
+  assert.equal(surfaceStatus.source, "event");
   assert.equal(isCapabilitySatisfied(caseData, "radiographs.reviewed", { kind: "tooth", tooth: "30" }), false);
   assert.deepEqual(getRadiologyScopeFromEvent(event), { kind: "custom", teeth: ["36", "37"], regionLabel: "Q3" });
   assert.deepEqual(getRadiologyEventDetails(event).modalities, ["pa", "cbct"]);
@@ -327,7 +334,29 @@ test("workflow target panel routing keeps operative workflows out of the endodon
 });
 
 test("case setup hides endodontic active-canal setup for operative workflows", () => {
-  const caseData = baseCase();
+  const radiologyEvent = {
+    id: "evt_rendered_radiology_reviewed",
+    timestamp: "2026-06-20T20:00:00.000Z",
+    type: radiologyEventTypes.reviewed,
+    workflowId: sharedRadiologyWorkflowId,
+    scope: { kind: "tooth" as const, tooth: "36" },
+    tooth: "36",
+    details: {
+      modalities: ["pa"],
+      tooth: "36",
+      imageDate: "2026-06-20",
+      sourceLabel: "current visit",
+    },
+  };
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        ...radiologyEvent,
+        capabilitiesSatisfied: [buildRadiographsReviewedCapability(radiologyEvent)],
+      },
+    ],
+  });
   const noop = () => {};
   const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
     caseData,
@@ -367,6 +396,8 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
   assert.equal(markup.includes("Radiograph readiness"), true);
   assert.equal(markup.includes("Shared radiology event"), true);
   assert.equal(markup.includes("Record radiograph review"), true);
+  assert.equal(markup.includes("Latest shared radiology event"), true);
+  assert.equal(markup.includes("Radiograph review recorded"), true);
   assert.equal(markup.includes("Endodontic setup"), false);
   assert.equal(markup.includes("Endodontic workflow setup"), false);
   assert.equal(markup.includes("Estimated WL for"), false);

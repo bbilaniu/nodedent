@@ -110,6 +110,8 @@ The capability should be scoped to the recorded target when possible:
 
 Case-field fallback should continue to satisfy `radiographs.reviewed` until old saved cases can be migrated or summarized through generated compatibility events.
 
+Operative surface workflows may use tooth-level radiograph review as sufficient shared readiness context for now. The clinician has either reviewed imaging for the tooth or explicitly decided current imaging review is not needed beyond the documented available images. Surface-specific radiology scope can be revisited if future workflows need tighter imaging provenance.
+
 ## First Implementation Slice
 
 Status: implemented as the initial Case Setup & Status capture slice.
@@ -121,14 +123,20 @@ Status: implemented as the initial Case Setup & Status capture slice.
 - Preserved saved-case import/export compatibility for existing `preOp` radiograph fields and global events.
 - Kept shared readiness opening the radiograph readiness surface.
 
-## Recommended Next Step
+## Second Implementation Slice
 
-Implement the first slice above before starting another primary workflow family. This is the smallest active spec that improves cross-workflow shared readiness without adding clinical interpretation rules.
+Status: implemented as the Case Setup & Status display and operative-scope compatibility slice.
+
+- Added latest `radiology.reviewed` event display to the Radiograph readiness section.
+- Kept the event-backed radiology review surface visually distinct from legacy PA, BW, and CBCT compatibility checkboxes.
+- Added regression coverage that tooth-level radiograph review satisfies operative surface readiness.
+- Documented that tooth-level radiograph review is sufficient context for operative surface workflows in the current implementation.
 
 ## Deferred Work
 
 - Dedicated embedded radiology workflow runner.
 - Image attachment management or image viewer integration.
+- Intraoral photography or camera documentation as a future imaging-adjacent shared module or radiology-adjacent capability.
 - Clinic-owned radiology documentation catalogs.
 - Source-backed imaging rules.
 - Migration that removes or hides the current pre-op radiograph case fields.
@@ -139,7 +147,8 @@ Implement the first slice above before starting another primary workflow family.
 - Answered for the first slice: one `radiology.reviewed` event can record multiple modalities.
 - Should `imageDate` be a free-text documentation field first, or a strict date field?
 - Answered for the first slice: use a date input in the UI while storing the value as an optional event detail string.
-- *My input* It should be a strict date field like in my other projects
+- Answered by product input: it should remain a strict date field like related projects.
 - Should prior-visit radiographs remain a prior-visit field or become compatibility input to `shared.radiology` summaries?
-- *My input* for endodontics it should be part of the inputs, but it should be clear that it was taken during a previous appointment, until a new one is take if needed.
-- What is the minimum scope required before emitting `radiographs.reviewed` for operative surface workflows? if the xrays are checked (can be old ones), it counts as reviewed (reviewed previous xrays), if new it's also reviewed (reviewed new xrays/new xrays taken).
+- Answered by product input: for endodontics it should remain part of the inputs, but it should be clear when the images were taken during a previous appointment until new imaging is taken if needed.
+- What is the minimum scope required before emitting `radiographs.reviewed` for operative surface workflows?
+- Answered by product input: tooth-level review is sufficient context for operative surface workflows. If radiographs are checked, including older images, the row counts as reviewed. New radiographs also count as reviewed when documented.

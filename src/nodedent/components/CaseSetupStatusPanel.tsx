@@ -11,6 +11,7 @@ import type { IsolationEventDetails, IsolationEventType } from "../workflow/isol
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
 import type { RadiologyEventDetails } from "../workflow/radiology";
+import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
@@ -148,9 +149,19 @@ function RadiographReadinessSection({
   onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
+  const latestRadiologyEvent = (caseData.globalEvents || []).filter(isRadiologyReviewedEvent).at(-1);
+  const latestRadiologyEventTime = formatEventTimestamp(latestRadiologyEvent?.timestamp);
+
   return (
     <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
       <h3 className={sectionText.titleSmall}>Radiograph readiness</h3>
+      {latestRadiologyEvent ? (
+        <div className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest shared radiology event</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatRadiologyEventFragment(latestRadiologyEvent)}</p>
+          {latestRadiologyEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestRadiologyEventTime}</p> : null}
+        </div>
+      ) : null}
       <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>
         <div className="grid gap-2 sm:grid-cols-3">
