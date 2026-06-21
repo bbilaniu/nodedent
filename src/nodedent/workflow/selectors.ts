@@ -3,6 +3,7 @@ import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
 import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent } from "./anesthesia";
 import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";
+import { getRadiographsReviewedCapabilityOutput, getRadiologyScopeFromEvent, radiologyEventTypes } from "./radiology";
 
 export type CapabilityStatusSource = "caseField" | "event" | "none";
 
@@ -54,6 +55,7 @@ function getEventDetails(event: ClinicalEvent) {
 function getEventScope(event: ClinicalEvent): WorkflowScope | undefined {
   if (getAnesthesiaAdequateCapabilityOutput(event) || anesthesiaInvalidatingEvents.has(event.type)) return getAnesthesiaScopeFromEvent(event);
   if (isolationEstablishedEvents.has(event.type) || isolationInvalidatingEvents.has(event.type)) return getIsolationScopeFromEvent(event);
+  if (event.type === radiologyEventTypes.reviewed) return getRadiologyScopeFromEvent(event);
   if (event.scope) return event.scope;
   const details = getEventDetails(event);
   const exposedTeeth = Array.isArray(details.exposedTeeth) ? details.exposedTeeth.map(String) : undefined;
@@ -166,7 +168,28 @@ function diagnosisStatus(caseData: EndoCase, queryScope?: WorkflowScope): Capabi
   };
 }
 
-function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope): CapabilityStatus {
+function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope, now = new Date()): CapabilityStatus {
+  const events = collectClinicalEvents(caseData);
+  const radiologyEvents = events.filter((event) => event.type === radiologyEventTypes.reviewed || eventSatisfiesCapability(event, "radiographs.reviewed"));
+  const explicitStatus = radiologyEvents
+    .flatMap((event) => {
+      const capability = eventSatisfiesCapability(event, "radiographs.reviewed") || getRadiographsReviewedCapabilityOutput(event);
+      if (!capability || !scopeMatches(capability.scope, queryScope, "radiographs.reviewed")) return [];
+      const expired = isExpired(capability.expiresAt || event.expiresAt, now);
+      return [{
+        name: "radiographs.reviewed" as const,
+        satisfied: !expired,
+        needsReassessment: expired,
+        source: "event" as const,
+        sourceEvent: event,
+        scope: capability.scope,
+        summary: expired ? "Radiographs reviewed but need reassessment" : "Radiographs reviewed",
+        reason: expired ? "Recorded radiograph review has expired." : undefined,
+      }];
+    })
+    .at(-1);
+  if (explicitStatus) return explicitStatus;
+
   const hasRadiographs = Boolean(
     caseData.preOp?.paReviewed ||
       caseData.preOp?.radiographsReviewed ||
@@ -184,7 +207,13 @@ function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope): Capab
     source: satisfied ? "caseField" : "none",
     scope: satisfied ? caseScope : queryScope || caseScope,
     summary: satisfied ? "Radiographs reviewed" : "Radiographs not recorded",
-    reason: hasRadiographs && !scopeMatched ? "Recorded radiograph review is for a different tooth." : hasRadiographs ? undefined : "No pre-op or prior radiograph review is recorded.",
+    reason: satisfied
+      ? undefined
+      : radiologyEvents.length
+        ? "Recorded radiograph review is for a different scope."
+        : hasRadiographs && !scopeMatched
+          ? "Recorded radiograph review is for a different tooth."
+          : "No pre-op, prior, or shared radiology review is recorded.",
   };
 }
 
@@ -225,7 +254,7 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
 
 export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityName, queryScope?: WorkflowScope, now = new Date()): CapabilityStatus {
   if (name === "diagnosis.recorded") return diagnosisStatus(caseData, queryScope);
-  if (name === "radiographs.reviewed") return radiographStatus(caseData, queryScope);
+  if (name === "radiographs.reviewed") return radiographStatus(caseData, queryScope, now);
 
   const events = collectClinicalEvents(caseData);
   const explicitStatus = events

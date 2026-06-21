@@ -26,6 +26,7 @@ export function buildFullNote(caseData: EndoCase) {
     caseData.preOp?.estimatedChamberDepth ? `Estimated chamber depth: ${caseData.preOp.estimatedChamberDepth} mm` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));
+  appendSection(lines, "Radiology:", groupEventsByPrefix(caseData, ["radiology."]));
   appendSection(lines, "Anesthesia:", groupEventsByPrefix(caseData, ["anesthesia."]));
   appendSection(lines, "Isolation:", groupEventsByPrefix(caseData, ["isolation."]));
   appendSection(lines, "Operative:", groupEventsByPrefix(caseData, ["operative.", "finalRestoration."]));

@@ -7,7 +7,7 @@ created_on: 2026-06-19
 
 This spec defines the first shared radiology/radiographs module boundary for NodeDent. It follows the case setup and shared readiness refactor and keeps the first implementation limited to clinician-entered documentation of image review.
 
-The current app records pre-op radiograph review as case setup fields. That should remain in place for one more cycle while the shared module contract is defined. The next implementation slice can then introduce `shared.radiology` without mixing radiology documentation with endodontic canal setup or future operative target setup.
+The current app records pre-op radiograph review as case setup fields and now also supports explicit `shared.radiology` review events from Case Setup & Status. The legacy fields remain visible as a compatibility surface while event-backed radiology review becomes the preferred shared-module boundary.
 
 ## Goals
 
@@ -55,11 +55,11 @@ Default behavior:
 
 Current readiness behavior:
 
-- `radiographs.reviewed` is derived from those case fields.
+- `radiographs.reviewed` is derived from explicit `radiology.reviewed` events or those case fields.
 - Shared readiness can focus the radiograph readiness section in Case Setup & Status.
-- Radiograph review is not yet event-backed.
+- Radiograph review is event-backed for new shared radiology captures.
 
-The first implementation should continue reading the existing fields so older saved cases and imports remain valid.
+The implementation should continue reading the existing fields so older saved cases and imports remain valid.
 
 ## Event Model
 
@@ -112,12 +112,14 @@ Case-field fallback should continue to satisfy `radiographs.reviewed` until old 
 
 ## First Implementation Slice
 
-- Add a typed radiology event model and formatter.
-- Add a compact Case Setup & Status capture surface for `radiology.reviewed`.
-- Keep the existing PA, BW, and CBCT checkboxes visible or compatibility-backed during the transition.
-- Update capability selectors so explicit `radiology.reviewed` events satisfy `radiographs.reviewed`.
-- Preserve saved-case import/export compatibility for existing `preOp` radiograph fields.
-- Keep shared readiness opening the radiograph readiness surface.
+Status: implemented as the initial Case Setup & Status capture slice.
+
+- Added a typed radiology event model and formatter.
+- Added a compact Case Setup & Status capture surface for `radiology.reviewed`.
+- Kept the existing PA, BW, and CBCT checkboxes visible during the transition.
+- Updated capability selectors so explicit `radiology.reviewed` events satisfy `radiographs.reviewed`.
+- Preserved saved-case import/export compatibility for existing `preOp` radiograph fields and global events.
+- Kept shared readiness opening the radiograph readiness surface.
 
 ## Recommended Next Step
 
@@ -134,6 +136,10 @@ Implement the first slice above before starting another primary workflow family.
 ## Open Decisions
 
 - Should the first UI record one review event with multiple modalities or one event per modality?
+- Answered for the first slice: one `radiology.reviewed` event can record multiple modalities.
 - Should `imageDate` be a free-text documentation field first, or a strict date field?
+- Answered for the first slice: use a date input in the UI while storing the value as an optional event detail string.
+- *My input* It should be a strict date field like in my other projects
 - Should prior-visit radiographs remain a prior-visit field or become compatibility input to `shared.radiology` summaries?
-- What is the minimum scope required before emitting `radiographs.reviewed` for operative surface workflows?
+- *My input* for endodontics it should be part of the inputs, but it should be clear that it was taken during a previous appointment, until a new one is take if needed.
+- What is the minimum scope required before emitting `radiographs.reviewed` for operative surface workflows? if the xrays are checked (can be old ones), it counts as reviewed (reviewed previous xrays), if new it's also reviewed (reviewed new xrays/new xrays taken).

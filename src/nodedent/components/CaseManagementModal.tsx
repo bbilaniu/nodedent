@@ -5,6 +5,7 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import type { OperativeWorkflowSetupState } from "../workflow/operative";
+import type { RadiologyEventDetails } from "../workflow/radiology";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
@@ -39,6 +40,7 @@ export function CaseManagementModal({
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onRecordRadiologyEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenOperativeWorkflowSetup,
@@ -62,6 +64,7 @@ export function CaseManagementModal({
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenOperativeWorkflowSetup?: () => void;
@@ -137,6 +140,7 @@ export function CaseManagementModal({
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
             onRecordIsolationEvent={onRecordIsolationEvent}
+            onRecordRadiologyEvent={onRecordRadiologyEvent}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}

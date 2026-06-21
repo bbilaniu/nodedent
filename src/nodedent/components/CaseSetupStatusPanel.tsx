@@ -10,6 +10,7 @@ import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
+import type { RadiologyEventDetails } from "../workflow/radiology";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
@@ -19,6 +20,7 @@ import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { IsolationCatalogManager } from "./IsolationCatalogManager";
 import { IsolationEventForm } from "./IsolationEventForm";
+import { RadiologyEventForm } from "./RadiologyEventForm";
 import { SelectInput, TextInput } from "./FormControls";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText } from "./uiStyles";
@@ -136,12 +138,14 @@ function RadiographReadinessSection({
   paReviewed,
   bwReviewed,
   onUpdatePreOp,
+  onRecordRadiologyEvent,
   sectionRef,
 }: {
   caseData: EndoCase;
   paReviewed: boolean;
   bwReviewed: boolean;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
+  onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
@@ -164,6 +168,7 @@ function RadiographReadinessSection({
           </label>
         </div>
       </div>
+      <RadiologyEventForm tooth={caseData.tooth} onRecordEvent={onRecordRadiologyEvent} />
     </section>
   );
 }
@@ -298,6 +303,7 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onRecordRadiologyEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenOperativeWorkflowSetup,
@@ -318,6 +324,7 @@ export function CaseSetupStatusPanel({
   onApplySuggestedCaseStatus: () => void;
   onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
   onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
+  onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenOperativeWorkflowSetup?: () => void;
@@ -381,7 +388,14 @@ export function CaseSetupStatusPanel({
 
       <CaseSetupGroup title="Shared readiness" description="Reusable diagnosis, radiograph, anesthesia, and isolation context for the current workflow.">
         <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
-        <RadiographReadinessSection caseData={caseData} paReviewed={paReviewed} bwReviewed={bwReviewed} onUpdatePreOp={onUpdatePreOp} sectionRef={radiographsSectionRef} />
+        <RadiographReadinessSection
+          caseData={caseData}
+          paReviewed={paReviewed}
+          bwReviewed={bwReviewed}
+          onUpdatePreOp={onUpdatePreOp}
+          onRecordRadiologyEvent={onRecordRadiologyEvent}
+          sectionRef={radiographsSectionRef}
+        />
         <SharedClinicalReadinessSection statusItems={statusItems} />
       </CaseSetupGroup>
 

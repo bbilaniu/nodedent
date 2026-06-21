@@ -1,6 +1,7 @@
 import type { ClinicalEvent, EndoCase } from "../types";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, isolationEventTypes } from "../workflow/isolation";
+import { formatRadiologyEventFragment, radiologyEventTypes } from "../workflow/radiology";
 import {
   formatOperativeRestorationEventFragment,
   formatOperativeSetupEventFragment,
@@ -23,6 +24,10 @@ export function eventFragment(event: ClinicalEvent) {
 
   if (Object.values(isolationEventTypes).includes(event.type as typeof isolationEventTypes[keyof typeof isolationEventTypes])) {
     return formatIsolationEventFragment(event);
+  }
+
+  if (Object.values(radiologyEventTypes).includes(event.type as typeof radiologyEventTypes[keyof typeof radiologyEventTypes])) {
+    return formatRadiologyEventFragment(event);
   }
 
   const canal = event.canal ? `${event.canal}: ` : "";

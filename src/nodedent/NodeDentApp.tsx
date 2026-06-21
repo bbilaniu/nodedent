@@ -61,6 +61,14 @@ import {
   sharedIsolationWorkflowId,
   sharedIsolationWorkflowVersion,
 } from "./workflow/isolation";
+import type { RadiologyEventDetails } from "./workflow/radiology";
+import {
+  buildRadiographsReviewedCapability,
+  getRadiologyScopeFromDetails,
+  radiologyEventTypes,
+  sharedRadiologyWorkflowId,
+  sharedRadiologyWorkflowVersion,
+} from "./workflow/radiology";
 import { getCaseCapabilitySummary } from "./workflow/selectors";
 
 type HistoryEntry = {
@@ -334,6 +342,33 @@ export default function NodeDentApp() {
     ) {
       event.capabilitiesSatisfied = [buildIsolationEstablishedCapability(event)];
     }
+
+    setCaseData((prev) => ({
+      ...prev,
+      globalEvents: [...prev.globalEvents, event],
+    }));
+    setCopied(false);
+    setValidationMessage(null);
+  }
+
+  function recordRadiologyEvent(details: RadiologyEventDetails) {
+    setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const scope = getRadiologyScopeFromDetails(details, caseData.tooth);
+    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || caseData.tooth;
+    const event = makeRuntimeEvent({
+      type: radiologyEventTypes.reviewed,
+      tooth: eventTooth,
+      canal: "All",
+      nodeId: currentNode.id,
+      label: "Radiograph review recorded",
+      activeCanal,
+      workflowId: sharedRadiologyWorkflowId,
+      workflowVersion: sharedRadiologyWorkflowVersion,
+      workflowRunId: makeWorkflowRunId("shared_radiology"),
+      scope,
+    });
+    event.details = { ...event.details, ...details };
+    event.capabilitiesSatisfied = [buildRadiographsReviewedCapability(event)];
 
     setCaseData((prev) => ({
       ...prev,
@@ -1126,6 +1161,7 @@ export default function NodeDentApp() {
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
+            onRecordRadiologyEvent={recordRadiologyEvent}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}

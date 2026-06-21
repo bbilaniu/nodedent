@@ -79,6 +79,14 @@ import {
   upsertOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import {
+  buildRadiographsReviewedCapability,
+  formatRadiologyEventFragment,
+  getRadiologyEventDetails,
+  getRadiologyScopeFromEvent,
+  radiologyEventTypes,
+  sharedRadiologyWorkflowId,
+} from "../workflow/radiology";
+import {
   endodonticRootWorkflow,
   endodonticRootWorkflowId,
   getReadyWorkflowLauncherEntries,
@@ -240,6 +248,48 @@ test("new cases leave radiograph review unchecked by default", () => {
   assert.equal(initialCase.priorVisit?.priorRadiographsAvailable, false);
 });
 
+test("shared radiology reviewed events satisfy radiograph readiness", () => {
+  const event = {
+    id: "evt_radiology_reviewed",
+    timestamp: "2026-06-20T20:00:00.000Z",
+    type: radiologyEventTypes.reviewed,
+    workflowId: sharedRadiologyWorkflowId,
+    scope: { kind: "custom" as const, teeth: ["36", "37"], regionLabel: "Q3" },
+    tooth: "36",
+    details: {
+      modalities: ["pa", "cbct"],
+      teeth: ["36", "37"],
+      regionLabel: "Q3",
+      imageDate: "2026-06-20",
+      sourceLabel: "current visit",
+      limitations: "limited distal view",
+      notes: "reviewed by clinician",
+    },
+  };
+  const caseData = baseCase({
+    tooth: "36",
+    preOp: { ...initialCase.preOp },
+    globalEvents: [
+      {
+        ...event,
+        capabilitiesSatisfied: [buildRadiographsReviewedCapability(event)],
+      },
+    ],
+  });
+  const status = getCapabilityStatus(caseData, "radiographs.reviewed", { kind: "tooth", tooth: "36" });
+
+  assert.equal(status.satisfied, true);
+  assert.equal(status.source, "event");
+  assert.equal(status.summary, "Radiographs reviewed");
+  assert.equal(isCapabilitySatisfied(caseData, "radiographs.reviewed", { kind: "tooth", tooth: "30" }), false);
+  assert.deepEqual(getRadiologyScopeFromEvent(event), { kind: "custom", teeth: ["36", "37"], regionLabel: "Q3" });
+  assert.deepEqual(getRadiologyEventDetails(event).modalities, ["pa", "cbct"]);
+  assert.match(formatRadiologyEventFragment(event), /Radiograph review recorded \(modalities: PA, CBCT; teeth 36, 37; image date: 2026-06-20; source: current visit; limitations: limited distal view\)/);
+  assert.match(eventFragment(event), /reviewed by clinician/);
+  assert.match(buildFullNote(caseData), /Radiology:\n- Radiograph review recorded/);
+  assert.equal(ClinicalEventSchema.safeParse(caseData.globalEvents[0]).success, true);
+});
+
 test("handoff nodes are intentional and resolvable", () => {
   const expectedHandoffs = [
     "identify-canals",
@@ -315,6 +365,8 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
   assert.equal(markup.includes("placeholder=\"e.g., M O\""), false);
   assert.equal(markup.includes("Diagnosis readiness"), true);
   assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Shared radiology event"), true);
+  assert.equal(markup.includes("Record radiograph review"), true);
   assert.equal(markup.includes("Endodontic setup"), false);
   assert.equal(markup.includes("Endodontic workflow setup"), false);
   assert.equal(markup.includes("Estimated WL for"), false);
