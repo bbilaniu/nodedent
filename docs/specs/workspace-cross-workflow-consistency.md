@@ -206,7 +206,7 @@ Reasoning level needed: medium.
 
 Reasoning level needed: medium.
 
-Status: partially implemented by moving shared readiness into a full-width band below the header, removing the generic Case Setup action from the readiness surface, keeping row-specific readiness actions, disabling the currently open shared-module row to prevent recursive modal launch, and removing the duplicate operative-runner readiness block so the workspace band owns shared readiness.
+Status: partially implemented by moving shared readiness into a full-width band below the header, removing the generic Case Setup action from the readiness surface, keeping row-specific readiness actions, showing explicit review/open action labels on readiness rows, using patient-specific shared-module status in launcher cards, dynamically labeling not-started endodontic workflow launch as `Start workflow`, disabling the currently open shared-module row to prevent recursive modal launch, and removing the duplicate operative-runner readiness block so the workspace band owns shared readiness.
 
 - Normalize NodeDent Home launcher labels and status text.
 - Normalize shared readiness row labels and actions across endodontic and operative contexts.
@@ -230,7 +230,7 @@ Status: partially implemented by adding explicit routing coverage for endodontic
 
 Reasoning level needed: medium.
 
-Status: partially implemented by changing shared-module runner dismiss actions from `Return to parent workflow` to `Close shared workflow`, keeping the modal header action as `Close`, adding regression coverage so dismiss UI does not use return language reserved for modeled workflow options, and aligning the isolation runner with the anesthesia runner by keeping the workflow close action visible before completion and grouping record/save actions inside the form card.
+Status: partially implemented by changing shared-module runner dismiss actions from `Return to parent workflow` to `Close shared workflow`, keeping the modal header action as `Close`, adding regression coverage so dismiss UI does not use return language reserved for modeled workflow options, and aligning the isolation runner with the anesthesia runner by keeping the workflow close action visible before completion, grouping record/save actions inside the form card, and retaining the full form layout with an appended-event confirmation after placement events are recorded.
 
 - Normalize runner action labels and completion states.
 - Keep note and export output unchanged unless intentionally tested.

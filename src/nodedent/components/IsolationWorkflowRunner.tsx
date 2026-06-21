@@ -161,6 +161,7 @@ export function IsolationWorkflowRunner({
   const targetTooth = launch.targetTooth || caseData.tooth;
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
   const [actionMode, setActionMode] = useState<IsolationActionMode>(() => getActionMode(defaultEventType));
+  const [recordedLabel, setRecordedLabel] = useState("");
   const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, targetTooth));
   const visibleOptions = useMemo(() => currentNode.options || [], [currentNode.options]);
   const hasRecordableOptions = visibleOptions.some((option) => option.noteEvent?.type);
@@ -232,7 +233,10 @@ export function IsolationWorkflowRunner({
         workflowRunId: launch.workflowRunId,
         parentWorkflowRunId,
       });
+      setRecordedLabel(selectedOption.label);
     }
+
+    if (workflow.completionNodeIds.includes(selectedOption.nextNodeId)) return;
 
     setModuleNodeId(selectedOption.nextNodeId);
     const nextNode = workflow.nodes[selectedOption.nextNodeId];
@@ -263,6 +267,12 @@ export function IsolationWorkflowRunner({
           <p className="mt-2 text-xs font-semibold text-brand-slate">Record: {currentNode.requiredInputs.join(", ")}</p>
         ) : null}
       </div>
+
+      {recordedLabel ? (
+        <div className="mt-4 rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy">
+          <strong>{recordedLabel}</strong> was appended to the current visit. The parent workflow remains at its current step.
+        </div>
+      ) : null}
 
       {!completion ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">

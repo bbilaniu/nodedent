@@ -17,9 +17,14 @@ function statusClass(satisfied: boolean, needsReassessment: boolean) {
 
 export type SharedReadinessAction = {
   label: string;
+  actionLabel: string;
   status: CapabilityStatus;
   onClick: () => void;
 };
+
+function sharedModuleActionLabel(label: "Anesthesia" | "Isolation", status: CapabilityStatus) {
+  return status.satisfied || status.needsReassessment ? `Review ${label.toLowerCase()}` : `Open ${label.toLowerCase()} workflow`;
+}
 
 export function getSharedReadinessActions({
   capabilitySummary,
@@ -41,21 +46,25 @@ export function getSharedReadinessActions({
   return [
     {
       label: "Diagnosis",
+      actionLabel: "Review diagnosis",
       status: capabilitySummary.diagnosis,
       onClick: () => onOpenCaseSetupStatus("diagnosis"),
     },
     {
       label: "Radiographs",
+      actionLabel: "Review radiographs",
       status: capabilitySummary.radiographs,
       onClick: () => onOpenCaseSetupStatus("radiographs"),
     },
     {
       label: "Anesthesia",
+      actionLabel: sharedModuleActionLabel("Anesthesia", capabilitySummary.anesthesia),
       status: capabilitySummary.anesthesia,
       onClick: () => onOpenAnesthesiaWorkflow(anesthesiaEntryNodeId),
     },
     {
       label: "Isolation",
+      actionLabel: sharedModuleActionLabel("Isolation", capabilitySummary.isolation),
       status: capabilitySummary.isolation,
       onClick: () => onOpenIsolationWorkflow(isolationEntryNodeId),
     },
@@ -95,7 +104,7 @@ export function SharedReadinessCard({
         <p className={sectionText.descriptionSmall}>Reusable diagnosis, radiographs, anesthesia, and isolation context for the active workflow.</p>
       </div>
       <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-        {items.map(({ label, status, onClick }) => {
+        {items.map(({ label, actionLabel, status, onClick }) => {
           const disabled = disabledActionLabels.includes(label);
           return (
             <button
@@ -118,6 +127,7 @@ export function SharedReadinessCard({
               <span className="mt-1 block text-xs leading-5 opacity-85">
                 {disabled ? "Currently open in the workspace." : status.summary}
               </span>
+              {!disabled ? <span className="mt-2 block text-xs font-semibold">{actionLabel}</span> : null}
             </button>
           );
         })}

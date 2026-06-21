@@ -432,6 +432,60 @@ test("shared readiness band uses row-specific actions without a generic case set
   assert.match(markup, /<button[^>]+disabled=""/);
 });
 
+test("shared readiness uses review labels when shared module status already exists", () => {
+  const caseData = baseCase({
+    tooth: "30",
+    globalEvents: [
+      {
+        id: "evt_anesthesia_ready",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: anesthesiaEventTypes.adequacyConfirmed,
+        tooth: "30",
+        canal: "N/A",
+        details: { response: "adequate", tooth: "30" },
+        scope: { kind: "tooth", tooth: "30" },
+      },
+      {
+        id: "evt_isolation_ready",
+        timestamp: "2026-01-01T10:05:00.000Z",
+        type: isolationEventTypes.rubberDamPlaced,
+        tooth: "30",
+        canal: "N/A",
+        details: { method: "rubberDam", exposedTeeth: ["30"] },
+        scope: { kind: "tooth", tooth: "30" },
+      },
+    ],
+  });
+  const anesthesiaEntries: Array<string | undefined> = [];
+  const isolationEntries: Array<string | undefined> = [];
+  const noop = () => {};
+  const summary = getCaseCapabilitySummary(caseData);
+  const actions = getSharedReadinessActions({
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
+    onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
+  });
+  const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
+    caseData,
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(actions.find((action) => action.label === "Anesthesia")?.actionLabel, "Review anesthesia");
+  assert.equal(actions.find((action) => action.label === "Isolation")?.actionLabel, "Review isolation");
+  actions.find((action) => action.label === "Anesthesia")?.onClick();
+  actions.find((action) => action.label === "Isolation")?.onClick();
+  assert.deepEqual(anesthesiaEntries, [undefined]);
+  assert.deepEqual(isolationEntries, ["isolation-needs-reassessment"]);
+  assert.equal(markup.includes("Review anesthesia"), true);
+  assert.equal(markup.includes("Review isolation"), true);
+  assert.equal(markup.includes("Open anesthesia workflow"), false);
+  assert.equal(markup.includes("Open isolation workflow"), false);
+});
+
 test("workflow launcher exposes operative runner entry", () => {
   const noop = () => {};
   const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
@@ -451,8 +505,33 @@ test("workflow launcher exposes operative runner entry", () => {
   }));
 
   assert.equal(markup.includes("Operative direct restoration"), true);
+  assert.equal(markup.includes("Not started"), true);
+  assert.equal(markup.includes("Start workflow"), true);
+  assert.equal(markup.includes("Continue workflow"), false);
   assert.equal(markup.includes("Start / resume workflow"), true);
   assert.equal(markup.includes("Model only"), false);
+});
+
+test("workflow launcher switches endodontic action after the first node", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: baseCase(),
+    currentNodeTitle: "Access pulp chamber",
+    currentNodePhase: "Access",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("In progress"), true);
+  assert.equal(markup.includes("Continue workflow"), true);
 });
 
 test("workflow launcher uses review labels for shared modules with current events", () => {
@@ -498,6 +577,8 @@ test("workflow launcher uses review labels for shared modules with current event
 
   assert.equal(markup.includes("Review anesthesia"), true);
   assert.equal(markup.includes("Review isolation"), true);
+  assert.match(markup, /Anesthesia[\s\S]*Ready[\s\S]*Review anesthesia/);
+  assert.match(markup, /Isolation[\s\S]*Ready[\s\S]*Review isolation/);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
   assert.equal(markup.includes("Open isolation workflow"), false);
 });
