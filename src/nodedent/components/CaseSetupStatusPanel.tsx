@@ -11,44 +11,25 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { anesthesiaRouteFromLabel, anesthesiaRouteLabels, anesthesiaRouteOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogItems } from "../workflow/catalogs";
-import type { IsolationEventDetails, IsolationEventType, IsolationMethod, IsolationRegionKind, IsolationSupport } from "../workflow/isolation";
-import { formatIsolationEventFragment, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, isolationMethods, isolationRegionKinds, isolationSupportTypeFromLabel } from "../workflow/isolation";
+import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
+import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
 import type { IsolationCatalogField } from "../workflow/isolationCatalog";
-import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, getIsolationCatalogOptions, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
+import { createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogItems, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
+import { IsolationEventForm } from "./IsolationEventForm";
 import { SelectInput, TextInput } from "./FormControls";
-import { cx, panelSurface, sectionText } from "./uiStyles";
+import { cx, panelActionButton, panelSurface, sectionText } from "./uiStyles";
 
 function statusClass(satisfied: boolean, needsReassessment: boolean) {
   if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
   if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
   return "border-brand-light-node bg-white text-brand-slate";
 }
-
-const isolationActionLabels = {
-  [isolationEventTypes.rubberDamPlaced]: "Rubber dam placed",
-  [isolationEventTypes.alternativeIsolationUsed]: "Alternative isolation used",
-  [isolationEventTypes.compromised]: "Isolation compromised",
-  [isolationEventTypes.removed]: "Isolation removed",
-  [isolationEventTypes.replaced]: "Isolation replaced",
-} as const satisfies Record<IsolationEventType, string>;
-
-const isolationActionOptions = Object.values(isolationActionLabels);
-const alternativeIsolationMethodOptions = isolationMethods.filter((method) => method !== "rubberDam");
-const replacementIsolationMethodOptions = [...isolationMethods];
-
-const isolationSubmitLabels = {
-  [isolationEventTypes.rubberDamPlaced]: "Record rubber dam placement",
-  [isolationEventTypes.alternativeIsolationUsed]: "Record alternative isolation",
-  [isolationEventTypes.compromised]: "Record isolation compromise",
-  [isolationEventTypes.removed]: "Record isolation removal",
-  [isolationEventTypes.replaced]: "Record isolation replacement",
-} as const satisfies Record<IsolationEventType, string>;
 
 const anesthesiaCatalogFieldLabels = {
   agents: "Agent",
@@ -73,6 +54,7 @@ const isolationCatalogFieldLabels = {
 } as const satisfies Record<IsolationCatalogField, string>;
 
 const isolationCatalogFieldOptions = Object.values(isolationCatalogFieldLabels);
+type CatalogPanelKind = "anesthesia" | "isolation";
 
 function anesthesiaCatalogFieldFromLabel(label: string): AnesthesiaCatalogField {
   const entry = Object.entries(anesthesiaCatalogFieldLabels).find(([, fieldLabel]) => fieldLabel === label);
@@ -413,77 +395,7 @@ function IsolationCatalogManager({
   );
 }
 
-function eventTypeFromLabel(label: string): IsolationEventType {
-  const entry = Object.entries(isolationActionLabels).find(([, actionLabel]) => actionLabel === label);
-  return (entry?.[0] as IsolationEventType | undefined) || isolationEventTypes.rubberDamPlaced;
-}
-
-function defaultIsolationMethod(action: IsolationEventType): IsolationMethod {
-  return action === isolationEventTypes.alternativeIsolationUsed ? "splitDam" : "rubberDam";
-}
-
-type IsolationFormState = {
-  action: IsolationEventType;
-  method: IsolationMethod;
-  methodLabel: string;
-  regionKind: IsolationRegionKind;
-  regionLabel: string;
-  exposedTeeth: string;
-  clampCode: string;
-  clampTooth: string;
-  supportLabel: string;
-  supportTooth: string;
-  supportNote: string;
-  note: string;
-};
-
 type CaseSetupFocusRefs = Record<CaseSetupFocusTarget, React.RefObject<HTMLElement | null>>;
-
-function defaultIsolationFormState(tooth: string, action: IsolationEventType = isolationEventTypes.rubberDamPlaced): IsolationFormState {
-  return {
-    action,
-    method: defaultIsolationMethod(action),
-    methodLabel: "",
-    regionKind: "custom",
-    regionLabel: "",
-    exposedTeeth: tooth || "",
-    clampCode: "",
-    clampTooth: tooth || "",
-    supportLabel: "",
-    supportTooth: "",
-    supportNote: "",
-    note: "",
-  };
-}
-
-function getClampDetails(details: IsolationEventDetails) {
-  const clampSupport = details.supports?.find((support) => support.type === "clamp");
-  return {
-    clampCode: details.clampCode || clampSupport?.clampCode || "",
-    clampTooth: details.clampTooth || clampSupport?.tooth || "",
-  };
-}
-
-function buildIsolationFormState(tooth: string, action: IsolationEventType, sourceEvent?: ClinicalEvent): IsolationFormState {
-  if (!sourceEvent) return defaultIsolationFormState(tooth, action);
-
-  const details = getIsolationEventDetails(sourceEvent);
-  const clamp = getClampDetails(details);
-
-  return {
-    ...defaultIsolationFormState(tooth, action),
-    method: details.method || defaultIsolationMethod(action),
-    methodLabel: details.methodLabel || "",
-    regionKind: details.regionKind || "custom",
-    regionLabel: details.regionLabel || "",
-    exposedTeeth: details.exposedTeeth?.join(" ") || tooth || "",
-    clampCode: clamp.clampCode,
-    clampTooth: clamp.clampTooth || tooth || "",
-    supportLabel: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.label || "",
-    supportTooth: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.tooth || "",
-    supportNote: details.supports?.find((support) => support.type !== "clamp" || support.label || support.notes)?.notes || "",
-  };
-}
 
 function formatEventTimestamp(timestamp?: string) {
   if (!timestamp) return "";
@@ -653,6 +565,53 @@ function SharedClinicalReadinessSection({
   );
 }
 
+function FloatingCatalogCard({
+  title,
+  description,
+  onClose,
+  children,
+}: {
+  title: string;
+  description: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const titleId = `${title.toLowerCase().replace(/\s+/g, "-")}-catalog-title`;
+
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-auto bg-brand-navy-deep/35 p-4" onClick={onClose}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="mt-6 w-full max-w-4xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className={sectionText.eyebrow}>Documentation catalog</p>
+            <h2 id={titleId} className="mt-1 text-xl font-bold text-brand-navy">{title}</h2>
+            <p className={sectionText.description}>{description}</p>
+          </div>
+          <button type="button" onClick={onClose} className={panelActionButton.secondary}>
+            Close
+          </button>
+        </div>
+        {children}
+      </section>
+    </div>
+  );
+}
+
 function OperativeWorkflowSetupSummary({
   caseData,
   setup,
@@ -744,8 +703,7 @@ export function CaseSetupStatusPanel({
   const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
   const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic";
   const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup);
-  const [isolationForm, setIsolationForm] = useState<IsolationFormState>(() => defaultIsolationFormState(caseData.tooth));
-  const previousToothRef = useRef(caseData.tooth);
+  const [activeCatalogPanel, setActiveCatalogPanel] = useState<CatalogPanelKind | null>(null);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
@@ -780,107 +738,10 @@ export function CaseSetupStatusPanel({
     ? "anesthesia-needs-reassessment"
     : undefined;
   const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
-  const showMethodField = isolationForm.action === isolationEventTypes.alternativeIsolationUsed || isolationForm.action === isolationEventTypes.replaced;
-  const methodOptions = isolationForm.action === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
-  const showClampFields =
-    isolationForm.action === isolationEventTypes.rubberDamPlaced ||
-    (isolationForm.action === isolationEventTypes.replaced && isolationForm.method === "rubberDam");
-  const actionIsReassessment = isolationForm.action === isolationEventTypes.compromised || isolationForm.action === isolationEventTypes.removed;
-  const showMethodLabelField = !actionIsReassessment;
-  const isolationMethodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userIsolationCatalogItems);
-  const isolationSupportTypeSuggestions = getIsolationCatalogOptions("supportTypes", userIsolationCatalogItems);
-  const isolationSupportPhraseSuggestions = getIsolationCatalogOptions("supportPhrases", userIsolationCatalogItems);
-  const isolationRegionLabelSuggestions = getIsolationCatalogOptions("regionLabels", userIsolationCatalogItems);
-  const isolationClampCodeSuggestions = getIsolationCatalogOptions("clampCodes", userIsolationCatalogItems);
-  const isolationReasonSuggestions = getIsolationCatalogOptions("reasons", userIsolationCatalogItems);
-  const isolationNoteSuggestions = getIsolationCatalogOptions("notes", userIsolationCatalogItems);
-  const isolationShortcutItems = buildUserIsolationCatalogItemsFromForm({
-    action: isolationForm.action,
-    methodLabel: showMethodLabelField ? isolationForm.methodLabel : "",
-    regionLabel: isolationForm.regionLabel,
-    clampCode: showClampFields ? isolationForm.clampCode : "",
-    supportType: showMethodLabelField ? isolationForm.supportLabel : "",
-    supportPhrase: showMethodLabelField ? isolationForm.supportNote : "",
-    note: isolationForm.note,
-  });
-  const canSaveIsolationShortcuts = Boolean(onUserIsolationCatalogItemsChange && isolationShortcutItems.length);
-
-  useEffect(() => {
-    const previousTooth = previousToothRef.current;
-    previousToothRef.current = caseData.tooth;
-    setIsolationForm((prev) => ({
-      ...prev,
-      exposedTeeth: !prev.exposedTeeth || prev.exposedTeeth === previousTooth ? caseData.tooth || "" : prev.exposedTeeth,
-      clampTooth: !prev.clampTooth || prev.clampTooth === previousTooth ? caseData.tooth || "" : prev.clampTooth,
-    }));
-  }, [caseData.tooth]);
 
   useEffect(() => {
     focusCaseSetupSection(initialFocusSection, focusRefs);
   }, [initialFocusSection]);
-
-  function updateIsolationForm(updates: Partial<IsolationFormState>) {
-    setIsolationForm((prev) => ({ ...prev, ...updates }));
-  }
-
-  function updateIsolationAction(action: IsolationEventType) {
-    setIsolationForm((prev) => ({
-      ...prev,
-      action,
-      method: action === isolationEventTypes.alternativeIsolationUsed && prev.method === "rubberDam" ? "splitDam" : action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : prev.method,
-    }));
-  }
-
-  function resetIsolationForm(action: IsolationEventType = isolationEventTypes.rubberDamPlaced) {
-    setIsolationForm(defaultIsolationFormState(caseData.tooth, action));
-  }
-
-  function prepareIsolationAction(action: IsolationEventType) {
-    setIsolationForm(buildIsolationFormState(caseData.tooth, action, latestIsolationEvent));
-  }
-
-  function submitIsolationEvent() {
-    const teeth = isolationForm.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
-    const supportLabel = isolationForm.supportLabel.trim();
-    const supportTooth = isolationForm.supportTooth.trim();
-    const supportNote = isolationForm.supportNote.trim();
-    const supports: IsolationSupport[] = [];
-    if (!actionIsReassessment && showClampFields && (isolationForm.clampCode.trim() || isolationForm.clampTooth.trim())) {
-      supports.push({
-        type: "clamp" as const,
-        tooth: isolationForm.clampTooth.trim() || undefined,
-        clampCode: isolationForm.clampCode.trim() || undefined,
-      });
-    }
-    if (!actionIsReassessment && (supportLabel || supportTooth || supportNote)) {
-      supports.push({
-        type: isolationSupportTypeFromLabel(supportLabel),
-        label: supportLabel || undefined,
-        tooth: supportTooth || undefined,
-        notes: supportNote || undefined,
-      });
-    }
-    const details: IsolationEventDetails = {
-      method: isolationForm.action === isolationEventTypes.rubberDamPlaced ? "rubberDam" : actionIsReassessment ? undefined : isolationForm.method,
-      methodLabel: showMethodLabelField ? isolationForm.methodLabel.trim() || undefined : undefined,
-      regionKind: isolationForm.regionKind,
-      regionLabel: isolationForm.regionLabel.trim() || undefined,
-      exposedTeeth: teeth.length ? teeth : undefined,
-      supports: supports.length ? supports : undefined,
-      clampCode: showClampFields ? isolationForm.clampCode.trim() || undefined : undefined,
-      clampTooth: showClampFields ? isolationForm.clampTooth.trim() || undefined : undefined,
-      reason: actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
-      notes: !actionIsReassessment ? isolationForm.note.trim() || undefined : undefined,
-    };
-
-    onRecordIsolationEvent(isolationForm.action, details);
-    resetIsolationForm();
-  }
-
-  function saveIsolationShortcuts() {
-    if (!onUserIsolationCatalogItemsChange || !isolationShortcutItems.length) return;
-    onUserIsolationCatalogItemsChange(updateUserCatalogItems(userIsolationCatalogItems, isolationShortcutItems));
-  }
 
   return (
     <div className="grid gap-6">
@@ -943,11 +804,9 @@ export function CaseSetupStatusPanel({
           latestEvent={latestAnesthesiaEvent}
           userCatalogItems={userAnesthesiaCatalogItems}
           onSaveCatalogItems={onUserAnesthesiaCatalogItemsChange ? (items) => onUserAnesthesiaCatalogItemsChange(updateUserCatalogItems(userAnesthesiaCatalogItems, items)) : undefined}
+          onManageShortcuts={onUserAnesthesiaCatalogItemsChange ? () => setActiveCatalogPanel("anesthesia") : undefined}
           onRecordEvent={onRecordAnesthesiaEvent}
         />
-        {onUserAnesthesiaCatalogItemsChange ? (
-          <AnesthesiaCatalogManager userCatalogItems={userAnesthesiaCatalogItems} onChange={onUserAnesthesiaCatalogItemsChange} />
-        ) : null}
       </section>
 
       <section ref={isolationSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
@@ -981,7 +840,7 @@ export function CaseSetupStatusPanel({
           </div>
         ) : null}
         {isolationIsEstablished ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3">
             <button
               type="button"
               aria-label="Open embedded isolation workflow"
@@ -989,30 +848,6 @@ export function CaseSetupStatusPanel({
               className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
             >
               Review isolation
-            </button>
-            <button
-              type="button"
-              aria-label="Prepare compromised isolation event"
-              onClick={() => prepareIsolationAction(isolationEventTypes.compromised)}
-              className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
-            >
-              Compromised
-            </button>
-            <button
-              type="button"
-              aria-label="Prepare removed isolation event"
-              onClick={() => prepareIsolationAction(isolationEventTypes.removed)}
-              className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-50"
-            >
-              Removed
-            </button>
-            <button
-              type="button"
-              aria-label="Prepare replacement isolation event"
-              onClick={() => prepareIsolationAction(isolationEventTypes.replaced)}
-              className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
-            >
-              Replace isolation
             </button>
           </div>
         ) : (
@@ -1027,76 +862,36 @@ export function CaseSetupStatusPanel({
             </button>
           </div>
         )}
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <SelectInput
-            label="Isolation action"
-            value={isolationActionLabels[isolationForm.action]}
-            onChange={(value) => updateIsolationAction(eventTypeFromLabel(value))}
-            options={isolationActionOptions}
-          />
-          {showMethodField ? (
-            <SelectInput
-              label="Method"
-              value={isolationForm.method}
-              onChange={(value) => updateIsolationForm({ method: value as IsolationMethod })}
-              options={methodOptions}
-            />
-          ) : null}
-          {showMethodLabelField ? (
-            <TextInput label="Method label" value={isolationForm.methodLabel} onChange={(value) => updateIsolationForm({ methodLabel: value })} placeholder="optional display text" suggestions={isolationMethodLabelSuggestions} />
-          ) : null}
-          <SelectInput
-            label="Region"
-            value={isolationForm.regionKind}
-            onChange={(value) => updateIsolationForm({ regionKind: value as IsolationRegionKind })}
-            options={[...isolationRegionKinds]}
-          />
-          <TextInput label="Region label" value={isolationForm.regionLabel} onChange={(value) => updateIsolationForm({ regionLabel: value })} placeholder="e.g., Q3, upper anterior, custom" suggestions={isolationRegionLabelSuggestions} />
-          <TextInput label="Exposed teeth" value={isolationForm.exposedTeeth} onChange={(value) => updateIsolationForm({ exposedTeeth: value })} placeholder="e.g., 34 35 36 37" />
-          {showClampFields ? (
-            <>
-              <TextInput label="Clamp tooth" value={isolationForm.clampTooth} onChange={(value) => updateIsolationForm({ clampTooth: value })} placeholder="e.g., 37" />
-              <TextInput label="Clamp code" value={isolationForm.clampCode} onChange={(value) => updateIsolationForm({ clampCode: value })} placeholder="e.g., W8A" suggestions={isolationClampCodeSuggestions} />
-            </>
-          ) : null}
-          {showMethodLabelField ? (
-            <>
-              <TextInput label="Support type" value={isolationForm.supportLabel} onChange={(value) => updateIsolationForm({ supportLabel: value })} placeholder="optional" suggestions={isolationSupportTypeSuggestions} />
-              <TextInput label="Support tooth" value={isolationForm.supportTooth} onChange={(value) => updateIsolationForm({ supportTooth: value })} placeholder="optional" />
-              <TextInput label="Support note" value={isolationForm.supportNote} onChange={(value) => updateIsolationForm({ supportNote: value })} placeholder="optional" suggestions={isolationSupportPhraseSuggestions} />
-            </>
-          ) : null}
-          <TextInput
-            label={actionIsReassessment ? "Reason" : "Notes"}
-            value={isolationForm.note}
-            onChange={(value) => updateIsolationForm({ note: value })}
-            placeholder={isolationForm.action === isolationEventTypes.compromised ? "e.g., saliva contamination" : "optional"}
-            suggestions={actionIsReassessment ? isolationReasonSuggestions : isolationNoteSuggestions}
-          />
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={submitIsolationEvent}
-            className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
-          >
-            {isolationSubmitLabels[isolationForm.action]}
-          </button>
-          {onUserIsolationCatalogItemsChange ? (
-            <button
-              type="button"
-              onClick={saveIsolationShortcuts}
-              disabled={!canSaveIsolationShortcuts}
-              className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveIsolationShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
-            >
-              Save shortcuts
-            </button>
-          ) : null}
-        </div>
-        {onUserIsolationCatalogItemsChange ? (
-          <IsolationCatalogManager userCatalogItems={userIsolationCatalogItems} onChange={onUserIsolationCatalogItemsChange} />
-        ) : null}
+        <IsolationEventForm
+          tooth={caseData.tooth}
+          latestEvent={latestIsolationEvent}
+          isolationIsEstablished={isolationIsEstablished}
+          userCatalogItems={userIsolationCatalogItems}
+          onSaveCatalogItems={onUserIsolationCatalogItemsChange ? (items) => onUserIsolationCatalogItemsChange(updateUserCatalogItems(userIsolationCatalogItems, items)) : undefined}
+          onManageShortcuts={onUserIsolationCatalogItemsChange ? () => setActiveCatalogPanel("isolation") : undefined}
+          onRecordEvent={onRecordIsolationEvent}
+        />
       </section>
+
+      {activeCatalogPanel === "anesthesia" && onUserAnesthesiaCatalogItemsChange ? (
+        <FloatingCatalogCard
+          title="Anesthesia catalog"
+          description="Manage anesthesia suggestion shortcuts without lengthening the shared readiness section."
+          onClose={() => setActiveCatalogPanel(null)}
+        >
+          <AnesthesiaCatalogManager userCatalogItems={userAnesthesiaCatalogItems} onChange={onUserAnesthesiaCatalogItemsChange} />
+        </FloatingCatalogCard>
+      ) : null}
+
+      {activeCatalogPanel === "isolation" && onUserIsolationCatalogItemsChange ? (
+        <FloatingCatalogCard
+          title="Isolation catalog"
+          description="Manage isolation suggestion shortcuts without lengthening the shared readiness section."
+          onClose={() => setActiveCatalogPanel(null)}
+        >
+          <IsolationCatalogManager userCatalogItems={userIsolationCatalogItems} onChange={onUserIsolationCatalogItemsChange} />
+        </FloatingCatalogCard>
+      ) : null}
     </div>
   );
 }
