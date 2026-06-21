@@ -29,6 +29,7 @@ export function AnesthesiaEventForm({
   defaultAction = anesthesiaEventTypes.administered,
   userCatalogItems = [],
   onSaveCatalogItems,
+  onManageShortcuts,
   onRecordEvent,
 }: {
   tooth: string;
@@ -36,6 +37,7 @@ export function AnesthesiaEventForm({
   defaultAction?: AnesthesiaAdministrationAction;
   userCatalogItems?: CatalogItem[];
   onSaveCatalogItems?: (items: CatalogItem[]) => void;
+  onManageShortcuts?: () => void;
   onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
   const [mode, setMode] = useState<AnesthesiaMode>("administration");
@@ -234,6 +236,15 @@ export function AnesthesiaEventForm({
             className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
           >
             Save shortcuts
+          </button>
+        ) : null}
+        {mode === "administration" && onManageShortcuts ? (
+          <button
+            type="button"
+            onClick={onManageShortcuts}
+            className="rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+          >
+            Manage shortcuts
           </button>
         ) : null}
       </div>

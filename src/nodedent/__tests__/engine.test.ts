@@ -342,6 +342,34 @@ test("case setup hides workflow target setup for shared module contexts", () => 
   assert.equal(markup.includes("Estimated WL for"), false);
 });
 
+test("case setup opens anesthesia and isolation catalogs from inline shortcut manager actions", () => {
+  const caseData = baseCase();
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+    caseData,
+    activeCanal: caseData.canals[0],
+    activeWorkflowId: sharedAnesthesiaWorkflowId,
+    currentNodeId: "anesthesia-select-route",
+    onClose: noop,
+    onUpdateCase: noop,
+    onUpdateDiagnosis: noop,
+    onUpdatePreOp: noop,
+    onUpdateActiveCanal: noop,
+    onApplySuggestedCaseStatus: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onUserAnesthesiaCatalogItemsChange: noop,
+    onUserIsolationCatalogItemsChange: noop,
+    onDownloadCaseJson: noop,
+  }));
+
+  assert.equal(markup.includes("Save shortcuts"), true);
+  assert.equal(markup.includes("Manage shortcuts"), true);
+  assert.equal(markup.includes("Favorites appear first in the selected field"), false);
+});
+
 test("active workflow target panel renders operative setup without canal controls", () => {
   const caseData = baseCase({ tooth: "36" });
   const noop = () => {};

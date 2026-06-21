@@ -20,7 +20,7 @@ export function OperativeWorkflowSetupPanel({
   return (
     <SectionCard title="Operative setup" className={className}>
       <div className="grid gap-3">
-        <p className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
+        <p className="max-w-3xl text-sm leading-6 text-brand-slate">
           Capture the planned operative tooth and surface scope separately from endodontic canals.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
