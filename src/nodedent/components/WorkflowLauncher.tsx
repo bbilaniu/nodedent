@@ -24,6 +24,12 @@ function availabilityClass(availability: string) {
   return "border-brand-light-node bg-white text-brand-slate";
 }
 
+function statusClass(status: string) {
+  if (status === "Ready") return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
+  if (status === "Review") return "border-amber-200 bg-amber-50 text-amber-900";
+  return "border-brand-light-node bg-white text-brand-slate";
+}
+
 function compactScopeList(scopes: readonly string[]) {
   return scopes.join(", ");
 }
@@ -66,6 +72,9 @@ export function WorkflowLauncher({
   const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
   const anesthesiaStatus = capabilitySummary.anesthesia.needsReassessment ? "Review" : capabilitySummary.anesthesia.satisfied ? "Ready" : "Pending";
   const isolationStatus = capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending";
+  const endodonticStarted = currentNodePhase !== "Pre-op" || (currentNodeTitle !== "Pre-op setup" && currentNodeTitle !== "Pre-op");
+  const endodonticStatusLabel = endodonticStarted ? "In progress" : "Not started";
+  const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : "Start workflow";
   const activeCaseFacts = [
     `Patient ${caseData.patientNumber || "not set"}`,
     `Tooth ${caseData.tooth || "not set"}`,
@@ -102,8 +111,8 @@ export function WorkflowLauncher({
                   {currentNodePhase} · Active canal {caseData.currentCanal || "not set"} · Autosaved {formatTimestamp(caseData.autosavedAt)}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full border border-brand-mint/40 bg-brand-mint/10 px-3 py-1 text-xs font-semibold text-brand-navy">
-                Fast resume
+              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${endodonticStarted ? "border-brand-mint/40 bg-brand-mint/10 text-brand-navy" : "border-brand-light-node bg-white text-brand-slate"}`}>
+                {endodonticStarted ? "Fast resume" : "Start"}
               </span>
             </div>
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
@@ -112,7 +121,7 @@ export function WorkflowLauncher({
                 onClick={onContinueEndodonticWorkflow}
                 className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
               >
-                Continue workflow
+                {endodonticLaunchLabel}
               </button>
               <button
                 type="button"
@@ -174,6 +183,8 @@ export function WorkflowLauncher({
             <div className="mt-3 grid gap-3">
               {primaryEntries.map((entry) => {
                 const isEndo = entry.workflowId === endodonticRootWorkflowId;
+                const statusLabel = isEndo ? endodonticStatusLabel : entry.statusLabel;
+                const launchLabel = isEndo ? endodonticLaunchLabel : entry.launchLabel;
                 return (
                   <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -182,8 +193,8 @@ export function WorkflowLauncher({
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${availabilityClass(entry.availability)}`}>
-                        {entry.statusLabel}
+                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${isEndo ? statusClass(statusLabel) : availabilityClass(entry.availability)}`}>
+                        {statusLabel}
                       </span>
                     </div>
                     <button
@@ -191,7 +202,7 @@ export function WorkflowLauncher({
                       onClick={isEndo ? onContinueEndodonticWorkflow : () => onOpenPrimaryWorkflowSetup(entry.workflowId)}
                       className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
                     >
-                      {entry.launchLabel}
+                      {launchLabel}
                     </button>
                   </div>
                 );
@@ -207,6 +218,7 @@ export function WorkflowLauncher({
                 const isAnesthesia = entry.workflowId === sharedAnesthesiaWorkflowId;
                 const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia);
                 const moduleStatus = isAnesthesia ? capabilitySummary.anesthesia : isIsolation ? capabilitySummary.isolation : null;
+                const moduleStatusLabel = isAnesthesia ? anesthesiaStatus : isIsolation ? isolationStatus : entry.statusLabel;
                 const launchLabel = moduleStatus?.satisfied || moduleStatus?.needsReassessment
                   ? `Review ${isAnesthesia ? "anesthesia" : "isolation"}`
                   : entry.launchLabel;
@@ -218,8 +230,8 @@ export function WorkflowLauncher({
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${availabilityClass(entry.availability)}`}>
-                        {entry.statusLabel}
+                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(moduleStatusLabel)}`}>
+                        {moduleStatusLabel}
                       </span>
                     </div>
                     <button
