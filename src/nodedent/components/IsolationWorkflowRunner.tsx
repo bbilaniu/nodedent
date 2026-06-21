@@ -16,6 +16,13 @@ const isolationActionLabels = {
 
 const alternativeIsolationMethodOptions = isolationMethods.filter((method) => method !== "rubberDam");
 const replacementIsolationMethodOptions = [...isolationMethods];
+const placementEventTypes = new Set<IsolationEventType>([
+  isolationEventTypes.rubberDamPlaced,
+  isolationEventTypes.alternativeIsolationUsed,
+  isolationEventTypes.replaced,
+]);
+
+type IsolationActionMode = "placement" | "reassessment";
 
 type IsolationFormState = {
   method: IsolationMethod;
@@ -54,6 +61,10 @@ function getIsolationEventType(node: ProtocolNode, optionIndex: number): Isolati
 
 function getDefaultEventType(node: ProtocolNode): IsolationEventType {
   return getIsolationEventType(node, 0) || isolationEventTypes.rubberDamPlaced;
+}
+
+function getActionMode(eventType: IsolationEventType): IsolationActionMode {
+  return placementEventTypes.has(eventType) ? "placement" : "reassessment";
 }
 
 function shouldShowMethod(eventType: IsolationEventType) {
@@ -149,11 +160,25 @@ export function IsolationWorkflowRunner({
   const defaultEventType = getDefaultEventType(currentNode);
   const targetTooth = launch.targetTooth || caseData.tooth;
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
+  const [actionMode, setActionMode] = useState<IsolationActionMode>(() => getActionMode(defaultEventType));
   const [form, setForm] = useState<IsolationFormState>(() => formFromEvent(latestIsolationEvent, targetTooth));
   const visibleOptions = useMemo(() => currentNode.options || [], [currentNode.options]);
   const hasRecordableOptions = visibleOptions.some((option) => option.noteEvent?.type);
   const completion = workflow.completionNodeIds.includes(currentNode.id) && !hasRecordableOptions;
-  const selectedOption = visibleOptions.find((option) => option.noteEvent?.type === selectedEventType) || visibleOptions[0];
+  const modeOptions = visibleOptions.filter((option) => {
+    const eventType = option.noteEvent?.type as IsolationEventType | undefined;
+    return eventType ? getActionMode(eventType) === actionMode : false;
+  });
+  const actionOptions = modeOptions.length ? modeOptions : visibleOptions;
+  const selectedOption = actionOptions.find((option) => option.noteEvent?.type === selectedEventType) || actionOptions[0];
+  const canSelectPlacement = visibleOptions.some((option) => {
+    const eventType = option.noteEvent?.type as IsolationEventType | undefined;
+    return eventType ? getActionMode(eventType) === "placement" : false;
+  });
+  const canSelectReassessment = visibleOptions.some((option) => {
+    const eventType = option.noteEvent?.type as IsolationEventType | undefined;
+    return eventType ? getActionMode(eventType) === "reassessment" : false;
+  });
   const methodOptions = selectedEventType === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
   const showMethodLabelField = selectedEventType !== isolationEventTypes.compromised && selectedEventType !== isolationEventTypes.removed;
   const methodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userCatalogItems);
@@ -180,9 +205,20 @@ export function IsolationWorkflowRunner({
 
   function updateSelectedEventType(eventType: IsolationEventType) {
     setSelectedEventType(eventType);
+    setActionMode(getActionMode(eventType));
     if (eventType === isolationEventTypes.alternativeIsolationUsed) {
       setForm((prev) => ({ ...prev, method: prev.method === "rubberDam" ? "splitDam" : prev.method }));
     }
+  }
+
+  function updateActionMode(nextMode: IsolationActionMode) {
+    setActionMode(nextMode);
+    const nextOption = visibleOptions.find((option) => {
+      const eventType = option.noteEvent?.type as IsolationEventType | undefined;
+      return eventType ? getActionMode(eventType) === nextMode : false;
+    });
+    const nextEventType = nextOption?.noteEvent?.type as IsolationEventType | undefined;
+    if (nextEventType) updateSelectedEventType(nextEventType);
   }
 
   function applySelectedOption() {
@@ -200,7 +236,11 @@ export function IsolationWorkflowRunner({
 
     setModuleNodeId(selectedOption.nextNodeId);
     const nextNode = workflow.nodes[selectedOption.nextNodeId];
-    if (nextNode) setSelectedEventType(getDefaultEventType(nextNode));
+    if (nextNode) {
+      const nextEventType = getDefaultEventType(nextNode);
+      setSelectedEventType(nextEventType);
+      setActionMode(getActionMode(nextEventType));
+    }
   }
 
   function saveCatalogItems() {
@@ -226,16 +266,34 @@ export function IsolationWorkflowRunner({
 
       {!completion ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <button
+              type="button"
+              onClick={() => updateActionMode("placement")}
+              disabled={!canSelectPlacement}
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "placement" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+            >
+              Record placement
+            </button>
+            <button
+              type="button"
+              onClick={() => updateActionMode("reassessment")}
+              disabled={!canSelectReassessment}
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "reassessment" ? "border-brand-mint bg-brand-mint/20 text-brand-navy hover:bg-brand-mint/30" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+            >
+              Record reassessment
+            </button>
+          </div>
           <div className="grid gap-3 md:grid-cols-2">
             <SelectInput
-              label="Isolation action"
+              label={actionMode === "placement" ? "Placement action" : "Reassessment action"}
               value={isolationActionLabels[selectedEventType]}
               onChange={(value) => {
-                const option = visibleOptions.find((item) => item.label === value);
+                const option = actionOptions.find((item) => item.label === value);
                 const eventType = option?.noteEvent?.type as IsolationEventType | undefined;
                 if (eventType) updateSelectedEventType(eventType);
               }}
-              options={visibleOptions.map((option) => option.label)}
+              options={actionOptions.map((option) => option.label)}
             />
             {shouldShowMethod(selectedEventType) ? (
               <SelectInput
@@ -277,40 +335,39 @@ export function IsolationWorkflowRunner({
               suggestions={selectedEventType === isolationEventTypes.compromised || selectedEventType === isolationEventTypes.removed ? reasonSuggestions : noteSuggestions}
             />
           </div>
+          {selectedOption ? (
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-start">
+              <button
+                type="button"
+                onClick={applySelectedOption}
+                className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
+              >
+                Record {selectedOption.label.toLowerCase()}
+                <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
+              </button>
+              {onUserCatalogItemsChange ? (
+                <button
+                  type="button"
+                  onClick={saveCatalogItems}
+                  disabled={!canSaveShortcuts}
+                  className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+                >
+                  Save shortcuts
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
       <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
-        {completion ? (
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
-          >
-            Close shared workflow
-          </button>
-        ) : selectedOption ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-            <button
-              type="button"
-              onClick={applySelectedOption}
-              className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
-            >
-              Record {selectedOption.label.toLowerCase()}
-              <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
-            </button>
-            {onUserCatalogItemsChange ? (
-              <button
-                type="button"
-                onClick={saveCatalogItems}
-                disabled={!canSaveShortcuts}
-                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
-              >
-                Save shortcuts
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
+        >
+          Close shared workflow
+        </button>
       </div>
     </>
   );
