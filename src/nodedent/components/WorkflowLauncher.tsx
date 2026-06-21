@@ -11,23 +11,13 @@ import {
 } from "../workflow/registry";
 import { sharedIsolationWorkflowId } from "../workflow/isolation";
 import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
+import { sharedAvailabilityClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
   const date = new Date(timestamp);
   if (!Number.isFinite(date.getTime())) return "not yet";
   return date.toLocaleString();
-}
-
-function availabilityClass(availability: string) {
-  if (availability === "ready") return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
-}
-
-function statusClass(status: string) {
-  if (status === "Ready") return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  if (status === "Review") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-brand-light-node bg-white text-brand-slate";
 }
 
 function compactScopeList(scopes: readonly string[]) {
@@ -70,8 +60,8 @@ export function WorkflowLauncher({
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
-  const anesthesiaStatus = capabilitySummary.anesthesia.needsReassessment ? "Review" : capabilitySummary.anesthesia.satisfied ? "Ready" : "Pending";
-  const isolationStatus = capabilitySummary.isolation.needsReassessment ? "Review" : capabilitySummary.isolation.satisfied ? "Ready" : "Pending";
+  const anesthesiaStatus = sharedCapabilityStatusLabel(capabilitySummary.anesthesia);
+  const isolationStatus = sharedCapabilityStatusLabel(capabilitySummary.isolation);
   const endodonticStarted = currentNodePhase !== "Pre-op" || (currentNodeTitle !== "Pre-op setup" && currentNodeTitle !== "Pre-op");
   const endodonticStatusLabel = endodonticStarted ? "In progress" : "Not started";
   const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : "Start workflow";
@@ -165,11 +155,11 @@ export function WorkflowLauncher({
                 <p className="text-xs font-bold uppercase tracking-wide">Radiographs</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.radiographs.summary}</p>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${availabilityClass(capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment ? "ready" : "modelOnly")}`}>
+              <div className={`rounded-xl border px-3 py-2 ${sharedAvailabilityClass(capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment ? "ready" : "modelOnly")}`}>
                 <p className="text-xs font-bold uppercase tracking-wide">Anesthesia</p>
                 <p className="mt-1 text-sm font-semibold">{anesthesiaStatus}</p>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${availabilityClass(capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment ? "ready" : "modelOnly")}`}>
+              <div className={`rounded-xl border px-3 py-2 ${sharedAvailabilityClass(capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment ? "ready" : "modelOnly")}`}>
                 <p className="text-xs font-bold uppercase tracking-wide">Isolation</p>
                 <p className="mt-1 text-sm font-semibold">{isolationStatus}</p>
               </div>
@@ -193,7 +183,7 @@ export function WorkflowLauncher({
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${isEndo ? statusClass(statusLabel) : availabilityClass(entry.availability)}`}>
+                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${isEndo ? sharedStatusLabelClass(statusLabel) : sharedAvailabilityClass(entry.availability)}`}>
                         {statusLabel}
                       </span>
                     </div>
@@ -219,9 +209,7 @@ export function WorkflowLauncher({
                 const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia);
                 const moduleStatus = isAnesthesia ? capabilitySummary.anesthesia : isIsolation ? capabilitySummary.isolation : null;
                 const moduleStatusLabel = isAnesthesia ? anesthesiaStatus : isIsolation ? isolationStatus : entry.statusLabel;
-                const launchLabel = moduleStatus?.satisfied || moduleStatus?.needsReassessment
-                  ? `Review ${isAnesthesia ? "anesthesia" : "isolation"}`
-                  : entry.launchLabel;
+                const launchLabel = moduleStatus ? sharedModuleActionLabel(isAnesthesia ? "anesthesia" : "isolation", moduleStatus) : entry.launchLabel;
                 return (
                   <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -230,7 +218,7 @@ export function WorkflowLauncher({
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${statusClass(moduleStatusLabel)}`}>
+                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedStatusLabelClass(moduleStatusLabel)}`}>
                         {moduleStatusLabel}
                       </span>
                     </div>

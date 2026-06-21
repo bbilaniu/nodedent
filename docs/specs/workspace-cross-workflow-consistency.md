@@ -75,6 +75,48 @@ Actions such as `Start`, `Resume`, `Record`, `Review`, `Complete`, `Add event`, 
 
 Missing setup, missing readiness, and missing workflow output should be shown with compact context and a clear next action. Empty states should not read as errors unless the user is blocked by validation.
 
+## Shared Module Implementation Contract
+
+Use this contract before adding another shared module so anesthesia, isolation, radiology, and later shared modules do not diverge.
+
+Shared module parent surfaces own:
+
+- Latest event/status summaries.
+- Readiness row actions and recursive-launch prevention.
+- Opening or closing the embedded shared-module workflow.
+- Opening floating shortcut/catalog management cards.
+- Passing saved user catalog items and persistence callbacks into forms.
+
+Shared module event forms own:
+
+- Local form state and reset behavior.
+- Record action buttons.
+- `Save shortcuts` and `Manage shortcuts` placement in the same action row.
+- Calling parent callbacks with typed event details and shortcut items.
+- Showing documentation suggestions from user/seed catalogs.
+
+Shared module workflow helpers own:
+
+- Default form state.
+- Hydrating form state from the latest relevant event.
+- Building typed event details from form state.
+- UI label maps that are specific to the module's event choices.
+
+Shared catalog managers own:
+
+- Adding, editing, deleting, hiding, and favoriting documentation shortcut rows.
+- Merging seed rows with user overrides through shared catalog helper functions.
+- Staying outside `CaseSetupStatusPanel` so the panel remains a workspace shell rather than a shortcut editor.
+
+Shared status/action helpers own:
+
+- `Ready`, `Review`, and `Pending` labels.
+- Readiness/status badge classes.
+- Shared-module launch labels such as `Open anesthesia workflow` and `Review isolation`.
+- Shared-module re-entry node IDs where a module has a review/reassessment node.
+
+Do not let new shared modules copy status-label logic, shortcut action rows, or catalog-management internals into `CaseSetupStatusPanel` or `WorkflowLauncher`.
+
 ## Proposed Changes
 
 ### 1. Launcher And Home Consistency
@@ -250,7 +292,7 @@ Status: partially implemented by introducing shared panel and section-heading st
 
 Reasoning level needed: medium-high.
 
-Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, and changing shared module re-entry labels to `Review` when current anesthesia or isolation status already exists.
+Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, changing shared module re-entry labels to `Review` when current anesthesia or isolation status already exists, extracting shared status/action helpers, moving anesthesia/isolation catalog managers out of `CaseSetupStatusPanel`, and defining a shared-module form contract for future modules.
 
 - Treat NodeDent Home as the persistent first screen and keep the modal launcher as a quick-switcher, without duplicating workflow state or clearing event-backed state when switching.
 - Split Case Setup & Status conceptually and internally into global case setup, shared readiness/documentation capture, workflow setup summaries, saved-case lifecycle, and audit/history surfaces, without creating separate user-facing setup screens yet.

@@ -2,18 +2,8 @@ import React from "react";
 import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import type { CaseCapabilitySummary, CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
+import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedModuleEntryNodeId } from "./sharedModuleUi";
 import { cx, panelSurface, sectionText } from "./uiStyles";
-
-function statusLabel(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "Review";
-  return satisfied ? "Ready" : "Pending";
-}
-
-function statusClass(satisfied: boolean, needsReassessment: boolean) {
-  if (needsReassessment) return "border-amber-200 bg-amber-50 text-amber-900";
-  if (satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
-}
 
 export type SharedReadinessAction = {
   label: string;
@@ -21,10 +11,6 @@ export type SharedReadinessAction = {
   status: CapabilityStatus;
   onClick: () => void;
 };
-
-function sharedModuleActionLabel(label: "Anesthesia" | "Isolation", status: CapabilityStatus) {
-  return status.satisfied || status.needsReassessment ? `Review ${label.toLowerCase()}` : `Open ${label.toLowerCase()} workflow`;
-}
 
 export function getSharedReadinessActions({
   capabilitySummary,
@@ -37,11 +23,8 @@ export function getSharedReadinessActions({
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
 }): SharedReadinessAction[] {
-  const anesthesiaEntryNodeId = capabilitySummary.anesthesia.needsReassessment ? "anesthesia-needs-reassessment" : undefined;
-  const isolationEntryNodeId =
-    capabilitySummary.isolation.satisfied || capabilitySummary.isolation.needsReassessment
-      ? "isolation-needs-reassessment"
-      : undefined;
+  const anesthesiaEntryNodeId = sharedModuleEntryNodeId("anesthesia", capabilitySummary.anesthesia);
+  const isolationEntryNodeId = sharedModuleEntryNodeId("isolation", capabilitySummary.isolation);
 
   return [
     {
@@ -58,13 +41,13 @@ export function getSharedReadinessActions({
     },
     {
       label: "Anesthesia",
-      actionLabel: sharedModuleActionLabel("Anesthesia", capabilitySummary.anesthesia),
+      actionLabel: sharedModuleActionLabel("anesthesia", capabilitySummary.anesthesia),
       status: capabilitySummary.anesthesia,
       onClick: () => onOpenAnesthesiaWorkflow(anesthesiaEntryNodeId),
     },
     {
       label: "Isolation",
-      actionLabel: sharedModuleActionLabel("Isolation", capabilitySummary.isolation),
+      actionLabel: sharedModuleActionLabel("isolation", capabilitySummary.isolation),
       status: capabilitySummary.isolation,
       onClick: () => onOpenIsolationWorkflow(isolationEntryNodeId),
     },
@@ -115,13 +98,13 @@ export function SharedReadinessCard({
               className={cx(
                 "min-h-[6.25rem] rounded-xl border px-3 py-2 text-left transition",
                 disabled ? "cursor-not-allowed opacity-60" : "hover:-translate-y-0.5 hover:shadow-sm",
-                statusClass(status.satisfied, status.needsReassessment),
+                sharedCapabilityStatusClass(status),
               )}
             >
               <span className="flex items-start justify-between gap-2">
                 <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
                 <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
-                  {disabled ? "Open" : statusLabel(status.satisfied, status.needsReassessment)}
+                  {disabled ? "Open" : sharedCapabilityStatusLabel(status)}
                 </span>
               </span>
               <span className="mt-1 block text-xs leading-5 opacity-85">
