@@ -569,6 +569,20 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
   }));
+  const activeIsolationMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedIsolationWorkflowId,
+      entryNodeId: "isolation-select-method",
+      workflowRunId: "run_shared_isolation_active_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onUserIsolationCatalogItemsChange: noop,
+  }));
 
   assert.equal(anesthesiaMarkup.includes("Close"), true);
   assert.equal(anesthesiaMarkup.includes("Close shared workflow"), true);
@@ -576,6 +590,12 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(isolationMarkup.includes("Close"), true);
   assert.equal(isolationMarkup.includes("Close shared workflow"), true);
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
+  assert.equal(activeIsolationMarkup.includes("Record placement"), true);
+  assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
+  assert.equal(activeIsolationMarkup.includes("Record rubber dam placed"), true);
+  assert.equal(activeIsolationMarkup.includes("Save shortcuts"), true);
+  assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
+  assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
 });
 
 test("every protocol note event has a note fragment", () => {
