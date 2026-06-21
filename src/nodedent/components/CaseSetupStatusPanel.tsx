@@ -1,31 +1,20 @@
-import React, { useEffect, useRef, useState } from "react";
-import type { CanalRecord, CaseSetupFocusTarget, ClinicalEvent, EndoCase } from "../types";
+import React, { useEffect, useRef } from "react";
+import type { CanalRecord, CaseSetupFocusTarget, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
-import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
+import type { AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
-import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
-import type { CatalogItem } from "../workflow/catalogs";
-import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
-import type { RadiologyEventDetails } from "../workflow/radiology";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
-import { updateUserCatalogItems } from "../workflow/userCatalogItems";
-import { AnesthesiaCatalogManager } from "./AnesthesiaCatalogManager";
-import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
-import { IsolationCatalogManager } from "./IsolationCatalogManager";
-import { IsolationEventForm } from "./IsolationEventForm";
-import { RadiologyEventForm } from "./RadiologyEventForm";
 import { SelectInput, TextInput } from "./FormControls";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText } from "./uiStyles";
-type CatalogPanelKind = "anesthesia" | "isolation";
 
 type CaseSetupFocusRefs = Record<CaseSetupFocusTarget, React.RefObject<HTMLElement | null>>;
 
@@ -139,14 +128,14 @@ function RadiographReadinessSection({
   paReviewed,
   bwReviewed,
   onUpdatePreOp,
-  onRecordRadiologyEvent,
+  onOpenRadiologyWorkflow,
   sectionRef,
 }: {
   caseData: EndoCase;
   paReviewed: boolean;
   bwReviewed: boolean;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
-  onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   const latestRadiologyEvent = (caseData.globalEvents || []).filter(isRadiologyReviewedEvent).at(-1);
@@ -160,6 +149,14 @@ function RadiographReadinessSection({
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest shared radiology event</p>
           <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatRadiologyEventFragment(latestRadiologyEvent)}</p>
           {latestRadiologyEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestRadiologyEventTime}</p> : null}
+        </div>
+      ) : null}
+      {caseData.priorVisit?.priorRadiographsAvailable ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Prior-visit radiographs</p>
+          <p className="mt-1 text-sm leading-6 text-brand-slate">
+            Prior radiographs are documented as available. Record a shared radiology event when the current visit review should be explicit.
+          </p>
         </div>
       ) : null}
       <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
@@ -179,7 +176,16 @@ function RadiographReadinessSection({
           </label>
         </div>
       </div>
-      <RadiologyEventForm tooth={caseData.tooth} onRecordEvent={onRecordRadiologyEvent} />
+      <div className="mt-3">
+        <button
+          type="button"
+          aria-label="Open embedded radiology workflow"
+          onClick={() => onOpenRadiologyWorkflow(latestRadiologyEvent ? "radiology-review" : undefined)}
+          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${latestRadiologyEvent ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+        >
+          {latestRadiologyEvent ? "Review radiology" : "Open radiology workflow"}
+        </button>
+      </div>
     </section>
   );
 }
@@ -207,53 +213,6 @@ function SharedClinicalReadinessSection({
         ))}
       </div>
     </section>
-  );
-}
-
-function FloatingCatalogCard({
-  title,
-  description,
-  onClose,
-  children,
-}: {
-  title: string;
-  description: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  const titleId = `${title.toLowerCase().replace(/\s+/g, "-")}-catalog-title`;
-
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-auto bg-brand-navy-deep/35 p-4" onClick={onClose}>
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="mt-6 w-full max-w-4xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className={sectionText.eyebrow}>Documentation catalog</p>
-            <h2 id={titleId} className="mt-1 text-xl font-bold text-brand-navy">{title}</h2>
-            <p className={sectionText.description}>{description}</p>
-          </div>
-          <button type="button" onClick={onClose} className={panelActionButton.secondary}>
-            Close
-          </button>
-        </div>
-        {children}
-      </section>
-    </div>
   );
 }
 
@@ -312,16 +271,10 @@ export function CaseSetupStatusPanel({
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
-  onRecordAnesthesiaEvent,
-  onRecordIsolationEvent,
-  onRecordRadiologyEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenRadiologyWorkflow,
   onOpenOperativeWorkflowSetup,
-  userAnesthesiaCatalogItems = [],
-  onUserAnesthesiaCatalogItemsChange,
-  userIsolationCatalogItems = [],
-  onUserIsolationCatalogItemsChange,
   initialFocusSection,
 }: {
   caseData: EndoCase;
@@ -333,16 +286,10 @@ export function CaseSetupStatusPanel({
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
-  onRecordAnesthesiaEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
-  onRecordIsolationEvent: (eventType: IsolationEventType, details: IsolationEventDetails) => void;
-  onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   onOpenOperativeWorkflowSetup?: () => void;
-  userAnesthesiaCatalogItems?: CatalogItem[];
-  onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
-  userIsolationCatalogItems?: CatalogItem[];
-  onUserIsolationCatalogItemsChange?: (items: CatalogItem[]) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
@@ -350,7 +297,6 @@ export function CaseSetupStatusPanel({
   const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
   const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic";
   const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup);
-  const [activeCatalogPanel, setActiveCatalogPanel] = useState<CatalogPanelKind | null>(null);
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
@@ -404,7 +350,7 @@ export function CaseSetupStatusPanel({
           paReviewed={paReviewed}
           bwReviewed={bwReviewed}
           onUpdatePreOp={onUpdatePreOp}
-          onRecordRadiologyEvent={onRecordRadiologyEvent}
+          onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
           sectionRef={radiographsSectionRef}
         />
         <SharedClinicalReadinessSection statusItems={statusItems} />
@@ -453,14 +399,6 @@ export function CaseSetupStatusPanel({
             {anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
           </button>
         </div>
-        <AnesthesiaEventForm
-          tooth={caseData.tooth}
-          latestEvent={latestAnesthesiaEvent}
-          userCatalogItems={userAnesthesiaCatalogItems}
-          onSaveCatalogItems={onUserAnesthesiaCatalogItemsChange ? (items) => onUserAnesthesiaCatalogItemsChange(updateUserCatalogItems(userAnesthesiaCatalogItems, items)) : undefined}
-          onManageShortcuts={onUserAnesthesiaCatalogItemsChange ? () => setActiveCatalogPanel("anesthesia") : undefined}
-          onRecordEvent={onRecordAnesthesiaEvent}
-        />
       </section>
 
       <section ref={isolationSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
@@ -516,36 +454,7 @@ export function CaseSetupStatusPanel({
             </button>
           </div>
         )}
-        <IsolationEventForm
-          tooth={caseData.tooth}
-          latestEvent={latestIsolationEvent}
-          isolationIsEstablished={isolationIsEstablished}
-          userCatalogItems={userIsolationCatalogItems}
-          onSaveCatalogItems={onUserIsolationCatalogItemsChange ? (items) => onUserIsolationCatalogItemsChange(updateUserCatalogItems(userIsolationCatalogItems, items)) : undefined}
-          onManageShortcuts={onUserIsolationCatalogItemsChange ? () => setActiveCatalogPanel("isolation") : undefined}
-          onRecordEvent={onRecordIsolationEvent}
-        />
       </section>
-
-      {activeCatalogPanel === "anesthesia" && onUserAnesthesiaCatalogItemsChange ? (
-        <FloatingCatalogCard
-          title="Anesthesia catalog"
-          description="Manage anesthesia suggestion shortcuts without lengthening the shared readiness section."
-          onClose={() => setActiveCatalogPanel(null)}
-        >
-          <AnesthesiaCatalogManager userCatalogItems={userAnesthesiaCatalogItems} onChange={onUserAnesthesiaCatalogItemsChange} />
-        </FloatingCatalogCard>
-      ) : null}
-
-      {activeCatalogPanel === "isolation" && onUserIsolationCatalogItemsChange ? (
-        <FloatingCatalogCard
-          title="Isolation catalog"
-          description="Manage isolation suggestion shortcuts without lengthening the shared readiness section."
-          onClose={() => setActiveCatalogPanel(null)}
-        >
-          <IsolationCatalogManager userCatalogItems={userIsolationCatalogItems} onChange={onUserIsolationCatalogItemsChange} />
-        </FloatingCatalogCard>
-      ) : null}
     </div>
   );
 }

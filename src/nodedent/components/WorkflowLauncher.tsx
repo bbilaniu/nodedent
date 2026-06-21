@@ -11,6 +11,7 @@ import {
 } from "../workflow/registry";
 import { sharedIsolationWorkflowId } from "../workflow/isolation";
 import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
+import { sharedRadiologyWorkflowId } from "../workflow/radiology";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -41,6 +42,7 @@ export function WorkflowLauncher({
   onOpenPrimaryWorkflowSetup,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenRadiologyWorkflow,
 }: {
   caseData: EndoCase;
   capabilitySummary?: CaseCapabilitySummary;
@@ -57,12 +59,14 @@ export function WorkflowLauncher({
   onOpenPrimaryWorkflowSetup: (workflowId: string) => void;
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
+  onOpenRadiologyWorkflow: () => void;
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
   const anesthesiaStatus = sharedCapabilityStatusLabel(capabilitySummary.anesthesia);
   const isolationStatus = sharedCapabilityStatusLabel(capabilitySummary.isolation);
+  const radiologyStatus = sharedCapabilityStatusLabel(capabilitySummary.radiographs);
   const endodonticStarted = currentNodePhase !== "Pre-op" || (currentNodeTitle !== "Pre-op setup" && currentNodeTitle !== "Pre-op");
   const endodonticStatusLabel = endodonticStarted ? "In progress" : "Not started";
   const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : "Start workflow";
@@ -207,10 +211,19 @@ export function WorkflowLauncher({
               {sharedModuleEntries.map((entry) => {
                 const isIsolation = entry.workflowId === sharedIsolationWorkflowId;
                 const isAnesthesia = entry.workflowId === sharedAnesthesiaWorkflowId;
-                const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia);
-                const moduleStatus = isAnesthesia ? capabilitySummary.anesthesia : isIsolation ? capabilitySummary.isolation : null;
-                const moduleStatusLabel = isAnesthesia ? anesthesiaStatus : isIsolation ? isolationStatus : entry.statusLabel;
-                const launchLabel = moduleStatus ? sharedModuleActionLabel(isAnesthesia ? "anesthesia" : "isolation", moduleStatus) : entry.launchLabel;
+                const isRadiology = entry.workflowId === sharedRadiologyWorkflowId;
+                const canLaunch = entry.availability === "ready" && (isIsolation || isAnesthesia || isRadiology);
+                const moduleStatus = isAnesthesia
+                  ? capabilitySummary.anesthesia
+                  : isIsolation
+                    ? capabilitySummary.isolation
+                    : isRadiology
+                      ? capabilitySummary.radiographs
+                      : null;
+                const moduleKind = isAnesthesia ? "anesthesia" : isIsolation ? "isolation" : isRadiology ? "radiology" : null;
+                const moduleStatusLabel = isAnesthesia ? anesthesiaStatus : isIsolation ? isolationStatus : isRadiology ? radiologyStatus : entry.statusLabel;
+                const launchLabel = moduleStatus && moduleKind ? sharedModuleActionLabel(moduleKind, moduleStatus) : entry.launchLabel;
+                const onLaunch = isIsolation ? onOpenIsolationWorkflow : isAnesthesia ? onOpenAnesthesiaWorkflow : isRadiology ? onOpenRadiologyWorkflow : undefined;
                 return (
                   <div key={entry.workflowId} className={workspaceSurface.launcherCard}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -225,7 +238,7 @@ export function WorkflowLauncher({
                     </div>
                     <button
                       type="button"
-                      onClick={canLaunch ? isIsolation ? onOpenIsolationWorkflow : onOpenAnesthesiaWorkflow : undefined}
+                      onClick={canLaunch ? onLaunch : undefined}
                       disabled={!canLaunch}
                       className={cx(panelActionButton.info, "mt-3 disabled:cursor-not-allowed disabled:opacity-50")}
                     >

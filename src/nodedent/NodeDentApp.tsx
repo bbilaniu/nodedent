@@ -65,6 +65,7 @@ import type { RadiologyEventDetails } from "./workflow/radiology";
 import {
   buildRadiographsReviewedCapability,
   getRadiologyScopeFromDetails,
+  isRadiologyReviewedEvent,
   radiologyEventTypes,
   sharedRadiologyWorkflowId,
   sharedRadiologyWorkflowVersion,
@@ -190,9 +191,15 @@ export default function NodeDentApp() {
       ? ["Anesthesia"]
       : embeddedWorkflowLaunch?.workflowId === sharedIsolationWorkflowId
         ? ["Isolation"]
-        : [];
+        : embeddedWorkflowLaunch?.workflowId === sharedRadiologyWorkflowId
+          ? ["Radiographs"]
+          : [];
   const latestAnesthesiaEvent = useMemo(
     () => (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType)).at(-1),
+    [caseData.globalEvents]
+  );
+  const latestRadiologyEvent = useMemo(
+    () => (caseData.globalEvents || []).filter(isRadiologyReviewedEvent).at(-1),
     [caseData.globalEvents]
   );
   const canResumeActiveCanalFromPriorVisit = Boolean(
@@ -351,7 +358,10 @@ export default function NodeDentApp() {
     setValidationMessage(null);
   }
 
-  function recordRadiologyEvent(details: RadiologyEventDetails) {
+  function recordRadiologyEvent(
+    details: RadiologyEventDetails,
+    context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
+  ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const scope = getRadiologyScopeFromDetails(details, caseData.tooth);
     const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || caseData.tooth;
@@ -359,15 +369,17 @@ export default function NodeDentApp() {
       type: radiologyEventTypes.reviewed,
       tooth: eventTooth,
       canal: "All",
-      nodeId: currentNode.id,
-      label: "Radiograph review recorded",
+      nodeId: context?.nodeId || currentNode.id,
+      label: context?.label || "Radiograph review recorded",
       activeCanal,
       workflowId: sharedRadiologyWorkflowId,
       workflowVersion: sharedRadiologyWorkflowVersion,
-      workflowRunId: makeWorkflowRunId("shared_radiology"),
+      workflowRunId: context?.workflowRunId || makeWorkflowRunId("shared_radiology"),
+      parentWorkflowRunId: context?.parentWorkflowRunId,
       scope,
     });
     event.details = { ...event.details, ...details };
+    if (context?.nodeId) event.details.parentNodeId = currentNode.id;
     event.capabilitiesSatisfied = [buildRadiographsReviewedCapability(event)];
 
     setCaseData((prev) => ({
@@ -513,6 +525,18 @@ export default function NodeDentApp() {
       workflowId: sharedAnesthesiaWorkflowId,
       entryNodeId,
       workflowRunId: makeWorkflowRunId("shared_anesthesia"),
+      targetTooth: activeSharedModuleTargetTooth,
+    });
+  }
+
+  function openRadiologyWorkflow(entryNodeId?: string) {
+    setIsWorkflowLauncherOpen(false);
+    setIsCasePanelOpen(false);
+    setCasePanelFocusTarget(null);
+    setEmbeddedWorkflowLaunch({
+      workflowId: sharedRadiologyWorkflowId,
+      entryNodeId,
+      workflowRunId: makeWorkflowRunId("shared_radiology"),
       targetTooth: activeSharedModuleTargetTooth,
     });
   }
@@ -1017,6 +1041,7 @@ export default function NodeDentApp() {
               onOpenPrimaryWorkflowSetup={activatePrimaryWorkflow}
               onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
               onOpenIsolationWorkflow={() => openIsolationWorkflow()}
+              onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
             />
           </main>
         ) : (
@@ -1027,6 +1052,7 @@ export default function NodeDentApp() {
               onOpenCaseSetupStatus={openCasePanel}
               onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
               onOpenIsolationWorkflow={openIsolationWorkflow}
+              onOpenRadiologyWorkflow={openRadiologyWorkflow}
               disabledActionLabels={disabledReadinessActionLabels}
             />
 
@@ -1139,6 +1165,7 @@ export default function NodeDentApp() {
             onOpenPrimaryWorkflowSetup={activatePrimaryWorkflow}
             onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
             onOpenIsolationWorkflow={() => openIsolationWorkflow()}
+            onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
           />
         ) : null}
 
@@ -1164,6 +1191,7 @@ export default function NodeDentApp() {
             onRecordRadiologyEvent={recordRadiologyEvent}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
+            onOpenRadiologyWorkflow={openRadiologyWorkflow}
             onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
@@ -1186,6 +1214,7 @@ export default function NodeDentApp() {
                 : activeReadinessSummary.anesthesia.sourceEvent || latestAnesthesiaEvent
             }
             latestIsolationEvent={activeReadinessSummary.isolation.sourceEvent}
+            latestRadiologyEvent={activeReadinessSummary.radiographs.sourceEvent || latestRadiologyEvent}
             userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
             onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
             userIsolationCatalogItems={userIsolationCatalogItems}
@@ -1193,6 +1222,7 @@ export default function NodeDentApp() {
             onClose={() => setEmbeddedWorkflowLaunch(null)}
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
+            onRecordRadiologyEvent={recordRadiologyEvent}
           />
         ) : null}
 

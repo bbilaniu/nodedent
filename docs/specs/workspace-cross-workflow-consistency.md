@@ -19,8 +19,8 @@ Current baseline:
 - Case Setup & Status owns broad case setup, shared readiness capture, and workflow-specific setup entry points.
 - Endodontic RCT uses canal-specific protocol nodes, canal status, measurements, and an endodontic target/progress panel.
 - Operative direct restoration owns tooth/surface setup, shared readiness review, restoration recording, and `finalRestoration.placed` output.
-- Shared anesthesia and isolation modules use event-backed documentation and reusable capabilities.
-- Radiographs are still case setup fields, with `shared.radiology` defined as the future module boundary.
+- Shared anesthesia, isolation, and radiology modules use event-backed documentation and reusable capabilities.
+- Radiograph case setup fields remain as compatibility inputs while `shared.radiology` owns new explicit review documentation.
 
 Known friction:
 
@@ -32,7 +32,7 @@ Known friction:
 
 ## Goals
 
-- Make launcher, readiness, setup, runner, completion, and return-to-home behavior consistent across endodontic RCT, operative direct restoration, shared anesthesia, and shared isolation.
+- Make launcher, readiness, setup, runner, completion, and return-to-home behavior consistent across endodontic RCT, operative direct restoration, shared anesthesia, shared isolation, and shared radiology.
 - Keep workflow-specific target panels strict: endodontic canals stay endodontic; operative tooth/surface setup stays operative; shared module scopes stay shared.
 - Normalize status labels, action labels, empty states, and completion messaging so users can predict how each workflow behaves.
 - Clarify the responsibility split between NodeDent Home, Case Setup & Status, shared readiness, active workflow runners, and workflow-specific target panels.
@@ -44,7 +44,7 @@ Known friction:
 - Do not add cleaning, hygiene, perio, or broader operative clinical protocol steps in this spec.
 - Do not invent clinical guidance, sequencing, materials, adequacy rules, or recommendations.
 - Do not edit clinical source material in `docs/source/`.
-- Do not implement `shared.radiology`; keep radiology work in the active shared radiology spec.
+- Keep radiology implementation details in the active shared radiology spec.
 - Do not merge endodontic closure and operative final restoration capabilities.
 - Do not create a universal target model for canals, surfaces, quadrants, sextants, and arches.
 - Do not replace the existing workflow engine or event ledger.
@@ -62,6 +62,7 @@ Examples:
 - Operative direct restoration owns tooth/surface setup, restorative documentation fields, and operative restoration output.
 - Shared anesthesia owns anesthetic documentation and scoped anesthesia capability output.
 - Shared isolation owns isolation documentation and scoped isolation capability output.
+- Shared radiology owns radiograph review documentation and scoped `radiographs.reviewed` capability output.
 
 ### Shared Readiness Is Reusable, Not Workflow-Owned
 
@@ -155,7 +156,7 @@ Expected behavior:
 Implementation notes:
 
 - Use existing capability selectors and scope-matching rules.
-- Keep radiographs compatible with current case setup fields until `shared.radiology` is implemented.
+- Keep radiographs compatible with current case setup fields while `shared.radiology` owns new explicit review events.
 - Add tests for endodontic and operative readiness card rendering if current coverage does not protect the labels and actions being changed.
 - Use a compact horizontal row layout for the four readiness items at wider breakpoints instead of simply stretching the current narrow stacked card.
 - On small screens, allow the readiness band to stack before the active workflow and target/progress panels.
@@ -276,7 +277,7 @@ Status: partially implemented by changing shared-module runner dismiss actions f
 
 - Normalize runner action labels and completion states.
 - Keep note and export output unchanged unless intentionally tested.
-- Confirm endodontic, operative, anesthesia, and isolation workflows all provide a clear route back to home/setup.
+- Confirm endodontic, operative, anesthesia, isolation, and radiology workflows all provide a clear route back to home/setup.
 
 ### Phase 5: Visual Hierarchy Pass
 
@@ -292,7 +293,7 @@ Status: partially implemented by introducing shared panel and section-heading st
 
 Reasoning level needed: medium-high.
 
-Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, changing shared module re-entry labels to `Review` when current anesthesia or isolation status already exists, extracting shared status/action helpers, moving anesthesia/isolation catalog managers out of `CaseSetupStatusPanel`, and defining a shared-module form contract for future modules.
+Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, changing shared module re-entry labels to `Review` when current anesthesia, isolation, or radiology status already exists, extracting shared status/action helpers, moving anesthesia/isolation catalog managers out of `CaseSetupStatusPanel`, adding shared radiology as a Home-launchable embedded module, and defining a shared-module form contract for future modules.
 
 - Treat NodeDent Home as the persistent first screen and keep the modal launcher as a quick-switcher, without duplicating workflow state or clearing event-backed state when switching.
 - Split Case Setup & Status conceptually and internally into global case setup, shared readiness/documentation capture, workflow setup summaries, saved-case lifecycle, and audit/history surfaces, without creating separate user-facing setup screens yet.
@@ -302,7 +303,7 @@ Status: partially implemented by confirming NodeDent Home remains the persistent
 
 ## Acceptance Criteria
 
-- NodeDent Home uses consistent status and action language for endodontic RCT, operative direct restoration, shared anesthesia, and shared isolation.
+- NodeDent Home uses consistent status and action language for endodontic RCT, operative direct restoration, shared anesthesia, shared isolation, and shared radiology.
 - Shared readiness rows behave consistently in endodontic and operative contexts while preserving scope-sensitive summaries.
 - Shared readiness appears as a full-width workspace band on wider layouts, with workflow-specific target/progress panels below it in the active workflow grid.
 - Shared readiness does not duplicate the header's generic Case Setup & Status action; readiness actions are specific to diagnosis, radiographs, anesthesia, or isolation.

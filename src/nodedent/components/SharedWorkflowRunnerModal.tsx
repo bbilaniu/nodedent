@@ -6,12 +6,16 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import type { IsolationEventDetails, IsolationEventType } from "../workflow/isolation";
 import { sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
+import type { RadiologyEventDetails } from "../workflow/radiology";
+import { sharedRadiologyWorkflow, sharedRadiologyWorkflowId } from "../workflow/radiology";
 import { AnesthesiaWorkflowRunner } from "./AnesthesiaWorkflowRunner";
 import { IsolationWorkflowRunner } from "./IsolationWorkflowRunner";
+import { RadiologyWorkflowRunner } from "./RadiologyWorkflowRunner";
 
 function getWorkflowForLaunch(launch: EmbeddedWorkflowLaunch): WorkflowDefinition | undefined {
   if (launch.workflowId === sharedIsolationWorkflowId) return sharedIsolationWorkflow;
   if (launch.workflowId === sharedAnesthesiaWorkflowId) return sharedAnesthesiaWorkflow;
+  if (launch.workflowId === sharedRadiologyWorkflowId) return sharedRadiologyWorkflow;
   return undefined;
 }
 
@@ -22,6 +26,7 @@ export function SharedWorkflowRunnerModal({
   parentWorkflowRunId,
   latestAnesthesiaEvent,
   latestIsolationEvent,
+  latestRadiologyEvent,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
   userIsolationCatalogItems = [],
@@ -29,6 +34,7 @@ export function SharedWorkflowRunnerModal({
   onClose,
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
+  onRecordRadiologyEvent,
 }: {
   launch: EmbeddedWorkflowLaunch;
   caseData: EndoCase;
@@ -36,6 +42,7 @@ export function SharedWorkflowRunnerModal({
   parentWorkflowRunId: string;
   latestAnesthesiaEvent?: ClinicalEvent;
   latestIsolationEvent?: ClinicalEvent;
+  latestRadiologyEvent?: ClinicalEvent;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
   userIsolationCatalogItems?: CatalogItem[];
@@ -49,6 +56,10 @@ export function SharedWorkflowRunnerModal({
   onRecordIsolationEvent: (
     eventType: IsolationEventType,
     details: IsolationEventDetails,
+    context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string }
+  ) => void;
+  onRecordRadiologyEvent: (
+    details: RadiologyEventDetails,
     context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string }
   ) => void;
 }) {
@@ -89,6 +100,15 @@ export function SharedWorkflowRunnerModal({
             onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
             onClose={onClose}
             onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
+          />
+        ) : launch.workflowId === sharedRadiologyWorkflowId ? (
+          <RadiologyWorkflowRunner
+            launch={launch}
+            caseData={caseData}
+            parentWorkflowRunId={parentWorkflowRunId}
+            latestRadiologyEvent={latestRadiologyEvent}
+            onClose={onClose}
+            onRecordRadiologyEvent={onRecordRadiologyEvent}
           />
         ) : (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">

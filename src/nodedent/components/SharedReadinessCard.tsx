@@ -17,14 +17,17 @@ export function getSharedReadinessActions({
   onOpenCaseSetupStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenRadiologyWorkflow,
 }: {
   capabilitySummary: CaseCapabilitySummary;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
 }): SharedReadinessAction[] {
   const anesthesiaEntryNodeId = sharedModuleEntryNodeId("anesthesia", capabilitySummary.anesthesia);
   const isolationEntryNodeId = sharedModuleEntryNodeId("isolation", capabilitySummary.isolation);
+  const radiologyEntryNodeId = sharedModuleEntryNodeId("radiology", capabilitySummary.radiographs);
 
   return [
     {
@@ -35,9 +38,9 @@ export function getSharedReadinessActions({
     },
     {
       label: "Radiographs",
-      actionLabel: "Review radiographs",
+      actionLabel: sharedModuleActionLabel("radiology", capabilitySummary.radiographs),
       status: capabilitySummary.radiographs,
-      onClick: () => onOpenCaseSetupStatus("radiographs"),
+      onClick: () => onOpenRadiologyWorkflow(radiologyEntryNodeId),
     },
     {
       label: "Anesthesia",
@@ -60,6 +63,7 @@ export function SharedReadinessCard({
   onOpenCaseSetupStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenRadiologyWorkflow,
   disabledActionLabels = [],
   className = "",
 }: {
@@ -68,6 +72,7 @@ export function SharedReadinessCard({
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   disabledActionLabels?: string[];
   className?: string;
 }) {
@@ -77,6 +82,7 @@ export function SharedReadinessCard({
     onOpenCaseSetupStatus,
     onOpenAnesthesiaWorkflow,
     onOpenIsolationWorkflow,
+    onOpenRadiologyWorkflow,
   });
 
   return (

@@ -3,6 +3,7 @@ import { protocolNodes } from "../protocol/nodes";
 import { sharedAnesthesiaWorkflow } from "./anesthesia";
 import { sharedIsolationWorkflow } from "./isolation";
 import { operativeDirectRestorationWorkflow } from "./operative";
+import { sharedRadiologyWorkflow } from "./radiology";
 
 export const endodonticRootWorkflowId = "endo.rct";
 export const endodonticRootWorkflowVersion = "0.1.0";
@@ -82,6 +83,18 @@ export const workflowLauncherEntries = [
     summary: "Embedded shared module records route-aware administration, top-up, assessment, and reassessment events.",
     supportedScopes: sharedAnesthesiaWorkflow.supportedScopes,
     definition: sharedAnesthesiaWorkflow,
+  },
+  {
+    workflowId: sharedRadiologyWorkflow.workflowId,
+    title: sharedRadiologyWorkflow.title,
+    discipline: sharedRadiologyWorkflow.discipline,
+    kind: "sharedModule",
+    availability: "ready",
+    statusLabel: "Ready",
+    launchLabel: "Open radiology workflow",
+    summary: "Shared module records scoped radiograph review without inferring image adequacy or recommendations.",
+    supportedScopes: sharedRadiologyWorkflow.supportedScopes,
+    definition: sharedRadiologyWorkflow,
   },
 ] as const satisfies readonly WorkflowLauncherEntry[];
 

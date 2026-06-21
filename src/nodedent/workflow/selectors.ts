@@ -190,13 +190,14 @@ function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope, now = 
     .at(-1);
   if (explicitStatus) return explicitStatus;
 
-  const hasRadiographs = Boolean(
+  const hasCurrentRadiographs = Boolean(
     caseData.preOp?.paReviewed ||
       caseData.preOp?.radiographsReviewed ||
       caseData.preOp?.bwReviewed ||
-      caseData.preOp?.cbctReviewed ||
-      caseData.priorVisit?.priorRadiographsAvailable
+      caseData.preOp?.cbctReviewed
   );
+  const hasPriorRadiographs = Boolean(caseData.priorVisit?.priorRadiographsAvailable);
+  const hasRadiographs = hasCurrentRadiographs || hasPriorRadiographs;
   const caseScope: WorkflowScope | undefined = caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined;
   const scopeMatched = scopeMatches(caseScope, queryScope, "radiographs.reviewed");
   const satisfied = hasRadiographs && scopeMatched;
@@ -206,9 +207,15 @@ function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope, now = 
     needsReassessment: false,
     source: satisfied ? "caseField" : "none",
     scope: satisfied ? caseScope : queryScope || caseScope,
-    summary: satisfied ? "Radiographs reviewed" : "Radiographs not recorded",
+    summary: satisfied
+      ? hasCurrentRadiographs
+        ? "Radiographs reviewed"
+        : "Prior radiographs documented"
+      : "Radiographs not recorded",
     reason: satisfied
-      ? undefined
+      ? hasCurrentRadiographs
+        ? undefined
+        : "Prior-visit radiographs are documented as available."
       : radiologyEvents.length
         ? "Recorded radiograph review is for a different scope."
         : hasRadiographs && !scopeMatched

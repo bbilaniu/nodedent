@@ -1,4 +1,4 @@
-import type { CapabilitySatisfaction, ClinicalEvent, WorkflowScope } from "../types";
+import type { CapabilitySatisfaction, ClinicalEvent, WorkflowDefinition, WorkflowScope } from "../types";
 
 export const sharedRadiologyWorkflowId = "shared.radiology";
 export const sharedRadiologyWorkflowVersion = "0.1.0";
@@ -144,3 +144,34 @@ export function formatRadiologyEventFragment(event: ClinicalEvent) {
   ].filter(Boolean).join("; ");
   return `Radiograph review recorded (${context})${details.notes ? `. Notes: ${details.notes}.` : "."}`;
 }
+
+export const sharedRadiologyWorkflow: WorkflowDefinition = {
+  workflowId: sharedRadiologyWorkflowId,
+  version: sharedRadiologyWorkflowVersion,
+  discipline: "shared",
+  title: "Radiology",
+  entryNodeIds: ["radiology-review"],
+  completionNodeIds: ["radiology-complete"],
+  supportedScopes: ["tooth", "quadrant", "archSegment", "procedure", "custom"],
+  nodes: {
+    "radiology-review": {
+      id: "radiology-review",
+      workflowId: sharedRadiologyWorkflowId,
+      phase: "Radiology",
+      title: "Record radiograph review",
+      chairsideInstruction: "Record image review documentation without inferring diagnostic adequacy, treatment readiness, or imaging recommendations.",
+      requiredInputs: ["Modalities reviewed", "Scope"],
+      options: [
+        { label: "Radiograph review recorded", nextNodeId: "radiology-complete", noteEvent: { type: radiologyEventTypes.reviewed } },
+      ],
+    },
+    "radiology-complete": {
+      id: "radiology-complete",
+      workflowId: sharedRadiologyWorkflowId,
+      phase: "Radiology",
+      title: "Radiograph review recorded",
+      chairsideInstruction: "Radiograph review status is available to parent workflows for the recorded scope.",
+      options: [{ label: "Close shared workflow", nextNodeId: "radiology-complete" }],
+    },
+  },
+};

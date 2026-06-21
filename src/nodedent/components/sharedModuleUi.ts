@@ -1,6 +1,6 @@
 import type { CapabilityStatus } from "../workflow/selectors";
 
-export type SharedModuleKind = "anesthesia" | "isolation";
+export type SharedModuleKind = "anesthesia" | "isolation" | "radiology";
 export type SharedCapabilityStatusLabel = "Ready" | "Review" | "Pending";
 
 export function sharedCapabilityStatusLabel(status: Pick<CapabilityStatus, "satisfied" | "needsReassessment">): SharedCapabilityStatusLabel {
@@ -26,11 +26,12 @@ export function sharedAvailabilityClass(availability: string) {
 }
 
 export function sharedModuleActionLabel(module: SharedModuleKind, status: Pick<CapabilityStatus, "satisfied" | "needsReassessment">) {
-  const label = module === "anesthesia" ? "anesthesia" : "isolation";
+  const label = module === "anesthesia" ? "anesthesia" : module === "isolation" ? "isolation" : "radiology";
   return status.satisfied || status.needsReassessment ? `Review ${label}` : `Open ${label} workflow`;
 }
 
 export function sharedModuleEntryNodeId(module: SharedModuleKind, status: Pick<CapabilityStatus, "satisfied" | "needsReassessment">) {
   if (module === "anesthesia") return status.needsReassessment ? "anesthesia-needs-reassessment" : undefined;
+  if (module === "radiology") return status.satisfied || status.needsReassessment ? "radiology-review" : undefined;
   return status.satisfied || status.needsReassessment ? "isolation-needs-reassessment" : undefined;
 }

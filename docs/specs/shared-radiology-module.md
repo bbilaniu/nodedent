@@ -16,7 +16,7 @@ The current app records pre-op radiograph review as case setup fields and now al
 - Support clinician-entered review records for PA, BW, CBCT, and other image types.
 - Scope radiology documentation to a tooth, teeth, quadrant, arch segment, procedure, or custom region.
 - Preserve or emit the existing `radiographs.reviewed` capability when image review is explicitly documented.
-- Keep current case setup radiograph fields as a compatibility surface until the module is implemented.
+- Keep current case setup radiograph fields as a compatibility surface during the shared-module migration.
 
 ## Non-Goals
 
@@ -35,7 +35,7 @@ Reasoning:
 
 - `radiology` leaves room for future documentation beyond a narrow radiograph checkbox, such as image source, date, modality, review scope, and limitations.
 - The first capability can remain `radiographs.reviewed` for compatibility with existing selectors and readiness summaries.
-- The current PA/BW/CBCT case fields should remain until `shared.radiology` has event capture, summary, import/export, and readiness wiring.
+- The current PA/BW/CBCT case fields should remain as compatibility inputs while `shared.radiology` owns new explicit review documentation.
 
 ## Current Compatibility Baseline
 
@@ -56,8 +56,9 @@ Default behavior:
 Current readiness behavior:
 
 - `radiographs.reviewed` is derived from explicit `radiology.reviewed` events or those case fields.
-- Shared readiness can focus the radiograph readiness section in Case Setup & Status.
+- Shared readiness can open the shared radiology workflow directly.
 - Radiograph review is event-backed for new shared radiology captures.
+- Case Setup & Status still displays compatibility radiograph fields and latest radiology summaries, but no longer owns the primary shared radiology event form.
 
 The implementation should continue reading the existing fields so older saved cases and imports remain valid.
 
@@ -132,14 +133,24 @@ Status: implemented as the Case Setup & Status display and operative-scope compa
 - Added regression coverage that tooth-level radiograph review satisfies operative surface readiness.
 - Documented that tooth-level radiograph review is sufficient context for operative surface workflows in the current implementation.
 
+## Third Implementation Slice
+
+Status: implemented as the shared-module launcher and embedded-runner slice.
+
+- Added `shared.radiology` to NodeDent Home alongside anesthesia and isolation shared modules.
+- Added an embedded radiology workflow runner that records `radiology.reviewed` events and closes back to the parent workflow without advancing the parent step.
+- Routed shared readiness radiograph actions to the radiology workflow instead of using Case Setup & Status as the primary event capture surface.
+- Kept Case Setup & Status as a compatibility and summary surface for legacy PA, BW, CBCT, and prior-visit radiograph fields.
+- Removed inline anesthesia, isolation, and radiology event forms from Case Setup & Status so shared modules use their dedicated workflow runners.
+- Made prior-visit radiographs explicit in readiness summaries so older images do not read as newly reviewed current-visit imaging.
+
 ## Deferred Work
 
-- Dedicated embedded radiology workflow runner.
 - Image attachment management or image viewer integration.
 - Intraoral photography or camera documentation as a future imaging-adjacent shared module or radiology-adjacent capability.
 - Clinic-owned radiology documentation catalogs.
 - Source-backed imaging rules.
-- Migration that removes or hides the current pre-op radiograph case fields.
+- Migration that removes or hides the current pre-op radiograph case fields after compatibility is no longer needed.
 
 ## Open Decisions
 

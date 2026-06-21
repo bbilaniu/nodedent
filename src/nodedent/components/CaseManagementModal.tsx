@@ -43,6 +43,7 @@ export function CaseManagementModal({
   onRecordRadiologyEvent,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
+  onOpenRadiologyWorkflow,
   onOpenOperativeWorkflowSetup,
   userAnesthesiaCatalogItems = [],
   onUserAnesthesiaCatalogItemsChange,
@@ -67,6 +68,7 @@ export function CaseManagementModal({
   onRecordRadiologyEvent?: (details: RadiologyEventDetails) => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   onOpenOperativeWorkflowSetup?: () => void;
   userAnesthesiaCatalogItems?: CatalogItem[];
   onUserAnesthesiaCatalogItemsChange?: (items: CatalogItem[]) => void;
@@ -138,16 +140,10 @@ export function CaseManagementModal({
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
-            onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
-            onRecordIsolationEvent={onRecordIsolationEvent}
-            onRecordRadiologyEvent={onRecordRadiologyEvent}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
+            onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
             onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
-            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
-            onUserAnesthesiaCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
-            userIsolationCatalogItems={userIsolationCatalogItems}
-            onUserIsolationCatalogItemsChange={onUserIsolationCatalogItemsChange}
             initialFocusSection={initialFocusSection}
           />
         </div>

@@ -380,6 +380,7 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
     onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
     onOpenOperativeWorkflowSetup: noop,
     onDownloadCaseJson: noop,
   }));
@@ -394,8 +395,9 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
   assert.equal(markup.includes("placeholder=\"e.g., M O\""), false);
   assert.equal(markup.includes("Diagnosis readiness"), true);
   assert.equal(markup.includes("Radiograph readiness"), true);
-  assert.equal(markup.includes("Shared radiology event"), true);
-  assert.equal(markup.includes("Record radiograph review"), true);
+  assert.equal(markup.includes("Shared radiology event"), false);
+  assert.equal(markup.includes("Record radiograph review"), false);
+  assert.equal(markup.includes("Review radiology"), true);
   assert.equal(markup.includes("Latest shared radiology event"), true);
   assert.equal(markup.includes("Radiograph review recorded"), true);
   assert.equal(markup.includes("Endodontic setup"), false);
@@ -422,6 +424,7 @@ test("case setup hides workflow target setup for shared module contexts", () => 
     onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
 
@@ -433,7 +436,7 @@ test("case setup hides workflow target setup for shared module contexts", () => 
   assert.equal(markup.includes("Estimated WL for"), false);
 });
 
-test("case setup opens anesthesia and isolation catalogs from inline shortcut manager actions", () => {
+test("case setup keeps shared modules as summaries instead of inline event forms", () => {
   const caseData = baseCase();
   const noop = () => {};
   const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
@@ -451,13 +454,17 @@ test("case setup opens anesthesia and isolation catalogs from inline shortcut ma
     onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
     onUserAnesthesiaCatalogItemsChange: noop,
     onUserIsolationCatalogItemsChange: noop,
     onDownloadCaseJson: noop,
   }));
 
-  assert.equal(markup.includes("Save shortcuts"), true);
-  assert.equal(markup.includes("Manage shortcuts"), true);
+  assert.equal(markup.includes("Open anesthesia workflow"), true);
+  assert.equal(markup.includes("Open isolation workflow"), true);
+  assert.equal(markup.includes("Open radiology workflow"), true);
+  assert.equal(markup.includes("Save shortcuts"), false);
+  assert.equal(markup.includes("Manage shortcuts"), false);
   assert.equal(markup.includes("Favorites appear first in the selected field"), false);
 });
 
@@ -508,11 +515,13 @@ test("shared readiness actions open reusable setup and module paths for operativ
   const caseSetupTargets: string[] = [];
   const anesthesiaEntries: Array<string | undefined> = [];
   const isolationEntries: Array<string | undefined> = [];
+  const radiologyEntries: Array<string | undefined> = [];
   const actions = getSharedReadinessActions({
     capabilitySummary: getCaseCapabilitySummary(caseData),
     onOpenCaseSetupStatus: (focusTarget) => caseSetupTargets.push(focusTarget || ""),
     onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
     onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
+    onOpenRadiologyWorkflow: (entryNodeId) => radiologyEntries.push(entryNodeId),
   });
 
   assert.deepEqual(actions.map((action) => action.label), ["Diagnosis", "Radiographs", "Anesthesia", "Isolation"]);
@@ -521,9 +530,10 @@ test("shared readiness actions open reusable setup and module paths for operativ
   actions.find((action) => action.label === "Anesthesia")?.onClick();
   actions.find((action) => action.label === "Isolation")?.onClick();
 
-  assert.deepEqual(caseSetupTargets, ["diagnosis", "radiographs"]);
+  assert.deepEqual(caseSetupTargets, ["diagnosis"]);
   assert.deepEqual(anesthesiaEntries, [undefined]);
   assert.deepEqual(isolationEntries, [undefined]);
+  assert.deepEqual(radiologyEntries, ["radiology-review"]);
 });
 
 test("shared readiness band uses row-specific actions without a generic case setup action", () => {
@@ -538,6 +548,7 @@ test("shared readiness band uses row-specific actions without a generic case set
     onOpenCaseSetupStatus: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
     disabledActionLabels: ["Anesthesia"],
   }));
 
@@ -577,6 +588,7 @@ test("shared readiness uses review labels when shared module status already exis
   });
   const anesthesiaEntries: Array<string | undefined> = [];
   const isolationEntries: Array<string | undefined> = [];
+  const radiologyEntries: Array<string | undefined> = [];
   const noop = () => {};
   const summary = getCaseCapabilitySummary(caseData);
   const actions = getSharedReadinessActions({
@@ -584,6 +596,7 @@ test("shared readiness uses review labels when shared module status already exis
     onOpenCaseSetupStatus: noop,
     onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
     onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
+    onOpenRadiologyWorkflow: (entryNodeId) => radiologyEntries.push(entryNodeId),
   });
   const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
     caseData,
@@ -591,14 +604,18 @@ test("shared readiness uses review labels when shared module status already exis
     onOpenCaseSetupStatus: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
   }));
 
   assert.equal(actions.find((action) => action.label === "Anesthesia")?.actionLabel, "Review anesthesia");
   assert.equal(actions.find((action) => action.label === "Isolation")?.actionLabel, "Review isolation");
+  assert.equal(actions.find((action) => action.label === "Radiographs")?.actionLabel, "Open radiology workflow");
   actions.find((action) => action.label === "Anesthesia")?.onClick();
   actions.find((action) => action.label === "Isolation")?.onClick();
+  actions.find((action) => action.label === "Radiographs")?.onClick();
   assert.deepEqual(anesthesiaEntries, [undefined]);
   assert.deepEqual(isolationEntries, ["isolation-needs-reassessment"]);
+  assert.deepEqual(radiologyEntries, [undefined]);
   assert.equal(markup.includes("Review anesthesia"), true);
   assert.equal(markup.includes("Review isolation"), true);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
@@ -621,6 +638,7 @@ test("workflow launcher exposes operative runner entry", () => {
     onOpenPrimaryWorkflowSetup: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
   }));
 
   assert.equal(markup.includes("Operative direct restoration"), true);
@@ -628,6 +646,8 @@ test("workflow launcher exposes operative runner entry", () => {
   assert.equal(markup.includes("Start workflow"), true);
   assert.equal(markup.includes("Continue workflow"), false);
   assert.equal(markup.includes("Start / resume workflow"), true);
+  assert.equal(markup.includes("Radiology"), true);
+  assert.equal(markup.includes("Open radiology workflow"), true);
   assert.equal(markup.includes("Model only"), false);
 });
 
@@ -647,6 +667,7 @@ test("workflow launcher switches endodontic action after the first node", () => 
     onOpenPrimaryWorkflowSetup: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
   }));
 
   assert.equal(markup.includes("In progress"), true);
@@ -676,6 +697,15 @@ test("workflow launcher uses review labels for shared modules with current event
         details: { method: "rubberDam", exposedTeeth: ["30"] },
         scope: { kind: "tooth", tooth: "30" },
       },
+      {
+        id: "evt_radiology_ready",
+        timestamp: "2026-01-01T10:10:00.000Z",
+        type: radiologyEventTypes.reviewed,
+        tooth: "30",
+        canal: "N/A",
+        details: { modalities: ["pa"], tooth: "30" },
+        scope: { kind: "tooth", tooth: "30" },
+      },
     ],
   });
   const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
@@ -692,14 +722,18 @@ test("workflow launcher uses review labels for shared modules with current event
     onOpenPrimaryWorkflowSetup: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
   }));
 
   assert.equal(markup.includes("Review anesthesia"), true);
   assert.equal(markup.includes("Review isolation"), true);
+  assert.equal(markup.includes("Review radiology"), true);
   assert.match(markup, /Anesthesia[\s\S]*Ready[\s\S]*Review anesthesia/);
   assert.match(markup, /Isolation[\s\S]*Ready[\s\S]*Review isolation/);
+  assert.match(markup, /Radiology[\s\S]*Ready[\s\S]*Review radiology/);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
   assert.equal(markup.includes("Open isolation workflow"), false);
+  assert.equal(markup.includes("Open radiology workflow"), false);
 });
 
 test("operative runner renders setup record and completion states without readiness duplication or endodontic controls", () => {
@@ -755,6 +789,7 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onClose: noop,
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
   }));
   const isolationMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
     launch: {
@@ -768,6 +803,29 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onClose: noop,
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+  const radiologyMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedRadiologyWorkflowId,
+      entryNodeId: "radiology-review",
+      workflowRunId: "run_shared_radiology_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    latestRadiologyEvent: {
+      id: "evt_latest_radiology_modal",
+      timestamp: "2026-01-01T10:00:00.000Z",
+      type: radiologyEventTypes.reviewed,
+      workflowId: sharedRadiologyWorkflowId,
+      scope: { kind: "tooth", tooth: "30" },
+      details: { modalities: ["pa"], tooth: "30" },
+    },
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
   }));
   const activeIsolationMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
     launch: {
@@ -781,6 +839,7 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onClose: noop,
     onRecordAnesthesiaEvent: noop,
     onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
     onUserIsolationCatalogItemsChange: noop,
   }));
 
@@ -790,6 +849,10 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(isolationMarkup.includes("Close"), true);
   assert.equal(isolationMarkup.includes("Close shared workflow"), true);
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
+  assert.equal(radiologyMarkup.includes("Radiology"), true);
+  assert.equal(radiologyMarkup.includes("Record radiograph review"), true);
+  assert.equal(radiologyMarkup.includes("Latest radiology event"), true);
+  assert.equal(radiologyMarkup.includes("Close shared workflow"), true);
   assert.equal(activeIsolationMarkup.includes("Record placement"), true);
   assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
   assert.equal(activeIsolationMarkup.includes("Record rubber dam placed"), true);
@@ -2434,9 +2497,11 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.equal(readyEntries.some((entry) => entry.workflowId === endodonticRootWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedIsolationWorkflow.workflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === sharedAnesthesiaWorkflowId), true);
+  assert.equal(readyEntries.some((entry) => entry.workflowId === sharedRadiologyWorkflowId), true);
   assert.equal(readyEntries.some((entry) => entry.workflowId === operativeDirectRestorationWorkflow.workflowId), true);
-  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId]);
+  assert.deepEqual(sharedEntries.map((entry) => entry.workflowId), [sharedIsolationWorkflow.workflowId, sharedAnesthesiaWorkflowId, sharedRadiologyWorkflowId]);
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
+  assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedRadiologyWorkflowId)?.availability, "ready");
   assert.equal(operativeEntry?.availability, "ready");
   assert.equal(operativeEntry?.launchLabel, "Start / resume workflow");
 });
