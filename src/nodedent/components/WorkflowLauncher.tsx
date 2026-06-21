@@ -11,7 +11,8 @@ import {
 } from "../workflow/registry";
 import { sharedIsolationWorkflowId } from "../workflow/isolation";
 import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
-import { sharedAvailabilityClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
+import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
+import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
@@ -73,10 +74,10 @@ export function WorkflowLauncher({
   ];
 
   const content = (
-      <section className={`${presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm"} w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5`}>
+      <section className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}>
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Clinical workspace</p>
+            <p className={sectionText.eyebrow}>Clinical workspace</p>
             <h2 className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
             <p className="mt-1 text-sm text-brand-slate">{activeCaseFacts.join(" · ")}</p>
           </div>
@@ -84,7 +85,7 @@ export function WorkflowLauncher({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate transition hover:bg-brand-light-node"
+              className={panelActionButton.muted}
             >
               Close
             </button>
@@ -92,16 +93,16 @@ export function WorkflowLauncher({
         </div>
 
         <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+          <section className={panelSurface.muted}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h3 className="text-sm font-bold text-brand-navy">Active endodontic workflow</h3>
+                <h3 className={sectionText.titleSmall}>Active endodontic workflow</h3>
                 <p className="mt-1 text-lg font-bold text-brand-navy">{currentNodeTitle}</p>
                 <p className="mt-1 text-sm leading-6 text-brand-slate">
                   {currentNodePhase} · Active canal {caseData.currentCanal || "not set"} · Autosaved {formatTimestamp(caseData.autosavedAt)}
                 </p>
               </div>
-              <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${endodonticStarted ? "border-brand-mint/40 bg-brand-mint/10 text-brand-navy" : "border-brand-light-node bg-white text-brand-slate"}`}>
+              <span className={cx(statusBadge.base, endodonticStarted ? statusBadge.ready : statusBadge.neutral)}>
                 {endodonticStarted ? "Fast resume" : "Start"}
               </span>
             </div>
@@ -109,57 +110,57 @@ export function WorkflowLauncher({
               <button
                 type="button"
                 onClick={onContinueEndodonticWorkflow}
-                className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+                className={panelActionButton.primary}
               >
                 {endodonticLaunchLabel}
               </button>
               <button
                 type="button"
                 onClick={onOpenCaseSetupStatus}
-                className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+                className={panelActionButton.secondary}
               >
                 Case Setup & Status
               </button>
               <button
                 type="button"
                 onClick={onOpenSavedCases}
-                className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
+                className={panelActionButton.info}
               >
                 Saved cases ({savedCaseCount})
               </button>
               <button
                 type="button"
                 onClick={onOpenPriorVisit}
-                className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
+                className={panelActionButton.warning}
               >
                 Prior visit
               </button>
               <button
                 type="button"
                 onClick={onOpenNewCaseConfirm}
-                className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+                className={panelActionButton.secondary}
               >
                 New case
               </button>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-            <h3 className="text-sm font-bold text-brand-navy">Shared module status</h3>
+          <section className={panelSurface.muted}>
+            <h3 className={sectionText.titleSmall}>Shared module status</h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className={`rounded-xl border px-3 py-2 ${capabilitySummary.diagnosis.satisfied ? "border-brand-mint/40 bg-white text-brand-navy" : "border-brand-light-node bg-white text-brand-slate"}`}>
+              <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.diagnosis))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Diagnosis</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.diagnosis.summary}</p>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${capabilitySummary.radiographs.satisfied ? "border-brand-mint/40 bg-white text-brand-navy" : "border-brand-light-node bg-white text-brand-slate"}`}>
+              <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.radiographs))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Radiographs</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.radiographs.summary}</p>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${sharedAvailabilityClass(capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment ? "ready" : "modelOnly")}`}>
+              <div className={cx(workspaceSurface.statusTile, sharedAvailabilityClass(capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment ? "ready" : "modelOnly"))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Anesthesia</p>
                 <p className="mt-1 text-sm font-semibold">{anesthesiaStatus}</p>
               </div>
-              <div className={`rounded-xl border px-3 py-2 ${sharedAvailabilityClass(capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment ? "ready" : "modelOnly")}`}>
+              <div className={cx(workspaceSurface.statusTile, sharedAvailabilityClass(capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment ? "ready" : "modelOnly"))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Isolation</p>
                 <p className="mt-1 text-sm font-semibold">{isolationStatus}</p>
               </div>
@@ -168,29 +169,29 @@ export function WorkflowLauncher({
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-brand-light-node bg-white p-4">
-            <h3 className="text-sm font-bold text-brand-navy">Primary workflows</h3>
+          <section className={panelSurface.cardPadded}>
+            <h3 className={sectionText.titleSmall}>Primary workflows</h3>
             <div className="mt-3 grid gap-3">
               {primaryEntries.map((entry) => {
                 const isEndo = entry.workflowId === endodonticRootWorkflowId;
                 const statusLabel = isEndo ? endodonticStatusLabel : entry.statusLabel;
                 const launchLabel = isEndo ? endodonticLaunchLabel : entry.launchLabel;
                 return (
-                  <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
+                  <div key={entry.workflowId} className={workspaceSurface.launcherCard}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-bold text-brand-navy">{entry.title}</p>
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${isEndo ? sharedStatusLabelClass(statusLabel) : sharedAvailabilityClass(entry.availability)}`}>
+                      <span className={cx(statusBadge.base, isEndo ? sharedStatusLabelClass(statusLabel) : sharedAvailabilityClass(entry.availability))}>
                         {statusLabel}
                       </span>
                     </div>
                     <button
                       type="button"
                       onClick={isEndo ? onContinueEndodonticWorkflow : () => onOpenPrimaryWorkflowSetup(entry.workflowId)}
-                      className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
+                      className={cx(panelActionButton.primary, "mt-3 disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate")}
                     >
                       {launchLabel}
                     </button>
@@ -200,8 +201,8 @@ export function WorkflowLauncher({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-brand-light-node bg-white p-4">
-            <h3 className="text-sm font-bold text-brand-navy">Shared modules</h3>
+          <section className={panelSurface.cardPadded}>
+            <h3 className={sectionText.titleSmall}>Shared modules</h3>
             <div className="mt-3 grid gap-3">
               {sharedModuleEntries.map((entry) => {
                 const isIsolation = entry.workflowId === sharedIsolationWorkflowId;
@@ -211,14 +212,14 @@ export function WorkflowLauncher({
                 const moduleStatusLabel = isAnesthesia ? anesthesiaStatus : isIsolation ? isolationStatus : entry.statusLabel;
                 const launchLabel = moduleStatus ? sharedModuleActionLabel(isAnesthesia ? "anesthesia" : "isolation", moduleStatus) : entry.launchLabel;
                 return (
-                  <div key={entry.workflowId} className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
+                  <div key={entry.workflowId} className={workspaceSurface.launcherCard}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-bold text-brand-navy">{entry.title}</p>
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedStatusLabelClass(moduleStatusLabel)}`}>
+                      <span className={cx(statusBadge.base, sharedStatusLabelClass(moduleStatusLabel))}>
                         {moduleStatusLabel}
                       </span>
                     </div>
@@ -226,7 +227,7 @@ export function WorkflowLauncher({
                       type="button"
                       onClick={canLaunch ? isIsolation ? onOpenIsolationWorkflow : onOpenAnesthesiaWorkflow : undefined}
                       disabled={!canLaunch}
-                      className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
+                      className={cx(panelActionButton.info, "mt-3 disabled:cursor-not-allowed disabled:opacity-50")}
                     >
                       {launchLabel}
                     </button>

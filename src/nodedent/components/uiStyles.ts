@@ -43,6 +43,18 @@ export const panelSurface = {
   success: "rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 shadow-sm",
 };
 
+export const workspaceSurface = {
+  shell: "w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5",
+  statusTile: "rounded-xl border px-3 py-2",
+  launcherCard: "rounded-xl border border-brand-light-node bg-brand-light-slate p-3",
+};
+
+export const statusBadge = {
+  base: "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold",
+  ready: "border-brand-mint/40 bg-brand-mint/10 text-brand-navy",
+  neutral: "border-brand-light-node bg-white text-brand-slate",
+};
+
 export const sectionText = {
   eyebrow: "text-xs font-bold uppercase tracking-[0.18em] text-brand-slate",
   title: "mt-1 text-base font-semibold text-brand-navy",

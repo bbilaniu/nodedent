@@ -232,6 +232,14 @@ test("protocol option targets resolve to existing nodes", () => {
   });
 });
 
+test("new cases leave radiograph review unchecked by default", () => {
+  assert.equal(initialCase.preOp.radiographsReviewed, false);
+  assert.equal(initialCase.preOp.paReviewed, false);
+  assert.equal(initialCase.preOp.bwReviewed, false);
+  assert.equal(initialCase.preOp.cbctReviewed, false);
+  assert.equal(initialCase.priorVisit?.priorRadiographsAvailable, false);
+});
+
 test("handoff nodes are intentional and resolvable", () => {
   const expectedHandoffs = [
     "identify-canals",

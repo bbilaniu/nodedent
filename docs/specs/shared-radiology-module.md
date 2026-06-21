@@ -47,6 +47,12 @@ Current case setup fields:
 - legacy `preOp.radiographsReviewed`
 - `priorVisit.priorRadiographsAvailable`
 
+Default behavior:
+
+- New cases must initialize PA, BW, CBCT, legacy all-radiographs review, and prior-radiographs availability as not reviewed / unchecked.
+- Radiograph readiness should become satisfied only after a clinician explicitly checks a current case setup field, records a future `radiology.reviewed` event, or documents prior radiographs in prior-visit history.
+- Compatibility with older saved cases may still read legacy true values, but new case defaults should not imply image review.
+
 Current readiness behavior:
 
 - `radiographs.reviewed` is derived from those case fields.
