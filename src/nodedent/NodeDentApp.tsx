@@ -970,7 +970,6 @@ export default function NodeDentApp() {
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Tooth: {caseData.tooth || "—"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{caseData.procedureType || "RCT"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
               {hasActivePrimaryWorkflow ? (
@@ -1005,13 +1004,15 @@ export default function NodeDentApp() {
               >
                 Resume saved workflow
               </button>
-              <button
-                type="button"
-                onClick={openPriorVisit}
-                className={headerActionButton.warning}
-              >
-                Prior visit
-              </button>
+              {isEndodonticWorkflowActive ? (
+                <button
+                  type="button"
+                  onClick={openPriorVisit}
+                  className={headerActionButton.warning}
+                >
+                  Prior visit
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={openNewCaseConfirm}

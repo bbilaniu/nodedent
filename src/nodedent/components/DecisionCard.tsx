@@ -79,6 +79,9 @@ export function DecisionCard({
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-slate">Phase : {currentNode.phase}</p>
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
+        <p className="mt-1 text-sm leading-6 text-brand-slate">
+          {caseData.procedureType || "RCT"} · Tooth {caseData.tooth || "not set"} · Active canal {activeCanal?.name || "not set"}
+        </p>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
       {currentNode.safetyNotes?.length ? (
