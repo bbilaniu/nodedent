@@ -7,7 +7,7 @@ created_on: 2026-06-19
 
 This spec defines the first shared radiology/radiographs module boundary for NodeDent. It follows the case setup and shared readiness refactor and keeps the first implementation limited to clinician-entered documentation of image review.
 
-The current app records pre-op radiograph review as case setup fields and now also supports explicit `shared.radiology` review events from Case Setup & Status. The legacy fields remain visible as a compatibility surface while event-backed radiology review becomes the preferred shared-module boundary.
+The current app records pre-op radiograph review as case setup fields and now also supports explicit `shared.radiology` review events from the shared radiology workflow. The legacy fields remain visible as a compatibility surface while event-backed radiology review becomes the preferred shared-module boundary.
 
 ## Goals
 
@@ -50,7 +50,7 @@ Current case setup fields:
 Default behavior:
 
 - New cases must initialize PA, BW, CBCT, legacy all-radiographs review, and prior-radiographs availability as not reviewed / unchecked.
-- Radiograph readiness should become satisfied only after a clinician explicitly checks a current case setup field, records a future `radiology.reviewed` event, or documents prior radiographs in prior-visit history.
+- Radiograph readiness should become satisfied only after a clinician explicitly checks a current case setup field, records a `radiology.reviewed` event, or documents prior radiographs in prior-visit history.
 - Compatibility with older saved cases may still read legacy true values, but new case defaults should not imply image review.
 
 Current readiness behavior:
@@ -144,11 +144,21 @@ Status: implemented as the shared-module launcher and embedded-runner slice.
 - Removed inline anesthesia, isolation, and radiology event forms from Case Setup & Status so shared modules use their dedicated workflow runners.
 - Made prior-visit radiographs explicit in readiness summaries so older images do not read as newly reviewed current-visit imaging.
 
+## Fourth Implementation Slice
+
+Status: implemented as shared-radiology consumption by x-ray-dependent workflows.
+
+- Updated endodontic pre-op validation to require the shared `radiographs.reviewed` capability at tooth scope instead of reading raw PA/BW/CBCT fields directly.
+- Added shared radiology module calls to endodontic pre-op and access-reassessment nodes so x-ray-dependent workflow steps point to `shared.radiology`.
+- Split operative readiness module calls so diagnosis and radiology are separate shared-module dependencies.
+- Updated pre-op decision and full-note summaries to derive radiograph status from shared capability selectors, while keeping legacy checkbox values as compatibility context.
+- Deferred radiology shortcut/catalog work; there is no shortcut catalog requirement for this slice.
+
 ## Deferred Work
 
 - Image attachment management or image viewer integration.
 - Intraoral photography or camera documentation as a future imaging-adjacent shared module or radiology-adjacent capability.
-- Clinic-owned radiology documentation catalogs.
+- Clinic-owned radiology documentation catalogs or shortcuts, if later needed.
 - Source-backed imaging rules.
 - Migration that removes or hides the current pre-op radiograph case fields after compatibility is no longer needed.
 

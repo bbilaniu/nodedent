@@ -1,4 +1,4 @@
-import type { CanalRecord, DecisionOption, EndoCase } from "../types";
+import type { CanalRecord, CapabilityRequirement, DecisionOption, EndoCase, WorkflowScope } from "../types";
 import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
 import { protocolNodes } from "../protocol/nodes";
@@ -42,11 +42,18 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     if (!missing.includes(message)) missing.push(message);
   };
   const node = protocolNodes[nodeId];
-  const capabilityScope = caseData.tooth ? { kind: activeCanal?.name ? "canal" as const : "tooth" as const, tooth: caseData.tooth, canal: activeCanal?.name } : undefined;
+  const defaultCapabilityScope = caseData.tooth ? { kind: activeCanal?.name ? "canal" as const : "tooth" as const, tooth: caseData.tooth, canal: activeCanal?.name } : undefined;
+  const getRequirementScope = (requirement: CapabilityRequirement): WorkflowScope | undefined => {
+    if (!caseData.tooth) return undefined;
+    if (requirement.scopeKind === "tooth") return { kind: "tooth", tooth: caseData.tooth };
+    if (requirement.scopeKind === "canal") return { kind: "canal", tooth: caseData.tooth, canal: activeCanal?.name };
+    if (requirement.scopeKind === "procedure") return { kind: "procedure", procedureId: caseData.procedureType, tooth: caseData.tooth };
+    return defaultCapabilityScope;
+  };
 
   node?.capabilityRequirements?.forEach((requirement) => {
     if (!isKnownCapabilityName(requirement.name)) return;
-    const status = getCapabilityStatus(caseData, requirement.name, capabilityScope);
+    const status = getCapabilityStatus(caseData, requirement.name, getRequirementScope(requirement));
     if (status.needsReassessment && requirement.allowReassessment !== false) {
       addMissing(requirement.message || `${requirement.name} needs reassessment`);
       return;

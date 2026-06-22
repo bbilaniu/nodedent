@@ -115,6 +115,28 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   };
 }
 
+function radiologyReviewedEvent(tooth = "30") {
+  const event = {
+    id: `evt_radiology_${tooth}`,
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: radiologyEventTypes.reviewed,
+    workflowId: sharedRadiologyWorkflowId,
+    tooth,
+    scope: { kind: "tooth" as const, tooth },
+    details: {
+      modalities: ["pa"],
+      tooth,
+      regionKind: "tooth",
+      imageDate: "2026-01-01",
+      sourceLabel: "current visit",
+    },
+  };
+  return {
+    ...event,
+    capabilitiesSatisfied: [buildRadiographsReviewedCapability(event)],
+  };
+}
+
 function listFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((entry) => {
     const path = join(directory, entry);
@@ -899,7 +921,7 @@ test("every protocol note event has a note fragment", () => {
 });
 
 test("valid transition produces next node and event", () => {
-  const input = baseCase();
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
   const output = applyDecision({
     currentNodeId: "preop",
     selectedOptionLabel: "Pre-op review complete",
@@ -912,7 +934,16 @@ test("valid transition produces next node and event", () => {
   assert.deepEqual(output.errors, []);
   assert.equal(output.nextNodeId, "access-chamber");
   assert.equal(output.generatedEvent?.type, "preop.reviewCompleted");
-  assert.equal(output.updatedCaseData.globalEvents.length, 1);
+  assert.equal(output.updatedCaseData.globalEvents.length, 2);
+});
+
+test("pre-op review uses shared radiology capability instead of raw radiograph checkboxes", () => {
+  const option = protocolNodes.preop.options[0];
+  const missingRadiology = baseCase();
+  const reviewedRadiology = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+
+  assert.ok(getMissingRequirements("preop", option, missingRadiology, missingRadiology.canals[0]).includes("Radiograph review recorded for the planned tooth"));
+  assert.deepEqual(getMissingRequirements("preop", option, reviewedRadiology, reviewedRadiology.canals[0]), []);
 });
 
 test("invalid node ID returns an error", () => {
@@ -964,7 +995,7 @@ test("difficulty flag is applied", () => {
 });
 
 test("input case data is not mutated", () => {
-  const input = baseCase();
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
   const before = JSON.stringify(input);
   applyDecision({
     currentNodeId: "preop",
@@ -2014,7 +2045,7 @@ test("operative direct restoration workflow reuses shared context and owns resto
   );
   assert.deepEqual(
     readinessNode.moduleCalls?.map((call) => call.workflowId),
-    [sharedDiagnosisWorkflowId, sharedAnesthesiaWorkflowId, sharedIsolationWorkflow.workflowId]
+    [sharedDiagnosisWorkflowId, sharedRadiologyWorkflowId, sharedAnesthesiaWorkflowId, sharedIsolationWorkflow.workflowId]
   );
   assert.equal(readinessNode.capabilityRequirements, undefined);
   assert.equal(restorationNode.moduleCalls, undefined);

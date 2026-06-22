@@ -28,7 +28,7 @@ export function MeasurementPanel({
       <aside className={`order-3 min-w-0 space-y-4 lg:col-span-2 lg:col-start-1 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-1 ${className}`}>
         <SectionCard title="Measurements">
           <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 text-sm leading-6 text-brand-slate">
-            Enter tooth, pre-op radiographs, chamber depth, and estimated WL in the case setup section before beginning access.
+            Record scoped radiograph review in the shared radiology workflow, then enter chamber depth and estimated WL before beginning access.
           </div>
         </SectionCard>
       </aside>

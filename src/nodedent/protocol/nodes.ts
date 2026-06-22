@@ -1,4 +1,5 @@
 import type { ProtocolNode } from "../types";
+import { sharedRadiologyWorkflowId } from "../workflow/radiology";
 
 export const protocolNodes: Record<string, ProtocolNode> = {
   preop: {
@@ -8,6 +9,17 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Review pre-op radiographs and record chamber depth plus estimated WL for the active canal.",
     instruments: ["Pre-op PA/BW", "CBCT if available", "Rubber dam armamentarium"],
     requiredInputs: ["Tooth", "Procedure", "Chamber depth", "Estimated WL"],
+    capabilityRequirements: [
+      { name: "radiographs.reviewed", scopeKind: "tooth", message: "Radiograph review recorded for the planned tooth" },
+    ],
+    moduleCalls: [
+      {
+        workflowId: sharedRadiologyWorkflowId,
+        title: "Radiology",
+        reason: "Records scoped radiograph review for workflows that need image review context.",
+        returnedCapabilities: ["radiographs.reviewed"],
+      },
+    ],
     safetyNotes: ["Workflow/documentation aid only. Clinical judgment and referral thresholds still apply."],
     options: [{ label: "Pre-op review complete", nextNodeId: "access-chamber", noteEvent: { type: "preop.reviewCompleted" } }],
   },
@@ -30,6 +42,14 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Stop and reassess access direction",
     chairsideInstruction: "Capture BW/PA as appropriate, reassess orientation, and redirect only after radiographic/clinical review.",
     instruments: ["BW/PA radiograph", "DG16/17", "557 bur"],
+    moduleCalls: [
+      {
+        workflowId: sharedRadiologyWorkflowId,
+        title: "Radiology",
+        reason: "Records the radiograph review used to reassess access direction.",
+        returnedCapabilities: ["radiographs.reviewed"],
+      },
+    ],
     safetyNotes: ["Do not continue blindly beyond the marked depth."],
     options: [
       { label: "Radiograph taken and access redirected", nextNodeId: "access-chamber", noteEvent: { type: "access.radiographRedirected" } },

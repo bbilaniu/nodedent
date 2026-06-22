@@ -4,6 +4,7 @@ import { statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
+import { getCapabilityStatus } from "../workflow/selectors";
 import { cx, panelActionButton } from "./uiStyles";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
@@ -63,11 +64,11 @@ export function DecisionCard({
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
-  const radiographLabels = [
-    caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ? "PA" : null,
-    caseData.preOp?.bwReviewed ? "BW" : null,
-    caseData.preOp?.cbctReviewed ? "CBCT" : null,
-  ].filter(Boolean);
+  const radiographStatus = getCapabilityStatus(
+    caseData,
+    "radiographs.reviewed",
+    caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined
+  );
 
   return (
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
@@ -101,7 +102,7 @@ export function DecisionCard({
                   Tooth <strong>{caseData.tooth || "not set"}</strong> · {caseData.procedureType || "Procedure not set"} · Active canal <strong>{activeCanal?.name || "not set"}</strong>
                 </p>
                 <p className="mt-1 text-xs leading-5 text-brand-slate">
-                  Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographLabels.length ? radiographLabels.join(", ") : "not recorded"}
+                  Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographStatus.summary}
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">

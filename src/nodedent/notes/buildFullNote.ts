@@ -4,11 +4,22 @@ import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { appendSection, groupEventsByPrefix } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { getPriorVisitLines } from "./priorVisit";
+import { getCapabilityStatus } from "../workflow/selectors";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed;
   const bwReviewed = caseData.preOp?.bwReviewed;
+  const radiographStatus = getCapabilityStatus(
+    caseData,
+    "radiographs.reviewed",
+    caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined
+  );
+  const compatibilityRadiographFields = [
+    paReviewed ? "PA" : null,
+    bwReviewed ? "BW" : null,
+    caseData.preOp?.cbctReviewed ? "CBCT" : null,
+  ].filter(Boolean);
   lines.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}`);
   if (caseData.patientNumber) lines.push(`Patient #: ${caseData.patientNumber}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
@@ -20,9 +31,9 @@ export function buildFullNote(caseData: EndoCase) {
     caseData.nextVisitPlan ? `Next visit / plan: ${caseData.nextVisitPlan}` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Pre-op:", [
-    `PA reviewed: ${paReviewed ? "yes" : "not recorded"}`,
-    `BW reviewed: ${bwReviewed ? "yes" : "not recorded"}`,
-    `CBCT reviewed: ${caseData.preOp?.cbctReviewed ? "yes" : "no/not recorded"}`,
+    `Radiograph review: ${radiographStatus.summary}`,
+    radiographStatus.reason ? `Radiograph context: ${radiographStatus.reason}` : null,
+    compatibilityRadiographFields.length ? `Compatibility radiograph fields: ${compatibilityRadiographFields.join(", ")}` : null,
     caseData.preOp?.estimatedChamberDepth ? `Estimated chamber depth: ${caseData.preOp.estimatedChamberDepth} mm` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Prior visit history:", getPriorVisitLines(caseData));

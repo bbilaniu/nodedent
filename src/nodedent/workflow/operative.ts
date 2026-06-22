@@ -1,6 +1,7 @@
 import type { CapabilityName, CapabilityRequirement, CapabilitySatisfaction, ClinicalEvent, EndoCase, WorkflowDefinition, WorkflowModuleCall, WorkflowScope } from "../types";
 import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
+import { sharedRadiologyWorkflowId } from "./radiology";
 import type { CaseCapabilitySummary } from "./selectors";
 import { getCapabilityStatus } from "./selectors";
 
@@ -69,8 +70,14 @@ export const operativeReadinessModuleCalls: WorkflowModuleCall[] = [
   {
     workflowId: sharedDiagnosisWorkflowId,
     title: "Diagnosis",
-    reason: "Provides reusable diagnosis and radiograph review context for the operative workflow when that context is not already available.",
-    returnedCapabilities: ["diagnosis.recorded", "radiographs.reviewed"],
+    reason: "Provides reusable diagnosis context for the operative workflow when that context is not already available.",
+    returnedCapabilities: ["diagnosis.recorded"],
+  },
+  {
+    workflowId: sharedRadiologyWorkflowId,
+    title: "Radiology",
+    reason: "Provides scoped radiograph review context for the planned tooth when that context is not already available.",
+    returnedCapabilities: ["radiographs.reviewed"],
   },
   {
     workflowId: sharedAnesthesiaWorkflowId,
