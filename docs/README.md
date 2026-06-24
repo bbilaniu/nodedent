@@ -10,6 +10,7 @@ This folder separates clinical source material, active product specs, architectu
 ## Active Product And Implementation Specs
 
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
+- [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [Shared radiology module](specs/shared-radiology-module.md)
