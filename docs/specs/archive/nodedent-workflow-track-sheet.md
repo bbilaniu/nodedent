@@ -1,9 +1,14 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-15
+completed_on: 2026-06-24
+archived_on: 2026-06-24
+archive_reason: Completed workflow fix track sheet; remaining ideas are covered by active roadmap specs.
 ---
 
 # Track Sheet For nodedent.com Workflow
+
+Archived status: this track sheet records completed workflow fixes and small follow-up ideas from the June 2026 workflow pass. It is retained as implementation history. Remaining active work should be tracked in the endodontic continuation and usability roadmap, the long-term product roadmap, or a dedicated new spec.
 
 This document tracks workflow observations, implemented fixes, and remaining product backlog for the NodeDent endodontic chairside workflow.
 

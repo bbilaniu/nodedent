@@ -22,6 +22,7 @@ Completed baseline work includes:
 - phase-aware multi-canal handoff menus
 - closure guards that block final chamber cleanup while other canals are still active or incomplete
 - coverage for completed, temporary, medicated/temporized, referred, and completed-RCT states
+- prior-visit continuation metadata, conservative resume routing, pause/medication resume targets, and note/export separation between prior history and today's events
 
 The remaining endodontic work should preserve the existing architecture:
 
@@ -47,12 +48,12 @@ Do not put new clinical branch logic directly inside React components. When addi
 
 ## Current Remaining Gaps
 
-- Multi-visit resume and prior undocumented visit continuation are not yet modeled cleanly.
+- Multi-visit resume and prior undocumented visit continuation have a first implementation, but still need broader scenario coverage and chairside usability review.
 - Realistic clinical scenario fixtures are still needed beyond focused protocol branch tests.
 - Notes and exports need ergonomic review for common completed, initiated, medicated, and referred cases.
 - Chairside UI needs another pass for scanability, error placement, undo/recovery, and responsive layout polish.
 
-## Phase 1: Multi-Visit Pause And Resume Workflow
+## Completed Baseline: Multi-Visit Pause And Resume Workflow
 
 Reasoning level needed: high. This work changes case continuity and must clearly separate historical prior treatment from events recorded during the current app session.
 
@@ -63,7 +64,7 @@ A clinician may complete a later visit in the app after the tooth was previously
 medicated, and temporized outside the app or before the app workflow was used.
 ```
 
-Decision:
+Implemented decision:
 
 ```text
 Do not pretend this was an in-app pause/resume event.
@@ -74,14 +75,14 @@ point, and clearly separate prior-visit history from today's system-recorded eve
 notes, JSON export, and tests.
 ```
 
-Scope:
+Implemented baseline:
 
 - Let the clinician pause a case with a next-visit plan.
 - Let the clinician start or resume from a prior undocumented visit without requiring fake protocol events.
 - Track per-canal state when some canals are complete and others are medicated or unfinished.
 - Resume at the best next protocol node for each canal.
 - Make continuation actions explicit and clinically meaningful.
-- Add a next-visit note template.
+- Include next-visit plan text in compact and full notes.
 - Add a prior-visit summary section for externally documented treatment history.
 - Preserve pause/resume state through local persistence and JSON import/export.
 
@@ -111,15 +112,19 @@ Fast-forward rules:
 - Unknown prior details should route earlier, not later.
 - High-risk resume points such as cone-fit-ready or partially obturated require explicit confirmation and enough supporting details to avoid accidental over-advancement.
 
-Acceptance criteria:
+Status against acceptance criteria:
 
-- A case can be paused after access, working length, shaping, disinfection, cone fit, medication, or partial obturation.
-- A case can be continued from a prior undocumented temporization or medication visit and completed today without fabricating prior in-app events.
-- Resume chooses the correct next node for each canal without losing measurements.
-- The generated note includes what was completed today, what remains, and any prior-visit history in a clearly separated section.
-- JSON export/import distinguishes in-app pause/resume state from external prior-visit history.
-- Tests cover pause/resume from at least access, shaped, cone-fit-ready, medicated, and partially obturated states.
-- Tests cover completing an RCT today after prior undocumented medicated/temporized care.
+- Implemented: pause and medication events can expose resume targets; prior undocumented canal statuses route to conservative resume nodes.
+- Implemented: generated notes label prior-visit history separately from today's system-recorded events.
+- Implemented: JSON export/import preserves prior-visit metadata, canal status, measurements, radiograph statuses, events, and current node state.
+- Partially covered: tests verify focused resume routing, import/export, note separation, and high-risk prior status routing.
+- Still needed: full scenario fixtures for completing an RCT today after prior undocumented medicated/temporized care and for pause/resume from each major clinical phase.
+
+Residual follow-up:
+
+- Add scenario fixtures that exercise the full acceptance paths end-to-end instead of relying only on focused engine and note/export tests.
+- Review whether the prior-visit capture surface should move from endodontic-specific case management into a reusable continuity/shared-history module.
+- Improve state-aware workflow labels so a never-started workflow says `Start workflow`, saved progress says `Continue workflow`, and completed cases say `Review / reopen`.
 
 ## Phase 2: Clinical Scenario Regression Fixtures
 

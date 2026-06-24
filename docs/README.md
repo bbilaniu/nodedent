@@ -12,7 +12,6 @@ This folder separates clinical source material, active product specs, architectu
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
-- [NodeDent workflow track sheet](specs/Track sheet for nodedent.com workflow.md)
 - [Shared radiology module](specs/shared-radiology-module.md)
 
 ## Engineering Guides
@@ -48,3 +47,4 @@ This folder separates clinical source material, active product specs, architectu
 - [Shared isolation module](specs/archive/shared-isolation-module.md)
 - [NodeDent app colour implementation plan](specs/archive/nodedent_app_colour_implementation_plan.md)
 - [NodeDent logo direction](specs/archive/nodedent_logo_direction.md)
+- [NodeDent workflow track sheet](specs/archive/nodedent-workflow-track-sheet.md)

@@ -113,6 +113,10 @@ Case-field fallback should continue to satisfy `radiographs.reviewed` until old 
 - Preserve saved-case import/export compatibility for existing `preOp` radiograph fields.
 - Keep shared readiness opening the radiograph readiness surface.
 
+## Recommended Next Step
+
+Implement the first slice above before starting another primary workflow family. This is the smallest active spec that improves cross-workflow shared readiness without adding clinical interpretation rules.
+
 ## Deferred Work
 
 - Dedicated embedded radiology workflow runner.

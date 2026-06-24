@@ -63,9 +63,10 @@ It would be useful to add placeholder primary workflows such as:
 
 * Extraction surgery
 * Cleaning / hygiene
-* Operative dentistry
 * Emergency exam
 * Diagnostic exam
+
+Operative direct restoration is now the first usable non-endodontic primary workflow. The remaining placeholder workflows should wait until there is a clear minimum useful note or workflow shell for each.
 
 These could initially appear as disabled roadmap cards, “coming soon” cards, or minimal unguided workflow containers.
 
@@ -130,6 +131,8 @@ It includes:
 * Autosaving even if the browser is closed or a new case is started
 * Optional tracking of decision-relevant clinical parameters
 * Canal-level data entry, including measurements and obturation details
+* A NodeDent Home launcher with endodontic RCT, operative direct restoration, and shared anesthesia/isolation modules
+* Shared readiness summaries for diagnosis, radiographs, anesthesia, and isolation
 
 ## Product Vision
 
