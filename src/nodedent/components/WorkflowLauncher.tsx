@@ -3,6 +3,7 @@ import type { EndoCase } from "../types";
 import { getCaseStatus, getOutputCaseStatus } from "../engine/deriveCaseStatus";
 import type { CaseCapabilitySummary } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
+import { buildAppointmentWorkflowMap } from "../workflow/workflowMap";
 import {
   endodonticRootWorkflowId,
   getPrimaryWorkflowLauncherEntries,
@@ -17,6 +18,7 @@ import {
   isOperativeScopeRecordedEvent,
   operativeDirectRestorationWorkflowId,
 } from "../workflow/operative";
+import { AppointmentWorkflowMapPanel } from "./AppointmentWorkflowMapPanel";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -48,6 +50,7 @@ function getOperativeProgressLabel(caseData: EndoCase): PrimaryWorkflowProgressL
 export function WorkflowLauncher({
   caseData,
   capabilitySummary: providedCapabilitySummary,
+  currentNodeId,
   currentNodeTitle,
   currentNodePhase,
   savedCaseCount,
@@ -65,6 +68,7 @@ export function WorkflowLauncher({
 }: {
   caseData: EndoCase;
   capabilitySummary?: CaseCapabilitySummary;
+  currentNodeId?: string;
   currentNodeTitle: string;
   currentNodePhase: string;
   savedCaseCount: number;
@@ -83,6 +87,7 @@ export function WorkflowLauncher({
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
+  const workflowMap = buildAppointmentWorkflowMap(caseData, currentNodeId);
   const anesthesiaStatus = sharedCapabilityStatusLabel(capabilitySummary.anesthesia);
   const isolationStatus = sharedCapabilityStatusLabel(capabilitySummary.isolation);
   const radiologyStatus = sharedCapabilityStatusLabel(capabilitySummary.radiographs);
@@ -249,6 +254,10 @@ export function WorkflowLauncher({
             </div>
           </section>
         ) : null}
+
+        <div className="mt-4">
+          <AppointmentWorkflowMapPanel map={workflowMap} />
+        </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <section className={panelSurface.cardPadded}>

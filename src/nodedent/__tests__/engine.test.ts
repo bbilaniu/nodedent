@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { EndoCase } from "../types";
+import type { ClinicalEvent, EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
@@ -95,6 +95,7 @@ import {
 } from "../workflow/registry";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowHasOperativeTargetPanel } from "../workflow/targetPanels";
+import { buildAppointmentWorkflowMap, workflowMapDefinitions } from "../workflow/workflowMap";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -679,7 +680,53 @@ test("workflow launcher exposes operative runner entry", () => {
   assert.equal(markup.includes("Start / resume workflow"), false);
   assert.equal(markup.includes("Radiology"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
-  assert.equal(markup.includes("Model only"), false);
+  assert.equal(markup.includes("Appointment workflow map"), true);
+  assert.equal(markup.includes("Extraction Surgery"), true);
+  assert.equal(markup.includes("Cleaning / Hygiene"), true);
+});
+
+test("appointment workflow map separates scoped workflow instances from shared events", () => {
+  const operativeSetupEvent: ClinicalEvent = {
+    id: "evt_operative_scope_map",
+    timestamp: "2026-01-01T09:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    tooth: "31",
+    canal: "N/A",
+    scope: { kind: "surface" as const, tooth: "31", surfaces: ["O"] },
+    details: { tooth: "31", surfaces: ["O"] },
+  };
+  const anesthesiaEvent: ClinicalEvent = {
+    id: "evt_anesthesia_map",
+    timestamp: "2026-01-01T09:05:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    tooth: "30",
+    canal: "N/A",
+    scope: { kind: "custom" as const, teeth: ["30", "31"] },
+    details: { teeth: ["30", "31"], response: "adequate" },
+  };
+  anesthesiaEvent.capabilitiesSatisfied = [buildAnesthesiaAdequateCapability(anesthesiaEvent)];
+  const map = buildAppointmentWorkflowMap(
+    baseCase({
+      tooth: "30",
+      diagnosis: { pulpal: "Irreversible pulpitis", apical: "Normal apical tissues" },
+      globalEvents: [operativeSetupEvent, anesthesiaEvent],
+    }),
+    "access-chamber"
+  );
+  const endoInstance = map.workflowInstances.find((instance) => instance.workflowType === "endo.rct");
+  const operativeInstance = map.workflowInstances.find((instance) => instance.workflowType === "operative.direct-restoration");
+  const anesthesiaModule = map.sharedModules.find((module) => module.moduleType === "shared.anesthesia");
+
+  assert.equal(workflowMapDefinitions.some((definition) => definition.workflowType === "extraction.surgery" && definition.status === "modelOnly"), true);
+  assert.equal(workflowMapDefinitions.some((definition) => definition.workflowType === "hygiene.cleaning" && definition.status === "modelOnly"), true);
+  assert.deepEqual(endoInstance?.target.teeth, ["30"]);
+  assert.deepEqual(operativeInstance?.target.teeth, ["31"]);
+  assert.deepEqual(operativeInstance?.target.surfaces, ["O"]);
+  assert.equal(anesthesiaModule?.statusLabel, "Ready");
+  assert.deepEqual(anesthesiaModule?.usedBy.sort(), ["instance_endo_current", "instance_operative_current"].sort());
+  assert.deepEqual(map.finalNoteAggregation.workflowInstanceIds.sort(), ["instance_endo_current", "instance_operative_current"].sort());
 });
 
 test("workflow launcher derives operative progress from operative events", () => {

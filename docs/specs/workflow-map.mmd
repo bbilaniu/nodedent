@@ -1,0 +1,63 @@
+flowchart TD
+  Encounter[Appointment / Clinical Encounter<br/>Container for one or more workflow instances]
+
+  subgraph SetupPlanning[Setup, Diagnosis, Planning]
+    CaseSetup[Case Setup & Status<br/>Scope: appointment]
+    SharedDiagnostics[Shared Diagnostics Module<br/>Scope: appointment / problem list]
+    SpecificDiagnostics[Specific Diagnostics Module<br/>Scope: tooth, surface, quadrant, or complaint]
+    TreatmentPlanning[Shared Treatment Planning Module<br/>Creates planned workflow instances]
+    Consent[Shared Consent Module<br/>Consent linked to planned treatment targets]
+  end
+
+  subgraph WorkflowInstances[Repeatable Workflow Instances]
+    EndoRCT[Endodontic RCT Workflow Instance<br/>Target: selected tooth/teeth]
+    Operative[Operative Dentistry Workflow Instance<br/>Target: selected tooth/surfaces]
+    Extraction[Extraction Surgery Workflow Instance<br/>Target: selected tooth/teeth]
+    Hygiene[Cleaning / Hygiene Workflow Instance<br/>Target: full mouth / quadrant / selected areas]
+  end
+
+  subgraph SharedClinicalModules[Shared Clinical Modules]
+    SharedAnesthesia[Shared Anesthesia Event<br/>Scope: appointment, quadrant, tooth, or teeth]
+    Isolation[Shared Isolation Module<br/>Scope: workflow instance / target tooth or teeth]
+  end
+
+  subgraph ConditionalHandoffs[Conditional Workflow Handoffs]
+    EndoOutcome{RCT outcome / restorability decision}
+    Referral[Referral / External Care<br/>Target: selected tooth/problem]
+  end
+
+  FinalNote[Generate Final Note<br/>Combines all workflow instances and shared events]
+
+  Encounter --> CaseSetup
+  CaseSetup --> SharedDiagnostics
+  SharedDiagnostics --> SpecificDiagnostics
+  SharedDiagnostics --> TreatmentPlanning
+  SpecificDiagnostics --> TreatmentPlanning
+  TreatmentPlanning --> Consent
+
+  Consent --> EndoRCT
+  Consent --> Operative
+  Consent --> Extraction
+  Consent --> Hygiene
+
+  EndoRCT --> SharedAnesthesia
+  Operative --> SharedAnesthesia
+  Extraction --> SharedAnesthesia
+
+  EndoRCT --> Isolation
+  Operative --> Isolation
+
+  EndoRCT --> EndoOutcome
+  EndoOutcome -. definitive restoration needed .-> Operative
+  EndoOutcome -. non-restorable / extraction chosen .-> Extraction
+  EndoOutcome -. specialist care indicated .-> Referral
+
+  Operative -. endo indicated during diagnosis or excavation .-> EndoRCT
+
+  EndoRCT --> FinalNote
+  Operative --> FinalNote
+  Extraction --> FinalNote
+  Hygiene --> FinalNote
+  SharedAnesthesia --> FinalNote
+  Isolation --> FinalNote
+  Referral --> FinalNote

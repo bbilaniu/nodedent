@@ -1054,6 +1054,7 @@ export default function NodeDentApp() {
             <WorkflowLauncher
               caseData={caseData}
               capabilitySummary={activeReadinessSummary}
+              currentNodeId={currentNodeId}
               currentNodeTitle={currentNode.title}
               currentNodePhase={currentNode.phase}
               savedCaseCount={savedCases.length}
@@ -1179,6 +1180,7 @@ export default function NodeDentApp() {
           <WorkflowLauncher
             caseData={outputCaseData}
             capabilitySummary={activeReadinessSummary}
+            currentNodeId={currentNodeId}
             currentNodeTitle={currentNode.title}
             currentNodePhase={currentNode.phase}
             savedCaseCount={savedCases.length}

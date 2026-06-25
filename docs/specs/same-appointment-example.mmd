@@ -1,0 +1,12 @@
+flowchart TD
+  Encounter[Appointment / Clinical Encounter]
+
+  Encounter --> Operative45[Operative Dentistry Instance<br/>Target: tooth 45<br/>Procedure: filling]
+  Encounter --> Extraction46[Extraction Surgery Instance<br/>Target: tooth 46<br/>Procedure: extraction]
+
+  Operative45 --> AnesthesiaEvent[Shared Anesthesia Event<br/>Scope: teeth 45 and 46, if clinically applicable]
+  Extraction46 --> AnesthesiaEvent
+
+  Operative45 --> FinalNote[Generate Final Note]
+  Extraction46 --> FinalNote
+  AnesthesiaEvent --> FinalNote

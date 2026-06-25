@@ -15,6 +15,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
+- [NodeDent workflow map](specs/workflow-map.md)
 - [Workspace cross-workflow consistency](specs/workspace-cross-workflow-consistency.md)
 
 ## Engineering Guides
