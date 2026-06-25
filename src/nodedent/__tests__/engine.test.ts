@@ -1255,7 +1255,8 @@ test("realistic PR2 note output includes EDTA NaOCl gauge master cone and cone f
   assert.match(compactNote, /Final NaOCl disinfection completed/);
   assert.match(compactNote, /gauge 30/);
   assert.match(compactNote, /MC 30\/.04/);
-  assert.match(compactNote, /Master cone fit confirmed radiographically/);
+  assert.match(compactNote, /Cone-fit PA: MB: acceptable/);
+  assert.doesNotMatch(compactNote, /Master cone fit confirmed radiographically/);
   assert.match(fullNote, /17% EDTA placed/);
   assert.match(fullNote, /Final NaOCl disinfection completed/);
   assert.match(fullNote, /Obturation gauge recorded as 30/);
@@ -1516,8 +1517,11 @@ test("temporary closure proceeds when every existing canal is declared", () => {
   assert.equal(result.generatedEvent?.type, "closure.temporary");
 });
 
-test("completed RCT closure records cleanup rinse final restoration and export status", () => {
-  let caseData = coneFitReadyCase();
+test("completed RCT closure records cleanup rinse final restoration and output-safe status", () => {
+  let caseData = coneFitReadyCase({
+    caseStatus: "RCT initiated",
+    autosavedAt: "2026-01-02T10:30:00.000Z",
+  });
   const completeEvent = { id: "evt_complete", timestamp: "2026-01-01T00:00:00.000Z", type: "backfill.compactedStable", canal: "MB" };
   caseData = {
     ...caseData,
@@ -1544,8 +1548,12 @@ test("completed RCT closure records cleanup rinse final restoration and export s
   assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).caseStatus, "RCT completed");
   assert.equal(buildJsonExport(result.updatedCaseData, result.nextNodeId).closure?.type, "closure.finalRestoration");
   assert.match(buildCompactNote(result.updatedCaseData), /Visit status: RCT completed/);
-  assert.match(buildCompactNote(result.updatedCaseData), /Final restoration placed/);
-  assert.match(buildFullNote(result.updatedCaseData), /Pulp chamber rinsed until residual sealer was removed/);
+  assert.match(buildCompactNote(result.updatedCaseData), /Closure recorded as final restoration; material\/details not recorded/);
+  const fullNote = buildFullNote(result.updatedCaseData);
+  assert.match(fullNote, /Visit status: RCT completed/);
+  assert.doesNotMatch(fullNote, /Visit status: RCT initiated/);
+  assert.doesNotMatch(fullNote, /Autosaved:/);
+  assert.match(fullNote, /Pulp chamber rinsed until residual sealer was removed/);
 });
 
 test("temporary closure after completed obturation is still a completed RCT", () => {
@@ -1899,13 +1907,13 @@ test("prior-visit resume event inference uses confirmed resume node", () => {
   assert.equal(inferCurrentNodeIdFromEvents({ globalEvents: [event] }), "remove-smear-layer");
 });
 
-test("compact and full notes include measurements and event fragments", () => {
+test("compact and full notes render final measurements without unsafe missing-data claims", () => {
   const event = {
     id: "evt_wl",
     timestamp: "2026-01-01T00:00:00.000Z",
     type: "workingLength.established",
     canal: "MB",
-    details: { canalSnapshot: { eal0: "20", patencyLength: "21", shapingLength: "19", referencePoint: "MB cusp", wlRadiographStatus: "not taken" } },
+    details: { canalSnapshot: { eal0: "19", patencyLength: "20", shapingLength: "18", referencePoint: "MB cusp", wlRadiographStatus: "not taken" } },
   };
   const caseData = baseCase({
     canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "20", eal0: "20", patencyLength: "21", shapingLength: "19", wlRadiographStatus: "not taken" }],
@@ -1918,11 +1926,21 @@ test("compact and full notes include measurements and event fragments", () => {
   assert.match(compactNote, /30 RCT/);
   assert.match(compactNote, /Canals: MB/);
   assert.match(compactNote, /MB: est WL 20 mm/);
-  assert.match(fullNote, /WL PA not taken/);
-  assert.match(fullNote, /MB: WL established/);
+  assert.match(compactNote, /Anesthesia: not recorded/);
+  assert.match(compactNote, /Isolation: not recorded/);
+  assert.doesNotMatch(compactNote, /RD isolation planned\/used/);
+  assert.match(compactNote, /Pre-op radiographs: PA not recorded; BW not recorded; CBCT not recorded/);
+  assert.match(compactNote, /WL PA: MB: not taken/);
+  assert.match(compactNote, /Cone-fit PA: MB: not recorded/);
+  assert.match(compactNote, /Final obturation PA: not recorded/);
+  assert.match(fullNote, /WL PA: not taken/);
+  assert.match(fullNote, /Final canal summary:/);
+  assert.match(fullNote, /MB \| WL established \| 20 \| 21 \| 19/);
+  assert.match(fullNote, /Length convention: MB shows shaping length 1 mm short of EAL0 and patency 1 mm beyond EAL0/);
+  assert.doesNotMatch(fullNote, /EAL0 19 mm, patency 20 mm, shaping 18 mm/);
 });
 
-test("full note includes canal switch narrative and patient summary remains concise", () => {
+test("full note excludes workflow switch navigation while patient summary remains concise", () => {
   const switchEvent = {
     id: "evt_switch",
     timestamp: "2026-01-01T00:00:00.000Z",
@@ -1932,7 +1950,7 @@ test("full note includes canal switch narrative and patient summary remains conc
   };
   const caseData = baseCase({ globalEvents: [switchEvent] });
 
-  assert.match(buildFullNote(caseData), /Workflow switched from MB to DB/);
+  assert.doesNotMatch(buildFullNote(caseData), /Workflow switched from MB to DB/);
   const summary = buildPatientSummary(caseData);
   assert.match(summary, /^Endodontic treatment workflow was started/);
   assert.ok(summary.length < 220);
@@ -2328,7 +2346,10 @@ test("operative setup and restoration records appear in notes and JSON export", 
   assert.match(eventFragment(restorationEvent), /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
   assert.match(compact, /Operative setup recorded: tooth 36; surfaces M O/);
   assert.match(compact, /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
-  assert.match(full, /Operative:/);
+  assert.doesNotMatch(compact, /Canals:/);
+  assert.match(full, /Visit status: Direct restoration documented/);
+  assert.doesNotMatch(full, /Final canal summary:/);
+  assert.match(full, /Restoration \/ operative details:/);
   assert.match(full, /Operative setup recorded: tooth 36; surfaces M O/);
   assert.match(full, /Final restoration recorded: tooth 36; surfaces M O/);
   assert.equal(exported.operative?.setup?.eventId, "evt_operative_setup_note");

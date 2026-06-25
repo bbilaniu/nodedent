@@ -142,7 +142,7 @@ export function eventFragment(event: ClinicalEvent) {
     "closure.chamberRinsed": "Pulp chamber rinsed until residual sealer was removed.",
     "closure.temporary": "Access closed with sponge and temporary restorative material.",
     "closure.orificeBarrierTemporary": "Orifice barrier and temporary restoration placed.",
-    "closure.finalRestoration": "Final restoration placed.",
+    "closure.finalRestoration": "Closure recorded as final restoration; material/details not recorded.",
     "drying.canalDriedAfterRepeat": `${canal}Canal dried after repeat drying attempts.`,
     "drying.persistentWetConfirmed": `${canal}Persistent wet canal confirmed after repeat drying attempts.`,
     "medication.calciumHydroxidePlaced": `${canal}Calcium hydroxide placed.`,

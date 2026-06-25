@@ -14,6 +14,11 @@ export const difficultyLabels = {
   refer: "Red · consider temporization/referral",
 };
 
+export function isEndodonticProcedureType(procedureType?: string) {
+  const normalized = (procedureType || "").trim().toLowerCase();
+  return !normalized || normalized === "rct" || normalized.includes("root canal") || normalized.includes("endodontic");
+}
+
 export function deriveSuggestedCaseStatus(caseData: EndoCase) {
   const events = (caseData.globalEvents || []).map((event) => event.type);
   if (events.includes("treatment.referralRecommended") || events.includes("treatment.referralSelected") || events.includes("canal.referred")) return "Referred";
@@ -25,6 +30,21 @@ export function deriveSuggestedCaseStatus(caseData: EndoCase) {
 
 export function getCaseStatus(caseData: EndoCase) {
   return caseData.caseStatus || deriveSuggestedCaseStatus(caseData);
+}
+
+export function getOutputCaseStatus(caseData: EndoCase) {
+  const manualStatus = caseData.caseStatus?.trim();
+  const derivedStatus = deriveSuggestedCaseStatus(caseData);
+  if (!isEndodonticProcedureType(caseData.procedureType)) {
+    if (manualStatus && !manualStatus.startsWith("RCT ")) return manualStatus;
+    return caseData.globalEvents.length ? `${caseData.procedureType || "Workflow"} documented` : `${caseData.procedureType || "Workflow"} planned`;
+  }
+  if (!manualStatus) return derivedStatus;
+
+  const staleManualStatuses = ["RCT planned", "RCT initiated"];
+  if (staleManualStatuses.includes(manualStatus) && manualStatus !== derivedStatus) return derivedStatus;
+
+  return manualStatus;
 }
 
 export function hydrateCaseStatusOverride(caseData: Partial<EndoCase>) {

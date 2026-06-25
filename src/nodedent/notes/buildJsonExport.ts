@@ -1,5 +1,5 @@
 import type { EndoCase } from "../types";
-import { getCaseStatus } from "../engine/deriveCaseStatus";
+import { getOutputCaseStatus } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
 import {
@@ -22,7 +22,7 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     autosavedAt: caseData.autosavedAt,
     tooth: caseData.tooth,
     procedureType: caseData.procedureType,
-    caseStatus: getCaseStatus(caseData),
+    caseStatus: getOutputCaseStatus(caseData),
     currentCanal: caseData.currentCanal,
     nextVisitPlan: caseData.nextVisitPlan,
     priorVisit: caseData.priorVisit,
@@ -61,8 +61,8 @@ export function buildPrintableSummary(caseData: EndoCase) {
   lines.push(`Patient #: ${caseData.patientNumber || "________________"}`);
   lines.push(`Tooth: ${caseData.tooth || "____"}`);
   lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
-  lines.push(`Visit status: ${getCaseStatus(caseData)}`);
-  lines.push(`Date/autosave: ${caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleString() : new Date().toLocaleString()}`);
+  lines.push(`Visit status: ${getOutputCaseStatus(caseData)}`);
+  lines.push(`App metadata - autosaved: ${caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleString() : "not recorded"}`);
   lines.push("");
   lines.push("CANALS");
   caseData.canals.forEach((canal) => {
@@ -83,7 +83,7 @@ export function buildEventLogExport(caseData: EndoCase) {
   lines.push(`Patient #: ${caseData.patientNumber || ""}`);
   lines.push(`Tooth: ${caseData.tooth || ""}`);
   lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
-  lines.push(`Visit status: ${getCaseStatus(caseData)}`);
+  lines.push(`Visit status: ${getOutputCaseStatus(caseData)}`);
   lines.push("");
 
   if (!caseData.globalEvents.length) {

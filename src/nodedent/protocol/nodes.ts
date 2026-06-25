@@ -245,7 +245,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     requiredInputs: ["EAL 0", "Patency length", "Shaping length", "Reference point"],
     options: [
       {
-        label: "EAL 0 recorded and WL radiograph taken",
+        label: "EAL 0 recorded and WL PA status recorded",
         nextNodeId: "patency-10c",
         noteEvent: { type: "workingLength.established" },
         guards: [

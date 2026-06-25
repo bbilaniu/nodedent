@@ -67,6 +67,8 @@ The JSON sample is not ready to be treated as a stable contract yet. The first i
 | 19. Irrigation details incomplete | A full fix needs concentration, volume, delivery, activation, and safety-control fields. |
 | 20. Difficulty flag lacks explanation | Structured difficulty reasons need a new field; without model work only inferred or missing reasons can be rendered. |
 | 27. Suggested architecture direction | A broad shared renderer should be extracted incrementally after current note-output regressions are covered by tests. |
+| 28. Independently editable note artifacts | A full fix needs a note artifact/draft model separate from the clinical event ledger so imported or generated notes can be edited without creating new timestamped clinical events. |
+| 29. Initial diagnosis/treatment plan versus post-op diagnosis/completed treatment | A full fix needs explicit planned-care and completed-care documentation boundaries so auditors can see why treatment was started and what was actually done. |
 
 ### Recommended first implementation slice
 
@@ -1173,6 +1175,109 @@ Tests should confirm:
 8. Final restoration is not overclaimed as definitive unless explicitly recorded.
 9. Missing anesthesia/consent/isolation are rendered honestly.
 10. Shared rendering functions do not reference endodontic-only concepts.
+11. Imported generated notes can be represented as editable note artifacts without being converted into new clinical events.
+
+---
+
+# 28. Independently editable note artifacts
+
+## Problem observed/risk
+
+The current architecture treats clinical events as the durable source for generated notes. That is appropriate for structured clinical facts, but it does not cover normal note-editing behavior after export/import.
+
+A clinician may want to import a JSON package containing events and prior generated notes, then edit the human-readable note wording without recording a new clinical procedure, clinical decision, or timestamped workflow event.
+
+Examples:
+
+* tightening wording before pasting into an EMR
+* correcting grammar or formatting
+* adding a clarification that does not change the underlying clinical event ledger
+* producing separate notes for two visits or episodes of care from the same case record
+* preserving an imported note exactly while still allowing regenerated notes from events
+
+## Required behavior
+
+Clinical events and note artifacts should be separate.
+
+The app should support:
+
+* immutable or append-only clinical event history for structured clinical facts
+* generated note previews derived from the current event/case state
+* editable note drafts or finalized note artifacts that can diverge from the generated preview
+* note metadata such as note kind, visit/episode scope, created/updated/exported timestamps, and source generator version
+* import/export of both the structured event ledger and user-edited note artifacts
+
+Editing a note artifact should not automatically create a new clinical event. A clinical event should be created only when the user records or changes a structured clinical fact.
+
+## Generalized requirement
+
+The shared output layer should distinguish:
+
+* event ledger
+* generated note
+* user-edited note draft
+* finalized/exported note artifact
+* audit/debug event log
+
+This should work for endodontic continuation visits and future non-endodontic workflows. Do not assume that one case has exactly one note, or that every note maps one-to-one to a workflow run.
+
+## Status
+
+* [ ] SOLVED
+* [ ] STILL FAILING
+* [ ] PARTIAL
+* [ ] NOT APPLICABLE
+
+---
+
+# 29. Initial diagnosis / treatment plan versus post-op outcome
+
+## Problem observed/risk
+
+A final clinical note can document what happened, but auditors also need to understand the context from which treatment arose. In endodontics and future workflows, the initial diagnosis and treatment plan may not be identical to the post-op diagnosis or the treatment actually completed.
+
+Examples:
+
+* initial diagnosis and planned treatment: symptomatic irreversible pulpitis; planned RCT and definitive restoration referral
+* post-op finding/outcome: necrotic pulp found, two canals treated, calcium hydroxide placed, temporary restoration
+* treatment plan changed because of restorability, canal anatomy, patient tolerance, persistent symptoms, referral, or staged care
+* planned definitive restoration differs from what was actually placed today
+
+## Required behavior
+
+The output layer should eventually support separate sections for:
+
+* initial diagnosis / reason for treatment
+* initial treatment plan
+* consented or discussed options, when a consent module exists
+* intra-op or post-op diagnosis/assessment, if different or clarified
+* treatment actually performed
+* deviations from the plan and reason, when recorded
+* next-step recommendation or planned definitive care
+
+The renderer should not overwrite the initial diagnosis/plan with final events, and it should not infer post-op diagnosis from procedure completion alone.
+
+## Generalized requirement
+
+The shared model should distinguish planned care from completed care. This should be reusable across endodontics, operative dentistry, hygiene, exams, surgery, and future workflows.
+
+Potential architecture:
+
+* `plannedDiagnosis`
+* `plannedTreatment`
+* `workingDiagnosis`
+* `postOpDiagnosis`
+* `completedTreatmentSummary`
+* `planDeviationReason`
+
+These names are placeholders; implementation should align with the eventual shared diagnosis, treatment planning, consent, and note-artifact model.
+
+## Status
+
+* [ ] SOLVED
+* [ ] STILL FAILING
+* [ ] PARTIAL
+* [ ] NOT APPLICABLE
 
 ---
 
@@ -1187,5 +1292,7 @@ This task is complete when:
 * Final state is selected consistently from JSON.
 * Earlier event snapshots do not pollute the clinical source-of-truth summary.
 * Radiographic statuses are separated by type.
+* Note artifacts can be edited independently from clinical events, or the remaining data-model work for that boundary is explicitly deferred.
+* Initial diagnosis/treatment plan and post-op/completed-treatment output are either represented clearly or explicitly deferred as data-model work.
 * The architecture remains reusable for non-endodontic workflows.
 * Tests exist to prevent regression.
