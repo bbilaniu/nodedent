@@ -16,7 +16,7 @@ import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
-import { buildJsonExport } from "../notes/buildJsonExport";
+import { buildEventLogExport, buildJsonExport, buildPrintableSummary } from "../notes/buildJsonExport";
 import { buildPatientSummary } from "../notes/buildPatientSummary";
 import { eventFragment } from "../notes/fragments";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
@@ -1938,6 +1938,88 @@ test("compact and full notes render final measurements without unsafe missing-da
   assert.match(fullNote, /MB \| WL established \| 20 \| 21 \| 19/);
   assert.match(fullNote, /Length convention: MB shows shaping length 1 mm short of EAL0 and patency 1 mm beyond EAL0/);
   assert.doesNotMatch(fullNote, /EAL0 19 mm, patency 20 mm, shaping 18 mm/);
+  assert.match(buildEventLogExport(caseData), /EAL0 19 mm, patency 20 mm, shaping 18 mm/);
+});
+
+test("difficulty summary renders reason not recorded when no event explains flag", () => {
+  const caseData = baseCase({ difficulty: "high" });
+  const compactNote = buildCompactNote(caseData);
+  const fullNote = buildFullNote(caseData);
+
+  assert.match(compactNote, /Difficulty flag: high; reason not recorded\./);
+  assert.doesNotMatch(compactNote, /Difficulty flag: high\./);
+  assert.match(fullNote, /Difficulty summary:\n- Difficulty flag: high\n- Reason: not recorded/);
+});
+
+test("difficulty summary uses protocol decision labels as reason context", () => {
+  const input = baseCase({
+    canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "20", availableTreatmentSpace: "17", referencePoint: "MB cusp" }],
+  });
+  const result = applyDecision({
+    currentNodeId: "measure-available-space",
+    selectedOptionLabel: "Available treatment space >16 mm",
+    caseData: input,
+    activeCanalName: "MB",
+    eventId: "evt_ats",
+    timestamp: "2026-01-01T00:00:00.000Z",
+  });
+
+  const compactNote = buildCompactNote(result.updatedCaseData);
+  const fullNote = buildFullNote(result.updatedCaseData);
+
+  assert.match(compactNote, /Difficulty flag: caution; reason: MB: Available treatment space >16 mm\./);
+  assert.doesNotMatch(compactNote, /Difficulty flag: caution\./);
+  assert.match(fullNote, /Difficulty summary:\n- Difficulty flag: caution\n- Reason: MB: Available treatment space >16 mm/);
+});
+
+test("multiple difficulty reasons keep compact output short and full note explicit", () => {
+  const initial = baseCase({
+    canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "20", availableTreatmentSpace: "16", referencePoint: "MB cusp" }],
+  });
+  const limitedSpace = applyDecision({
+    currentNodeId: "measure-available-space",
+    selectedOptionLabel: "Available treatment space ≤16 mm",
+    caseData: initial,
+    activeCanalName: "MB",
+    eventId: "evt_limited_space",
+    timestamp: "2026-01-01T00:00:00.000Z",
+  });
+  const extremeCaution = applyDecision({
+    currentNodeId: "limited-space-warning",
+    selectedOptionLabel: "Proceed with extreme caution",
+    caseData: limitedSpace.updatedCaseData,
+    activeCanalName: "MB",
+    eventId: "evt_extreme_caution",
+    timestamp: "2026-01-01T00:01:00.000Z",
+  });
+
+  const compactNote = buildCompactNote(extremeCaution.updatedCaseData);
+  const fullNote = buildFullNote(extremeCaution.updatedCaseData);
+
+  assert.match(compactNote, /Difficulty flag: high; reason: MB: Proceed with extreme caution\. Additional difficulty context in full note\./);
+  assert.doesNotMatch(compactNote, /Available treatment space ≤16 mm.*Proceed with extreme caution/);
+  assert.match(fullNote, /Reason: MB: Available treatment space ≤16 mm/);
+  assert.match(fullNote, /Reason: MB: Proceed with extreme caution/);
+});
+
+test("clinical note display normalizes blank canal fields without changing explicit not taken", () => {
+  const caseData = baseCase({
+    canals: [{ ...blankCanal("MB"), wlRadiographStatus: "not taken" }],
+  });
+  const fullNote = buildFullNote(caseData);
+  const printable = buildPrintableSummary(caseData);
+  const exported = buildJsonExport(caseData, "preop");
+
+  assert.match(fullNote, /MB estimated WL: not recorded/);
+  assert.match(fullNote, /MB 10C terminal length: not recorded/);
+  assert.match(fullNote, /MB available treatment space: not recorded/);
+  assert.match(fullNote, /MB reference point: not recorded/);
+  assert.match(fullNote, /MB WL PA: not taken/);
+  assert.match(fullNote, /MB cone fit PA: not recorded/);
+  assert.match(printable, /Est WL: not recorded \| EAL0: not recorded \| Patency: not recorded \| Shaping: not recorded/);
+  assert.match(printable, /WL PA: not taken \| Ref: not recorded \| Final shaping file: not recorded \| Gauge: not recorded \| MC: not recorded \| Cone fit PA: not recorded/);
+  assert.equal(exported.canals[0].wlRadiographStatus, "not taken");
+  assert.equal(exported.canals[0].coneFitRadiograph, "");
 });
 
 test("full note excludes workflow switch navigation while patient summary remains concise", () => {

@@ -121,12 +121,12 @@ Current issue status index:
 | 17. Pre-op clinical findings are under-documented | STILL FAILING | Structured findings module is not implemented. |
 | 18. Final restoration is too vague | PARTIAL | Wording is cautious when details are missing; full restoration-detail model remains future work. |
 | 19. Irrigation details incomplete | STILL FAILING | Concentration/volume/delivery/activation fields remain future work. |
-| 20. Difficulty flag lacks explanation | STILL FAILING | Structured difficulty reasons remain future work. |
+| 20. Difficulty flag lacks explanation | SOLVED | Notes now render an existing event-derived reason or `reason not recorded`; structured reason fields remain future model work. |
 | 21. Workflow-switch events clutter the note | SOLVED | Workflow navigation events are excluded from the full clinical note. |
-| 22. Compact note loses important nuance | PARTIAL | Major overclaims are fixed; diagnosis, consent, difficulty, and final restoration detail still need model work. |
+| 22. Compact note loses important nuance | PARTIAL | Major overclaims and bare difficulty flags are fixed; diagnosis, consent, and final restoration detail still need model work. |
 | 23. Final source-of-truth summary block | SOLVED | Endodontic final canal summary is rendered from final canal state. |
-| 24. Blank fields vs `not recorded` | PARTIAL | Shared render helpers are in place; not every field has a normalized schema enum yet. |
-| 25. Event snapshots as final state | PARTIAL | Clinical summary uses final state for canal values; broader snapshot/audit separation needs more fixture coverage. |
+| 24. Blank fields vs `not recorded` | PARTIAL | Clinical note and printable summary display normalize blanks; structured JSON still preserves raw blanks for compatibility. |
+| 25. Event snapshots as final state | PARTIAL | Clinical summary/full-note rows use final state and event log keeps snapshots; broader fixture coverage still needed. |
 | 26. Shared methods overfitting risk | PARTIAL | Generic render helpers were introduced, but the broader shared renderer extraction remains incremental. |
 | 27. Suggested architecture direction | PARTIAL | First helpers and tests exist; full shared renderer architecture is deferred. |
 | 28. Independently editable note artifacts | STILL FAILING | Requires a note artifact/draft model separate from the event ledger. |
@@ -922,7 +922,7 @@ Shared flags should support structured reason(s) plus free text, not just a seve
 
 ## Status
 
-* [ ] SOLVED
+* [x] SOLVED
 * [ ] STILL FAILING
 * [ ] PARTIAL
 * [ ] NOT APPLICABLE
@@ -1005,7 +1005,7 @@ Compact notes need safety rules. They should not compress missing or contradicto
 
 * [ ] SOLVED
 * [ ] STILL FAILING
-* [ ] PARTIAL
+* [x] PARTIAL
 * [ ] NOT APPLICABLE
 
 ---
@@ -1072,11 +1072,15 @@ Create consistent missing-data semantics:
 
 Shared methods should normalize missing values before rendering. Avoid ambiguous blank strings in exported clinical notes.
 
+## Implementation note
+
+Clinical note and printable-summary rendering now normalize blank clinical display values to `not recorded` while preserving explicit values such as `not taken`. Structured JSON export still preserves raw blank/internal values for import/export compatibility until the schema has explicit missing-data enums.
+
 ## Status
 
 * [ ] SOLVED
 * [ ] STILL FAILING
-* [ ] PARTIAL
+* [x] PARTIAL
 * [ ] NOT APPLICABLE
 
 ---
@@ -1111,7 +1115,7 @@ Possible rule:
 
 * [ ] SOLVED
 * [ ] STILL FAILING
-* [ ] PARTIAL
+* [x] PARTIAL
 * [ ] NOT APPLICABLE
 
 ---

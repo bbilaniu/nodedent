@@ -10,6 +10,7 @@ import {
 } from "../workflow/operative";
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
+import { renderMeasurementValue, renderRecordedValue } from "./rendering";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
@@ -67,8 +68,8 @@ export function buildPrintableSummary(caseData: EndoCase) {
   lines.push("CANALS");
   caseData.canals.forEach((canal) => {
     lines.push(`- ${canal.name} (${statusLabels[getCanalStatus(canal)]})`);
-    lines.push(`  Est WL: ${canal.estimatedWorkingLength || "___"} mm | EAL0: ${canal.eal0 || "___"} mm | Patency: ${canal.patencyLength || "___"} mm | Shaping: ${canal.shapingLength || "___"} mm`);
-    lines.push(`  WL PA: ${canal.wlRadiographStatus || "___"} | Ref: ${canal.referencePoint || "___"} | Final shaping file: ${canal.finalShape || "___"} | Gauge: ${canal.obturationGauge || "___"} | MC: ${canal.masterCone || "___"} | Cone fit PA: ${canal.coneFitRadiograph || "___"}`);
+    lines.push(`  Est WL: ${renderMeasurementValue(canal.estimatedWorkingLength)} | EAL0: ${renderMeasurementValue(canal.eal0)} | Patency: ${renderMeasurementValue(canal.patencyLength)} | Shaping: ${renderMeasurementValue(canal.shapingLength)}`);
+    lines.push(`  WL PA: ${renderRecordedValue(canal.wlRadiographStatus)} | Ref: ${renderRecordedValue(canal.referencePoint)} | Final shaping file: ${renderRecordedValue(canal.finalShape)} | Gauge: ${renderRecordedValue(canal.obturationGauge)} | MC: ${renderRecordedValue(canal.masterCone)} | Cone fit PA: ${renderRecordedValue(canal.coneFitRadiograph)}`);
   });
   lines.push("");
   lines.push("COMPACT NOTE");

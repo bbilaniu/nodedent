@@ -8,7 +8,7 @@ import {
   isOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import { getPriorVisitLines } from "./priorVisit";
-import { getCompactRadiographLines, groupClinicalEventsByPrefix } from "./rendering";
+import { getCompactDifficultyLine, getCompactRadiographLines, groupClinicalEventsByPrefix } from "./rendering";
 
 export function buildCompactNote(caseData: EndoCase) {
   const canals = caseData.canals || [];
@@ -47,7 +47,8 @@ export function buildCompactNote(caseData: EndoCase) {
   if (latestOperativeSetupEvent) note.push(formatOperativeSetupEventFragment(latestOperativeSetupEvent));
   operativeRestorationEvents.forEach((event) => note.push(formatOperativeRestorationEventFragment(event)));
   if (caseData.nextVisitPlan) note.push(`Next visit/plan: ${caseData.nextVisitPlan}.`);
-  if (caseData.difficulty !== "none") note.push(`Difficulty flag: ${caseData.difficulty}.`);
+  const difficultyLine = getCompactDifficultyLine(caseData);
+  if (difficultyLine) note.push(difficultyLine);
   note.push("POIG.");
   return note.join(" ");
 }

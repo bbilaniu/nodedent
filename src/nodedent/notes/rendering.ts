@@ -1,10 +1,15 @@
-import type { CanalRecord, EndoCase } from "../types";
+import type { CanalRecord, ClinicalEvent, EndoCase } from "../types";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { isBlank } from "../engine/measurements";
+import { protocolNodes } from "../protocol/nodes";
 import { eventFragment } from "./fragments";
 
 export function renderRecordedValue(value: unknown, fallback = "not recorded") {
   return isBlank(value) ? fallback : String(value).trim();
+}
+
+export function renderMeasurementValue(value: unknown, unit = "mm") {
+  return isBlank(value) ? "not recorded" : `${String(value).trim()} ${unit}`;
 }
 
 export function renderReviewStatus(reviewed?: boolean) {
@@ -20,6 +25,53 @@ export function groupClinicalEventsByPrefix(caseData: EndoCase, prefixes: string
     .filter((event) => prefixes.some((prefix) => event.type.startsWith(prefix)))
     .filter((event) => !excludeTypes.includes(event.type))
     .map(eventFragment);
+}
+
+function eventHasDifficultyFlag(event: ClinicalEvent) {
+  const nodeId = event.nodeId || event.details?.nodeId;
+  const decisionLabel = event.details?.decisionLabel;
+  if (!nodeId || !decisionLabel) return false;
+  const node = protocolNodes[nodeId];
+  return Boolean(node?.options?.some((option) => option.label === decisionLabel && option.difficultyFlag));
+}
+
+function isDifficultyReasonEvent(event: ClinicalEvent) {
+  return eventHasDifficultyFlag(event)
+    || event.type.startsWith("difficulty.")
+    || event.type === "treatment.referralSelected"
+    || event.type === "treatment.referralRecommended"
+    || event.type === "treatment.referralOnlyCompleted"
+    || event.type === "canal.referred";
+}
+
+function formatDifficultyReason(event: ClinicalEvent) {
+  const reason = event.details?.decisionLabel || eventFragment(event);
+  const normalizedReason = String(reason).trim().replace(/[.。]+$/, "");
+  const canal = event.canal && event.canal !== "All" && event.canal !== "N/A" ? `${event.canal}: ` : "";
+  return `${canal}${normalizedReason}`;
+}
+
+export function getDifficultyReasonLines(caseData: EndoCase) {
+  return (caseData.globalEvents || [])
+    .filter(isDifficultyReasonEvent)
+    .map(formatDifficultyReason);
+}
+
+export function getCompactDifficultyLine(caseData: EndoCase) {
+  if (caseData.difficulty === "none") return null;
+  const reasons = getDifficultyReasonLines(caseData);
+  if (!reasons.length) return `Difficulty flag: ${caseData.difficulty}; reason not recorded.`;
+  const suffix = reasons.length > 1 ? " Additional difficulty context in full note." : "";
+  return `Difficulty flag: ${caseData.difficulty}; reason: ${reasons.at(-1)}.${suffix}`;
+}
+
+export function getFullDifficultyLines(caseData: EndoCase) {
+  if (caseData.difficulty === "none") return [];
+  const reasons = getDifficultyReasonLines(caseData);
+  return [
+    `Difficulty flag: ${caseData.difficulty}`,
+    ...(reasons.length ? reasons.map((reason) => `Reason: ${reason}`) : ["Reason: not recorded"]),
+  ];
 }
 
 function formatCanalFieldList(canals: CanalRecord[], field: keyof CanalRecord) {

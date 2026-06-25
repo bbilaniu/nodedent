@@ -5,7 +5,7 @@ import { appendSection } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { getPriorVisitLines } from "./priorVisit";
 import { getCapabilityStatus } from "../workflow/selectors";
-import { getFinalCanalSummaryLines, groupClinicalEventsByPrefix, hasEventType } from "./rendering";
+import { getFinalCanalSummaryLines, getFullDifficultyLines, groupClinicalEventsByPrefix, hasEventType, renderMeasurementValue, renderRecordedValue } from "./rendering";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
@@ -51,17 +51,18 @@ export function buildFullNote(caseData: EndoCase) {
     const canalLines: string[] = [];
     caseData.canals.forEach((canal) => {
       canalLines.push(`${canal.name} (${statusLabels[getCanalStatus(canal)]})`);
-      if (canal.estimatedWorkingLength) canalLines.push(`  ${canal.name} estimated WL: ${canal.estimatedWorkingLength} mm`);
-      if (canal.availableTreatmentSpace) canalLines.push(`  ${canal.name} available treatment space: ${canal.availableTreatmentSpace} mm`);
-      if (canal.referencePoint) canalLines.push(`  ${canal.name} reference point: ${canal.referencePoint}`);
-      if (canal.eal0) canalLines.push(`  ${canal.name} EAL 0: ${canal.eal0} mm`);
-      if (canal.wlRadiographStatus) canalLines.push(`  ${canal.name} WL PA: ${canal.wlRadiographStatus}`);
-      if (canal.patencyLength) canalLines.push(`  ${canal.name} patency length: ${canal.patencyLength} mm`);
-      if (canal.shapingLength) canalLines.push(`  ${canal.name} shaping length: ${canal.shapingLength} mm`);
-      if (canal.finalShape) canalLines.push(`  ${canal.name} final shaping file: ${canal.finalShape}`);
-      if (canal.obturationGauge) canalLines.push(`  ${canal.name} obturation gauge: ${canal.obturationGauge}`);
-      if (canal.masterCone) canalLines.push(`  ${canal.name} master cone: ${canal.masterCone}`);
-      if (canal.coneFitRadiograph) canalLines.push(`  ${canal.name} cone fit PA: ${canal.coneFitRadiograph}`);
+      canalLines.push(`  ${canal.name} estimated WL: ${renderMeasurementValue(canal.estimatedWorkingLength)}`);
+      canalLines.push(`  ${canal.name} 10C terminal length: ${renderMeasurementValue(canal.fileTerminalLength)}`);
+      canalLines.push(`  ${canal.name} available treatment space: ${renderMeasurementValue(canal.availableTreatmentSpace)}`);
+      canalLines.push(`  ${canal.name} reference point: ${renderRecordedValue(canal.referencePoint)}`);
+      canalLines.push(`  ${canal.name} EAL 0: ${renderMeasurementValue(canal.eal0)}`);
+      canalLines.push(`  ${canal.name} WL PA: ${renderRecordedValue(canal.wlRadiographStatus)}`);
+      canalLines.push(`  ${canal.name} patency length: ${renderMeasurementValue(canal.patencyLength)}`);
+      canalLines.push(`  ${canal.name} shaping length: ${renderMeasurementValue(canal.shapingLength)}`);
+      canalLines.push(`  ${canal.name} final shaping file: ${renderRecordedValue(canal.finalShape)}`);
+      canalLines.push(`  ${canal.name} obturation gauge: ${renderRecordedValue(canal.obturationGauge)}`);
+      canalLines.push(`  ${canal.name} master cone: ${renderRecordedValue(canal.masterCone)}`);
+      canalLines.push(`  ${canal.name} cone fit PA: ${renderRecordedValue(canal.coneFitRadiograph)}`);
     });
     appendSection(lines, "Canal measurements / status:", canalLines);
     appendSection(lines, "Final canal summary:", getFinalCanalSummaryLines(caseData));
@@ -69,6 +70,7 @@ export function buildFullNote(caseData: EndoCase) {
     appendSection(lines, "Irrigation / smear layer / disinfection:", groupClinicalEventsByPrefix(caseData, ["smearLayer.", "disinfection."]));
     appendSection(lines, "Cone fit / obturation:", groupClinicalEventsByPrefix(caseData, ["obturationGauge.", "coneFit.", "drying.", "sealer.", "gpSeating.", "downpack.", "backfill."]));
     appendSection(lines, "Closure:", groupClinicalEventsByPrefix(caseData, ["closure.", "medication."]));
+    appendSection(lines, "Difficulty summary:", getFullDifficultyLines(caseData));
     appendSection(lines, "Difficulty / referral / canal controls:", groupClinicalEventsByPrefix(caseData, ["difficulty.", "treatment.", "canal."]));
   }
   lines.push("Compact note:");
