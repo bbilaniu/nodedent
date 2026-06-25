@@ -1,5 +1,5 @@
 import type { EndoCase } from "../types";
-import { getOutputCaseStatus } from "../engine/deriveCaseStatus";
+import { getOutputCaseStatus, isEndodonticProcedureType } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
 import {
@@ -56,21 +56,24 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
 }
 
 export function buildPrintableSummary(caseData: EndoCase) {
+  const isEndodonticProcedure = isEndodonticProcedureType(caseData.procedureType);
   const lines: string[] = [];
-  lines.push("ENDODONTIC CHAIRSIDE SUMMARY");
-  lines.push("============================");
+  lines.push(isEndodonticProcedure ? "ENDODONTIC CHAIRSIDE SUMMARY" : "CLINICAL WORKFLOW SUMMARY");
+  lines.push(isEndodonticProcedure ? "============================" : "=========================");
   lines.push(`Patient #: ${caseData.patientNumber || "________________"}`);
   lines.push(`Tooth: ${caseData.tooth || "____"}`);
-  lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
+  lines.push(`Procedure: ${caseData.procedureType || "Workflow"}`);
   lines.push(`Visit status: ${getOutputCaseStatus(caseData)}`);
   lines.push(`App metadata - autosaved: ${caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleString() : "not recorded"}`);
-  lines.push("");
-  lines.push("CANALS");
-  caseData.canals.forEach((canal) => {
-    lines.push(`- ${canal.name} (${statusLabels[getCanalStatus(canal)]})`);
-    lines.push(`  Est WL: ${renderMeasurementValue(canal.estimatedWorkingLength)} | EAL0: ${renderMeasurementValue(canal.eal0)} | Patency: ${renderMeasurementValue(canal.patencyLength)} | Shaping: ${renderMeasurementValue(canal.shapingLength)}`);
-    lines.push(`  WL PA: ${renderRecordedValue(canal.wlRadiographStatus)} | Ref: ${renderRecordedValue(canal.referencePoint)} | Final shaping file: ${renderRecordedValue(canal.finalShape)} | Gauge: ${renderRecordedValue(canal.obturationGauge)} | MC: ${renderRecordedValue(canal.masterCone)} | Cone fit PA: ${renderRecordedValue(canal.coneFitRadiograph)}`);
-  });
+  if (isEndodonticProcedure) {
+    lines.push("");
+    lines.push("CANALS");
+    caseData.canals.forEach((canal) => {
+      lines.push(`- ${canal.name} (${statusLabels[getCanalStatus(canal)]})`);
+      lines.push(`  Est WL: ${renderMeasurementValue(canal.estimatedWorkingLength)} | EAL0: ${renderMeasurementValue(canal.eal0)} | Patency: ${renderMeasurementValue(canal.patencyLength)} | Shaping: ${renderMeasurementValue(canal.shapingLength)}`);
+      lines.push(`  WL PA: ${renderRecordedValue(canal.wlRadiographStatus)} | Ref: ${renderRecordedValue(canal.referencePoint)} | Final shaping file: ${renderRecordedValue(canal.finalShape)} | Gauge: ${renderRecordedValue(canal.obturationGauge)} | MC: ${renderRecordedValue(canal.masterCone)} | Cone fit PA: ${renderRecordedValue(canal.coneFitRadiograph)}`);
+    });
+  }
   lines.push("");
   lines.push("COMPACT NOTE");
   lines.push(buildCompactNote(caseData));
@@ -78,12 +81,13 @@ export function buildPrintableSummary(caseData: EndoCase) {
 }
 
 export function buildEventLogExport(caseData: EndoCase) {
+  const isEndodonticProcedure = isEndodonticProcedureType(caseData.procedureType);
   const lines: string[] = [];
-  lines.push("ENDODONTIC EVENT LOG");
-  lines.push("====================");
+  lines.push(isEndodonticProcedure ? "ENDODONTIC EVENT LOG" : "CLINICAL EVENT LOG");
+  lines.push(isEndodonticProcedure ? "====================" : "==================");
   lines.push(`Patient #: ${caseData.patientNumber || ""}`);
   lines.push(`Tooth: ${caseData.tooth || ""}`);
-  lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
+  lines.push(`Procedure: ${caseData.procedureType || "Workflow"}`);
   lines.push(`Visit status: ${getOutputCaseStatus(caseData)}`);
   lines.push("");
 

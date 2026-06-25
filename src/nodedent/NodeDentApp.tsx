@@ -14,7 +14,7 @@ import { SharedReadinessCard } from "./components/SharedReadinessCard";
 import { WorkflowLauncher } from "./components/WorkflowLauncher";
 import { cx, headerActionButton } from "./components/uiStyles";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
-import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
+import { getCaseStatus, getOutputCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
 import { makeRuntimeEvent } from "./engine/events";
 import { getCanalCheckpointNodeId, getSavedCurrentNodeId, inferCurrentNodeIdFromEvents } from "./engine/getCurrentNode";
@@ -90,6 +90,17 @@ type SavedCaseSummary = {
 
 type ThemeMode = "light" | "dark";
 type PrimaryWorkflowId = typeof endodonticRootWorkflowId | typeof operativeDirectRestorationWorkflowId;
+
+const operativeOutputProcedureType = "Direct restoration";
+
+function getCaseForActiveWorkflowOutput(caseData: EndoCase, activePrimaryWorkflowId: PrimaryWorkflowId | null): EndoCase {
+  if (activePrimaryWorkflowId !== operativeDirectRestorationWorkflowId) return caseData;
+  return { ...caseData, procedureType: operativeOutputProcedureType };
+}
+
+function hasOperativeSetupValue(setup: OperativeWorkflowSetupState) {
+  return Boolean(setup.tooth || setup.surfaces || setup.restorationIntent || setup.material || setup.shade);
+}
 
 const THEME_STORAGE_KEY = "nodedent-theme";
 const LIGHT_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference.svg";
@@ -180,6 +191,20 @@ export default function NodeDentApp() {
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
   const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
   const latestOperativeRestorationEvent = useMemo(() => getOperativeRestorationEvents(caseData).at(-1), [caseData.globalEvents]);
+  const outputCaseData = useMemo(
+    () => getCaseForActiveWorkflowOutput(caseData, activePrimaryWorkflowId),
+    [activePrimaryWorkflowId, caseData]
+  );
+  const outputCurrentNodeId = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId
+    ? latestOperativeRestorationEvent
+      ? "operative-restoration-complete"
+      : hasOperativeSetupValue(operativeSetup)
+        ? "operative-restoration-record"
+        : "operative-readiness"
+    : currentNodeId;
+  const activeCaseStatusLabel = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId
+    ? getOutputCaseStatus(outputCaseData)
+    : getCaseStatus(caseData);
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
   const activeReadinessSummary = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId ? operativeReadinessSummary : caseCapabilitySummary;
@@ -657,7 +682,7 @@ export default function NodeDentApp() {
   }
 
   function downloadCaseJson() {
-    const blob = new Blob([JSON.stringify(buildJsonExport(caseData, currentNodeId), null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(buildJsonExport(outputCaseData, outputCurrentNodeId), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -935,12 +960,12 @@ export default function NodeDentApp() {
     setIsNewCaseConfirmOpen(true);
   }
 
-  const compactNote = buildCompactNote(caseData);
-  const fullNote = buildFullNote(caseData);
-  const patientSummary = buildPatientSummary(caseData);
-  const jsonExport = JSON.stringify(buildJsonExport(caseData, currentNodeId), null, 2);
-  const printableSummary = buildPrintableSummary(caseData);
-  const eventLogExport = buildEventLogExport(caseData);
+  const compactNote = buildCompactNote(outputCaseData);
+  const fullNote = buildFullNote(outputCaseData);
+  const patientSummary = buildPatientSummary(outputCaseData);
+  const jsonExport = JSON.stringify(buildJsonExport(outputCaseData, outputCurrentNodeId), null, 2);
+  const printableSummary = buildPrintableSummary(outputCaseData);
+  const eventLogExport = buildEventLogExport(outputCaseData);
   const displayedNote = noteMode === "compact" ? compactNote : noteMode === "full" ? fullNote : noteMode === "patient" ? patientSummary : noteMode === "print" ? printableSummary : noteMode === "event log" ? eventLogExport : jsonExport;
 
   async function copyDisplayedNote() {
@@ -970,7 +995,7 @@ export default function NodeDentApp() {
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Tooth: {caseData.tooth || "—"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{activeCaseStatusLabel}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
               {hasActivePrimaryWorkflow ? (
                 <button
@@ -1152,7 +1177,7 @@ export default function NodeDentApp() {
 
         {isWorkflowLauncherOpen ? (
           <WorkflowLauncher
-            caseData={caseData}
+            caseData={outputCaseData}
             capabilitySummary={activeReadinessSummary}
             currentNodeTitle={currentNode.title}
             currentNodePhase={currentNode.phase}

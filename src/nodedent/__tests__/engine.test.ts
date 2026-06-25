@@ -664,13 +664,105 @@ test("workflow launcher exposes operative runner entry", () => {
   }));
 
   assert.equal(markup.includes("Operative direct restoration"), true);
-  assert.equal(markup.includes("Not started"), true);
-  assert.equal(markup.includes("Start workflow"), true);
+  assert.equal(markup.includes("Workflow status"), true);
+  assert.equal(markup.includes("No workflows started"), true);
+  assert.equal(markup.includes("Start a primary workflow below"), true);
+  assert.equal(markup.includes("Current workflow"), false);
+  assert.equal(markup.includes("No current workflow"), false);
+  assert.equal(markup.includes("Active endodontic workflow"), false);
+  assert.equal(markup.includes("No workflow"), true);
+  assert.match(markup, /Endodontic RCT[\s\S]*Not started[\s\S]*Enter workflow/);
+  assert.match(markup, /Operative direct restoration[\s\S]*Not started[\s\S]*Enter workflow/);
+  assert.equal(markup.includes("Enter workflow"), true);
+  assert.equal(markup.includes("Start workflow"), false);
   assert.equal(markup.includes("Continue workflow"), false);
-  assert.equal(markup.includes("Start / resume workflow"), true);
+  assert.equal(markup.includes("Start / resume workflow"), false);
   assert.equal(markup.includes("Radiology"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
   assert.equal(markup.includes("Model only"), false);
+});
+
+test("workflow launcher derives operative progress from operative events", () => {
+  const noop = () => {};
+  const setup = {
+    tooth: "36",
+    surfaces: "MO",
+    restorationIntent: "direct restoration",
+    material: "composite",
+    shade: "A2",
+  };
+  const setupCase = baseCase({
+    tooth: "36",
+    globalEvents: [{
+      id: "evt_operative_scope_progress",
+      timestamp: "2026-01-01T10:00:00.000Z",
+      type: operativeScopeRecordedEventType,
+      workflowId: operativeDirectRestorationWorkflowId,
+      nodeId: "operative-surface-scope",
+      tooth: "36",
+      canal: "N/A",
+      details: buildOperativeSetupEventDetails(setup, "36"),
+      scope: { kind: "surface", tooth: "36", surfaces: ["M", "O"], label: "36 MO" },
+    }],
+  });
+  const setupMarkup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: setupCase,
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.equal(setupMarkup.includes("1 workflow in progress"), true);
+  assert.equal(setupMarkup.includes("No workflows started"), false);
+  assert.equal(setupMarkup.includes("Current workflow"), true);
+  assert.equal(setupMarkup.includes("Enter workflow"), true);
+  assert.equal(setupMarkup.includes("Continue operative workflow"), false);
+  assert.match(setupMarkup, /Operative direct restoration[\s\S]*In progress[\s\S]*Enter workflow/);
+
+  const completedCase = baseCase({
+    tooth: "36",
+    globalEvents: [buildOperativeRestorationPlacedEvent({
+      id: "evt_operative_complete",
+      timestamp: "2026-01-01T11:00:00.000Z",
+      record: {
+        ...setup,
+        outcome: "placed",
+        notes: "",
+      },
+      fallbackTooth: "36",
+    })],
+  });
+  const completedMarkup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: completedCase,
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.equal(completedMarkup.includes("No workflows in progress"), true);
+  assert.equal(completedMarkup.includes("Completed workflows remain available"), true);
+  assert.equal(completedMarkup.includes("Current workflow"), false);
+  assert.match(completedMarkup, /Operative direct restoration[\s\S]*Complete[\s\S]*Enter workflow/);
 });
 
 test("workflow launcher switches endodontic action after the first node", () => {
@@ -692,8 +784,15 @@ test("workflow launcher switches endodontic action after the first node", () => 
     onOpenRadiologyWorkflow: noop,
   }));
 
+  assert.equal(markup.includes("Workflow status"), true);
+  assert.equal(markup.includes("1 workflow in progress"), true);
+  assert.equal(markup.includes("Current workflow"), true);
+  assert.equal(markup.includes("Endodontic RCT"), true);
+  assert.equal(markup.includes("Current step: Access pulp chamber"), true);
   assert.equal(markup.includes("In progress"), true);
-  assert.equal(markup.includes("Continue workflow"), true);
+  assert.equal(markup.includes("Enter workflow"), true);
+  assert.equal(markup.includes("Continue workflow"), false);
+  assert.equal(markup.includes("No current workflow"), false);
 });
 
 test("workflow launcher uses review labels for shared modules with current events", () => {
@@ -2463,8 +2562,10 @@ test("operative setup and restoration records appear in notes and JSON export", 
   assert.match(compact, /Operative setup recorded: tooth 36; surfaces M O/);
   assert.match(compact, /Final restoration recorded: tooth 36; surfaces M O; intent direct restoration; material composite; shade A2; outcome placed; notes Occlusion checked by clinician/);
   assert.doesNotMatch(compact, /Canals:/);
+  assert.doesNotMatch(compact, /RCT/);
   assert.match(full, /Visit status: Direct restoration documented/);
   assert.doesNotMatch(full, /Final canal summary:/);
+  assert.doesNotMatch(full, /RCT/);
   assert.match(full, /Restoration \/ operative details:/);
   assert.match(full, /Operative setup recorded: tooth 36; surfaces M O/);
   assert.match(full, /Final restoration recorded: tooth 36; surfaces M O/);
@@ -2488,6 +2589,11 @@ test("operative setup and restoration records appear in notes and JSON export", 
   });
   assert.equal(exported.operative?.restorations[0].capabilitiesSatisfied[0].name, "finalRestoration.placed");
   assert.equal(exported.events.length, 2);
+  assert.equal(buildPrintableSummary(caseData).includes("CLINICAL WORKFLOW SUMMARY"), true);
+  assert.equal(buildPrintableSummary(caseData).includes("CANALS"), false);
+  assert.equal(buildEventLogExport(caseData).includes("CLINICAL EVENT LOG"), true);
+  assert.match(buildPatientSummary(caseData), /Direct restoration treatment was documented/);
+  assert.doesNotMatch(buildPatientSummary(caseData), /Root canal|Endodontic/i);
 });
 
 test("operative note and export handle partially documented records without inferred wording", () => {
@@ -2653,7 +2759,7 @@ test("operative readiness summary targets planned tooth and surfaces", () => {
   assert.equal(isCapabilitySatisfied(caseData, "isolation.established", scopes.treatmentScope), true);
 });
 
-test("workflow launcher registry preserves endodontic fast path and shared module availability", () => {
+test("workflow launcher registry preserves primary entry labels and shared module availability", () => {
   const readyEntries = getReadyWorkflowLauncherEntries();
   const sharedEntries = getSharedModuleLauncherEntries();
   const endoEntry = workflowLauncherEntries.find((entry) => entry.workflowId === endodonticRootWorkflowId);
@@ -2671,7 +2777,8 @@ test("workflow launcher registry preserves endodontic fast path and shared modul
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedAnesthesiaWorkflowId)?.availability, "ready");
   assert.equal(sharedEntries.find((entry) => entry.workflowId === sharedRadiologyWorkflowId)?.availability, "ready");
   assert.equal(operativeEntry?.availability, "ready");
-  assert.equal(operativeEntry?.launchLabel, "Start / resume workflow");
+  assert.equal(endoEntry?.launchLabel, "Enter workflow");
+  assert.equal(operativeEntry?.launchLabel, "Enter workflow");
 });
 
 test("shared anesthesia phase 1 model parses typed details and preserves legacy events", () => {
