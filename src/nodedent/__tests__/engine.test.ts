@@ -2022,6 +2022,40 @@ test("clinical note display normalizes blank canal fields without changing expli
   assert.equal(exported.canals[0].coneFitRadiograph, "");
 });
 
+test("diagnosis rendering normalizes weak values and flags missing prior treatment context", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "Previously started RCT", apical: "idem" },
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const printable = buildPrintableSummary(caseData);
+  const exported = buildJsonExport(caseData, "preop");
+
+  assert.match(compact, /Diagnosis: pulpal previously initiated endodontic therapy; apical not recorded\./);
+  assert.match(compact, /Prior visit history: Prior treatment context: not recorded\./);
+  assert.match(full, /Diagnosis \/ visit context:\n- Pulpal diagnosis: previously initiated endodontic therapy\n- Apical diagnosis: not recorded/);
+  assert.match(full, /Prior visit history:\n- Prior treatment context: not recorded\./);
+  assert.match(printable, /Diagnosis: pulpal previously initiated endodontic therapy; apical not recorded\./);
+  assert.equal(exported.diagnosis?.pulpal, "Previously started RCT");
+  assert.equal(exported.diagnosis?.apical, "idem");
+});
+
+test("recorded prior visit history suppresses missing prior context fallback", () => {
+  const caseData = baseCase({
+    diagnosis: { pulpal: "Previously started RCT", apical: "idem" },
+    priorVisit: {
+      continuedFromPriorVisit: true,
+      priorVisitDate: "2026-01-10",
+      sourceNote: "Prior endodontic treatment started elsewhere.",
+    },
+  });
+  const full = buildFullNote(caseData);
+
+  assert.match(full, /Prior visit history:\n- Continued from prior visit \/ outside system\./);
+  assert.match(full, /Prior visit date\/timing: 2026-01-10/);
+  assert.doesNotMatch(full, /Prior treatment context: not recorded/);
+});
+
 test("full note excludes workflow switch navigation while patient summary remains concise", () => {
   const switchEvent = {
     id: "evt_switch",

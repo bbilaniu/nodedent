@@ -5,7 +5,7 @@ import { appendSection } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { getPriorVisitLines } from "./priorVisit";
 import { getCapabilityStatus } from "../workflow/selectors";
-import { getFinalCanalSummaryLines, getFullDifficultyLines, groupClinicalEventsByPrefix, hasEventType, renderMeasurementValue, renderRecordedValue } from "./rendering";
+import { getDiagnosisLines, getFinalCanalSummaryLines, getFullDifficultyLines, groupClinicalEventsByPrefix, hasEventType, renderMeasurementValue, renderRecordedValue } from "./rendering";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
@@ -27,8 +27,7 @@ export function buildFullNote(caseData: EndoCase) {
   lines.push(`Visit status: ${getOutputCaseStatus(caseData)}`);
   lines.push("");
   appendSection(lines, "Diagnosis / visit context:", [
-    caseData.diagnosis?.pulpal ? `Pulpal diagnosis: ${caseData.diagnosis.pulpal}` : null,
-    caseData.diagnosis?.apical ? `Apical diagnosis: ${caseData.diagnosis.apical}` : null,
+    ...getDiagnosisLines(caseData),
     caseData.nextVisitPlan ? `Next visit / plan: ${caseData.nextVisitPlan}` : null,
   ].filter(Boolean) as string[]);
   appendSection(lines, "Pre-op:", [

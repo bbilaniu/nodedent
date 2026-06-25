@@ -1,6 +1,22 @@
 import type { EndoCase } from "../types";
 import { priorCanalStatusLabels } from "../engine/resume";
 
+function impliesPriorTreatment(value: unknown) {
+  const normalized = String(value || "").toLowerCase().replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim();
+  return /previously\s+(started|initiated)\s+(rct|root canal|endodontic)/.test(normalized)
+    || /\bprior\s+(rct|root canal|endodontic|endo)\b/.test(normalized)
+    || /\bcontinued\s+from\s+prior\b/.test(normalized)
+    || /^(started|initiated)\s+(rct|root canal|endodontic)/.test(normalized);
+}
+
+function caseImpliesPriorTreatment(caseData: EndoCase) {
+  return [
+    caseData.diagnosis?.pulpal,
+    caseData.diagnosis?.apical,
+    caseData.caseStatus,
+  ].some(impliesPriorTreatment);
+}
+
 export function getPriorVisitLines(caseData: EndoCase) {
   const prior = caseData.priorVisit;
   const canalLines = (caseData.canals || [])
@@ -10,7 +26,9 @@ export function getPriorVisitLines(caseData: EndoCase) {
       return `${canal.name}: ${status}${canal.priorVisitNote ? `; ${canal.priorVisitNote}` : ""}`;
     });
 
-  if (!prior?.continuedFromPriorVisit && !canalLines.length) return [];
+  if (!prior?.continuedFromPriorVisit && !canalLines.length) {
+    return caseImpliesPriorTreatment(caseData) ? ["Prior treatment context: not recorded."] : [];
+  }
 
   return [
     "Continued from prior visit / outside system.",

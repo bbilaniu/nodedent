@@ -16,6 +16,55 @@ export function renderReviewStatus(reviewed?: boolean) {
   return reviewed ? "reviewed" : "not recorded";
 }
 
+function normalizeText(value: unknown) {
+  return String(value || "").trim();
+}
+
+export function normalizeDiagnosisDisplayValue(value: unknown) {
+  const text = normalizeText(value);
+  if (isBlank(text)) return "not recorded";
+  const normalized = text.toLowerCase().replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim();
+  const weakValues = new Set([
+    "idem",
+    "same",
+    "same as above",
+    "same as prior",
+    "same as previous",
+    "n a",
+    "na",
+    "n/a",
+    "none",
+    "nil",
+    "unknown",
+    "not recorded",
+  ]);
+  if (weakValues.has(normalized)) return "not recorded";
+  if (/previously\s+(started|initiated)\s+(rct|root canal|endodontic)/.test(normalized)) {
+    return "previously initiated endodontic therapy";
+  }
+  if (/^(started|initiated)\s+(rct|root canal|endodontic)/.test(normalized)) {
+    return "previously initiated endodontic therapy";
+  }
+  return text;
+}
+
+export function hasDiagnosisInput(caseData: EndoCase) {
+  return !isBlank(caseData.diagnosis?.pulpal) || !isBlank(caseData.diagnosis?.apical);
+}
+
+export function getDiagnosisLines(caseData: EndoCase) {
+  if (!hasDiagnosisInput(caseData)) return [];
+  return [
+    `Pulpal diagnosis: ${normalizeDiagnosisDisplayValue(caseData.diagnosis?.pulpal)}`,
+    `Apical diagnosis: ${normalizeDiagnosisDisplayValue(caseData.diagnosis?.apical)}`,
+  ];
+}
+
+export function getCompactDiagnosisLine(caseData: EndoCase) {
+  if (!hasDiagnosisInput(caseData)) return null;
+  return `Diagnosis: pulpal ${normalizeDiagnosisDisplayValue(caseData.diagnosis?.pulpal)}; apical ${normalizeDiagnosisDisplayValue(caseData.diagnosis?.apical)}.`;
+}
+
 export function hasEventType(caseData: EndoCase, type: string) {
   return (caseData.globalEvents || []).some((event) => event.type === type);
 }

@@ -8,7 +8,7 @@ import {
   isOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import { getPriorVisitLines } from "./priorVisit";
-import { getCompactDifficultyLine, getCompactRadiographLines, groupClinicalEventsByPrefix } from "./rendering";
+import { getCompactDiagnosisLine, getCompactDifficultyLine, getCompactRadiographLines, groupClinicalEventsByPrefix } from "./rendering";
 
 export function buildCompactNote(caseData: EndoCase) {
   const canals = caseData.canals || [];
@@ -22,6 +22,8 @@ export function buildCompactNote(caseData: EndoCase) {
   note.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}.`);
   if (caseData.patientNumber) note.push(`Patient #: ${caseData.patientNumber}.`);
   note.push(`Visit status: ${getOutputCaseStatus(caseData)}.`);
+  const diagnosisLine = getCompactDiagnosisLine(caseData);
+  if (diagnosisLine) note.push(diagnosisLine);
   const priorVisitLines = getPriorVisitLines(caseData);
   if (priorVisitLines.length) note.push(`Prior visit history: ${priorVisitLines.join(" ")}`);
   const anesthesiaLines = groupClinicalEventsByPrefix(caseData, ["anesthesia."]);

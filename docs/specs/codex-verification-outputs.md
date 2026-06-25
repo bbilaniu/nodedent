@@ -112,8 +112,8 @@ Current issue status index:
 | 8. `currentCanal` / final event mismatch | PARTIAL | Human-readable notes avoid UI navigation state; JSON export still preserves app state. |
 | 9. `small` file/cone/gauge labels | STILL FAILING | Needs separate file-system/size catalog work before mapping clinical labels. |
 | 10. EAL0 / patency / shaping relationship | SOLVED | Final canal summary can include convention text. |
-| 11. Diagnosis fields are weak or unclear | STILL FAILING | Diagnosis normalization needs separate diagnosis/model work. |
-| 12. Prior visit history missing | STILL FAILING | Prior context exists elsewhere, but this fallback prompt/output is not implemented. |
+| 11. Diagnosis fields are weak or unclear | PARTIAL | Clinical note display normalizes `idem`/weak values and prior-RCT wording; structured diagnosis model work remains. |
+| 12. Prior visit history missing | SOLVED | Notes now render `Prior treatment context: not recorded.` when diagnosis/status implies prior treatment but no prior history is present. |
 | 13. Missing anesthesia documentation | PARTIAL | Shared anesthesia can be recorded and rendered honestly; explicit not used/not required semantics still need model support. |
 | 14. Missing or unclear isolation documentation | PARTIAL | Shared isolation can be recorded and compact overclaiming is fixed; deviation/reason fields remain future work. |
 | 15. Operative section is missing | SOLVED | Section wording now clarifies restoration/operative details without contradicting closure output. |
@@ -596,11 +596,15 @@ Examples:
 
 Avoid using `idem` in exported clinical notes. If a field is intentionally same-as-prior, resolve it to the actual value or write `not recorded`.
 
+## Implementation note
+
+Clinical note rendering now normalizes weak diagnosis values such as `idem`, `same`, and blank-like values to `not recorded`. `Previously started RCT`-style wording is rendered as `previously initiated endodontic therapy` so the output preserves uncertainty without treating it as a full pulpal/apical diagnosis. Structured diagnosis dropdowns remain future model work.
+
 ## Status
 
 * [ ] SOLVED
 * [ ] STILL FAILING
-* [ ] PARTIAL
+* [x] PARTIAL
 * [ ] NOT APPLICABLE
 
 ---
@@ -632,9 +636,13 @@ If the case is a previously started treatment, prompt for or render prior treatm
 
 If a diagnosis/status depends on prior treatment, the shared template should support a linked “prior history/context” section.
 
+## Implementation note
+
+When the diagnosis or status implies prior endodontic treatment and no prior-visit history is recorded, compact and full notes now render `Prior treatment context: not recorded.` Existing prior-visit details still take precedence and suppress this fallback.
+
 ## Status
 
-* [ ] SOLVED
+* [x] SOLVED
 * [ ] STILL FAILING
 * [ ] PARTIAL
 * [ ] NOT APPLICABLE
