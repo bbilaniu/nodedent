@@ -1,5 +1,5 @@
 import React from "react";
-import type { EndoCase } from "../types";
+import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import { getCaseStatus, getOutputCaseStatus } from "../engine/deriveCaseStatus";
 import type { CaseCapabilitySummary } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
@@ -18,7 +18,7 @@ import {
   isOperativeScopeRecordedEvent,
   operativeDirectRestorationWorkflowId,
 } from "../workflow/operative";
-import { AppointmentWorkflowMapPanel } from "./AppointmentWorkflowMapPanel";
+import { AppointmentWorkflowMapPanel, getAppointmentWorkflowMapActions } from "./AppointmentWorkflowMapPanel";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -75,7 +75,7 @@ export function WorkflowLauncher({
   presentation?: "modal" | "page";
   onClose: () => void;
   onContinueEndodonticWorkflow: () => void;
-  onOpenCaseSetupStatus: () => void;
+  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenSavedCases: () => void;
   onOpenPriorVisit: () => void;
   onOpenNewCaseConfirm: () => void;
@@ -88,6 +88,14 @@ export function WorkflowLauncher({
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
   const capabilitySummary = providedCapabilitySummary || getCaseCapabilitySummary(caseData);
   const workflowMap = buildAppointmentWorkflowMap(caseData, currentNodeId);
+  const workflowMapActions = getAppointmentWorkflowMapActions(workflowMap, {
+    onContinueEndodonticWorkflow,
+    onOpenPrimaryWorkflowSetup,
+    onOpenCaseSetupStatus,
+    onOpenAnesthesiaWorkflow,
+    onOpenIsolationWorkflow,
+    onOpenRadiologyWorkflow,
+  });
   const anesthesiaStatus = sharedCapabilityStatusLabel(capabilitySummary.anesthesia);
   const isolationStatus = sharedCapabilityStatusLabel(capabilitySummary.isolation);
   const radiologyStatus = sharedCapabilityStatusLabel(capabilitySummary.radiographs);
@@ -177,7 +185,7 @@ export function WorkflowLauncher({
             <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
               <button
                 type="button"
-                onClick={onOpenCaseSetupStatus}
+                onClick={() => onOpenCaseSetupStatus()}
                 className={panelActionButton.secondary}
               >
                 Case Setup & Status
@@ -256,7 +264,7 @@ export function WorkflowLauncher({
         ) : null}
 
         <div className="mt-4">
-          <AppointmentWorkflowMapPanel map={workflowMap} />
+          <AppointmentWorkflowMapPanel map={workflowMap} actions={workflowMapActions} />
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">

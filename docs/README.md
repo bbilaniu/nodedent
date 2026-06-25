@@ -16,6 +16,7 @@ This folder separates clinical source material, active product specs, architectu
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [NodeDent workflow map](specs/workflow-map.md)
+- [Repeatable workflow instances](specs/repeatable-workflow-instances.md)
 - [Workspace cross-workflow consistency](specs/workspace-cross-workflow-consistency.md)
 
 ## Engineering Guides

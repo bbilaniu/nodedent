@@ -1,7 +1,24 @@
 import React from "react";
+import type { CaseSetupFocusTarget } from "../types";
 import type { AppointmentWorkflowMap } from "../workflow/workflowMap";
 import { formatWorkflowMapTarget } from "../workflow/workflowMap";
 import { cx, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
+
+export type WorkflowMapActionHandlers = {
+  onContinueEndodonticWorkflow: () => void;
+  onOpenPrimaryWorkflowSetup: (workflowId: string) => void;
+  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenAnesthesiaWorkflow: () => void;
+  onOpenIsolationWorkflow: () => void;
+  onOpenRadiologyWorkflow: () => void;
+};
+
+export type WorkflowMapPanelAction = {
+  id: string;
+  label: string;
+  disabled: boolean;
+  onClick?: () => void;
+};
 
 function statusClass(label: string) {
   const normalized = label.toLowerCase();
@@ -18,7 +35,108 @@ function compactList(items: readonly string[] = []) {
   return items.length ? items.join(", ") : "none";
 }
 
-export function AppointmentWorkflowMapPanel({ map }: { map: AppointmentWorkflowMap }) {
+export function getAppointmentWorkflowMapActions(
+  map: AppointmentWorkflowMap,
+  handlers: WorkflowMapActionHandlers
+): {
+  instanceActions: Record<string, WorkflowMapPanelAction>;
+  moduleActions: Record<string, WorkflowMapPanelAction>;
+  definitionActions: Record<string, WorkflowMapPanelAction>;
+} {
+  const instanceActions = Object.fromEntries(map.workflowInstances.map((instance) => {
+    if (instance.workflowType === "endo.rct") {
+      return [instance.id, {
+        id: instance.id,
+        label: "Enter workflow",
+        disabled: false,
+        onClick: handlers.onContinueEndodonticWorkflow,
+      }];
+    }
+
+    if (instance.workflowType === "operative.direct-restoration") {
+      return [instance.id, {
+        id: instance.id,
+        label: "Enter workflow",
+        disabled: false,
+        onClick: () => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration"),
+      }];
+    }
+
+    return [instance.id, { id: instance.id, label: "Model only", disabled: true }];
+  }));
+
+  const moduleActions = Object.fromEntries(map.sharedModules.map((module) => {
+    if (module.moduleType === "shared.diagnostics") {
+      return [module.id, {
+        id: module.id,
+        label: "Open diagnosis",
+        disabled: false,
+        onClick: () => handlers.onOpenCaseSetupStatus("diagnosis"),
+      }];
+    }
+
+    if (module.moduleType === "shared.radiology") {
+      return [module.id, {
+        id: module.id,
+        label: "Open radiology workflow",
+        disabled: false,
+        onClick: handlers.onOpenRadiologyWorkflow,
+      }];
+    }
+
+    if (module.moduleType === "shared.anesthesia") {
+      return [module.id, {
+        id: module.id,
+        label: "Open anesthesia workflow",
+        disabled: false,
+        onClick: handlers.onOpenAnesthesiaWorkflow,
+      }];
+    }
+
+    if (module.moduleType === "shared.isolation") {
+      return [module.id, {
+        id: module.id,
+        label: "Open isolation workflow",
+        disabled: false,
+        onClick: handlers.onOpenIsolationWorkflow,
+      }];
+    }
+
+    return [module.id, { id: module.id, label: "Model only", disabled: true }];
+  }));
+
+  const definitionActions = Object.fromEntries(map.workflowDefinitions.map((definition) => {
+    if (definition.workflowType === "endo.rct") {
+      return [definition.workflowType, {
+        id: definition.workflowType,
+        label: "Enter workflow",
+        disabled: false,
+        onClick: handlers.onContinueEndodonticWorkflow,
+      }];
+    }
+
+    if (definition.workflowType === "operative.direct-restoration") {
+      return [definition.workflowType, {
+        id: definition.workflowType,
+        label: "Enter workflow",
+        disabled: false,
+        onClick: () => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration"),
+      }];
+    }
+
+    return [definition.workflowType, { id: definition.workflowType, label: "Model only", disabled: true }];
+  }));
+
+  return { instanceActions, moduleActions, definitionActions };
+}
+
+export function AppointmentWorkflowMapPanel({
+  map,
+  actions,
+}: {
+  map: AppointmentWorkflowMap;
+  actions: ReturnType<typeof getAppointmentWorkflowMapActions>;
+}) {
   const primaryDefinitions = map.workflowDefinitions.filter((definition) => definition.category === "primary");
   const modelOnlyDefinitions = primaryDefinitions.filter((definition) => definition.status === "modelOnly");
 
@@ -39,17 +157,28 @@ export function AppointmentWorkflowMapPanel({ map }: { map: AppointmentWorkflowM
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Workflow instances</p>
           <div className="mt-2 grid gap-2">
             {map.workflowInstances.length ? (
-              map.workflowInstances.map((instance) => (
-                <div key={instance.id} className={workspaceSurface.statusTile}>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div>
-                      <p className="text-sm font-bold text-brand-navy">{instance.label}</p>
-                      <p className="mt-1 text-xs leading-5 text-brand-slate">Target: {formatWorkflowMapTarget(instance.target)}</p>
+              map.workflowInstances.map((instance) => {
+                const action = actions.instanceActions[instance.id];
+                return (
+                  <div key={instance.id} className={workspaceSurface.statusTile}>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="text-sm font-bold text-brand-navy">{instance.label}</p>
+                        <p className="mt-1 text-xs leading-5 text-brand-slate">Target: {formatWorkflowMapTarget(instance.target)}</p>
+                      </div>
+                      <span className={cx(statusBadge.base, statusClass(instance.statusLabel))}>{instance.statusLabel}</span>
                     </div>
-                    <span className={cx(statusBadge.base, statusClass(instance.statusLabel))}>{instance.statusLabel}</span>
+                    <button
+                      type="button"
+                      onClick={action?.onClick}
+                      disabled={!action || action.disabled}
+                      className="mt-3 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
+                    >
+                      {action?.label || "Model only"}
+                    </button>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className={workspaceSurface.statusTile}>
                 <p className="text-sm font-semibold text-brand-slate">No scoped workflow instances yet.</p>
@@ -61,20 +190,31 @@ export function AppointmentWorkflowMapPanel({ map }: { map: AppointmentWorkflowM
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Shared modules</p>
           <div className="mt-2 grid gap-2">
-            {map.sharedModules.map((module) => (
-              <div key={module.id} className={workspaceSurface.statusTile}>
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-brand-navy">{module.label}</p>
-                    <p className="mt-1 text-xs leading-5 text-brand-slate">Scope: {formatWorkflowMapTarget(module.scope)}</p>
-                    <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">
-                      Used by: {compactList(module.usedBy)}
-                    </p>
+            {map.sharedModules.map((module) => {
+              const action = actions.moduleActions[module.id];
+              return (
+                <div key={module.id} className={workspaceSurface.statusTile}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-brand-navy">{module.label}</p>
+                      <p className="mt-1 text-xs leading-5 text-brand-slate">Scope: {formatWorkflowMapTarget(module.scope)}</p>
+                      <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">
+                        Used by: {compactList(module.usedBy)}
+                      </p>
+                    </div>
+                    <span className={cx(statusBadge.base, statusClass(module.statusLabel))}>{module.statusLabel}</span>
                   </div>
-                  <span className={cx(statusBadge.base, statusClass(module.statusLabel))}>{module.statusLabel}</span>
+                  <button
+                    type="button"
+                    onClick={action?.onClick}
+                    disabled={!action || action.disabled}
+                    className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {action?.label || "Model only"}
+                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -83,11 +223,20 @@ export function AppointmentWorkflowMapPanel({ map }: { map: AppointmentWorkflowM
         <div className="mt-4 border-t border-brand-light-node pt-3">
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Seeded future workflow types</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {modelOnlyDefinitions.map((definition) => (
-              <span key={definition.workflowType} className={cx(statusBadge.base, modelStatusClass(definition.status))}>
-                {definition.label}
-              </span>
-            ))}
+            {modelOnlyDefinitions.map((definition) => {
+              const action = actions.definitionActions[definition.workflowType];
+              return (
+                <button
+                  key={definition.workflowType}
+                  type="button"
+                  onClick={action?.onClick}
+                  disabled={!action || action.disabled}
+                  className={cx(statusBadge.base, modelStatusClass(definition.status), "disabled:cursor-not-allowed")}
+                >
+                  {definition.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}

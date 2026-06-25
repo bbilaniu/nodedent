@@ -6,6 +6,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ClinicalEvent, EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
+import { getAppointmentWorkflowMapActions } from "../components/AppointmentWorkflowMapPanel";
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
@@ -729,6 +730,59 @@ test("appointment workflow map separates scoped workflow instances from shared e
   assert.deepEqual(map.finalNoteAggregation.workflowInstanceIds.sort(), ["instance_endo_current", "instance_operative_current"].sort());
 });
 
+test("appointment workflow map actions route ready items and leave model-only items disabled", () => {
+  const operativeSetupEvent: ClinicalEvent = {
+    id: "evt_operative_scope_action_map",
+    timestamp: "2026-01-01T09:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    tooth: "31",
+    canal: "N/A",
+    scope: { kind: "surface" as const, tooth: "31", surfaces: ["O"] },
+    details: { tooth: "31", surfaces: ["O"] },
+  };
+  const map = buildAppointmentWorkflowMap(
+    baseCase({
+      tooth: "30",
+      diagnosis: { pulpal: "Irreversible pulpitis", apical: "Normal apical tissues" },
+      globalEvents: [operativeSetupEvent],
+    }),
+    "access-chamber"
+  );
+  const openedPrimaryWorkflows: string[] = [];
+  const openedSetupTargets: Array<string | undefined> = [];
+  const openedSharedModules: string[] = [];
+  let endodonticEntries = 0;
+  const actions = getAppointmentWorkflowMapActions(map, {
+    onContinueEndodonticWorkflow: () => {
+      endodonticEntries += 1;
+    },
+    onOpenPrimaryWorkflowSetup: (workflowId) => openedPrimaryWorkflows.push(workflowId),
+    onOpenCaseSetupStatus: (focusTarget) => openedSetupTargets.push(focusTarget),
+    onOpenAnesthesiaWorkflow: () => openedSharedModules.push("anesthesia"),
+    onOpenIsolationWorkflow: () => openedSharedModules.push("isolation"),
+    onOpenRadiologyWorkflow: () => openedSharedModules.push("radiology"),
+  });
+
+  actions.instanceActions.instance_endo_current.onClick?.();
+  actions.instanceActions.instance_operative_current.onClick?.();
+  actions.moduleActions.module_diagnostics.onClick?.();
+  actions.moduleActions.module_radiology.onClick?.();
+  actions.moduleActions.module_anesthesia.onClick?.();
+  actions.moduleActions.module_isolation.onClick?.();
+
+  assert.equal(endodonticEntries, 1);
+  assert.deepEqual(openedPrimaryWorkflows, [operativeDirectRestorationWorkflowId]);
+  assert.deepEqual(openedSetupTargets, ["diagnosis"]);
+  assert.deepEqual(openedSharedModules, ["radiology", "anesthesia", "isolation"]);
+  assert.equal(actions.moduleActions.module_treatment_planning.disabled, true);
+  assert.equal(actions.moduleActions.module_consent.disabled, true);
+  assert.equal(actions.definitionActions["extraction.surgery"].disabled, true);
+  assert.equal(actions.definitionActions["hygiene.cleaning"].disabled, true);
+  assert.equal(actions.definitionActions["extraction.surgery"].onClick, undefined);
+  assert.equal(actions.definitionActions["hygiene.cleaning"].onClick, undefined);
+});
+
 test("workflow launcher derives operative progress from operative events", () => {
   const noop = () => {};
   const setup = {
@@ -899,9 +953,9 @@ test("workflow launcher uses review labels for shared modules with current event
   assert.match(markup, /Anesthesia[\s\S]*Ready[\s\S]*Review anesthesia/);
   assert.match(markup, /Isolation[\s\S]*Ready[\s\S]*Review isolation/);
   assert.match(markup, /Radiology[\s\S]*Ready[\s\S]*Review radiology/);
-  assert.equal(markup.includes("Open anesthesia workflow"), false);
-  assert.equal(markup.includes("Open isolation workflow"), false);
-  assert.equal(markup.includes("Open radiology workflow"), false);
+  assert.equal(markup.includes("Open anesthesia workflow"), true);
+  assert.equal(markup.includes("Open isolation workflow"), true);
+  assert.equal(markup.includes("Open radiology workflow"), true);
 });
 
 test("operative runner renders setup record and completion states without readiness duplication or endodontic controls", () => {
