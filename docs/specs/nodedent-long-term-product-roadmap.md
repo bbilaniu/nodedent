@@ -11,7 +11,7 @@ Use this file for product ideas that should not be forgotten, but are not ready 
 
 ## Relationship To Current Specs
 
-- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md` and `docs/specs/archive/shared-isolation-module.md` record the implemented shared anesthesia and shared isolation modules.
+- `docs/specs/archive/generalized-workflow-nodes.md` records the implemented architecture for reusable workflow modules, event-backed capabilities, Case Setup & Status, and embedded workflow UI. `docs/specs/archive/shared-anesthesia-module.md`, `docs/specs/archive/shared-isolation-module.md`, and `docs/specs/archive/shared-radiology-module.md` record the implemented shared anesthesia, shared isolation, and shared radiology modules.
 - `docs/adr/0004-generalize-clinical-workflow-nodes.md` records the architecture decision behind reusable workflow modules.
 - This roadmap tracks platform-level capabilities that should be revisited after the current event ledger, shared modules, and first non-endodontic workflow runner are stable.
 
@@ -23,7 +23,7 @@ The shared anesthesia and shared isolation modules are implemented for the curre
 
 The first usable non-endodontic primary workflow, operative direct restoration, is implemented as a focused workflow-specific runner. It reuses shared diagnosis, radiographs, anesthesia, and isolation context where appropriate, while owning operative-specific treatment targets such as teeth, surfaces, materials, shades, bonding/cementation details, and restoration outputs.
 
-Near-term shared-module follow-up should focus on completing the staged radiology boundary in `docs/specs/shared-radiology-module.md`, tightening workflow-state labels in NodeDent Home, and keeping endodontic, operative, Case Setup & Status, and shared module launch controls visually and behaviorally consistent.
+Near-term shared-module follow-up should focus on tightening workflow-state labels in NodeDent Home and keeping endodontic, operative, Case Setup & Status, and shared module launch controls visually and behaviorally consistent.
 
 The operative direct restoration runner should remain workflow-specific until another non-endodontic workflow repeats the same setup, readiness, record, and completion pattern. At that point, revisit whether a generic primary-workflow shell would reduce duplication without forcing all procedures through the same UI too early.
 
@@ -32,6 +32,20 @@ Event-backed workflow setup and output should remain the durable state boundary.
 Endodontic closure and operative final restoration placement should remain separate capabilities unless a future compatibility or workflow-switching spec defines how one satisfies or maps to the other.
 
 Near-term follow-up should avoid expanding anesthesia into source-backed clinical decision support until those rules have their own evidence-backed spec or ADR.
+
+### Future Radiology And Imaging
+
+The first shared radiology module is implemented and archived in `docs/specs/archive/shared-radiology-module.md`. It records clinician-entered radiograph review events and satisfies the shared `radiographs.reviewed` capability without interpreting images or recommending imaging.
+
+Future radiology and imaging work should include:
+
+- image attachment management, image viewing, DICOM handling, or imaging-system integration
+- intraoral photography or camera documentation as a future imaging-adjacent shared module or radiology-adjacent capability
+- clinic-owned radiology documentation catalogs or shortcuts, if repeated radiology documentation patterns justify them
+- source-backed imaging rules only after a dedicated evidence-backed ADR or active spec defines the rules and boundaries
+- migration that removes or hides legacy pre-op radiograph case fields after compatibility is no longer needed
+
+Radiology should remain documentation-oriented unless a future source-backed spec explicitly adds interpretation, adequacy, recency, or recommendation behavior.
 
 ### Clinical Documentation Catalogs
 
@@ -169,7 +183,7 @@ Revisit this roadmap when:
 - consider adding `shared.consent` for collecting written and or verbal consent, `shared.examination` for clinical exams, `shared.continuity` of care.
 - Case Setup & Status can summarize event-backed capabilities.
 - Multi-visit endodontic continuation is implemented.
-- `shared.radiology` records structured events and satisfies `radiographs.reviewed`.
+- future radiology/imaging work is ready to move from roadmap backlog into an active source-backed or product spec.
 - Multi-visit endodontic continuation has end-to-end scenario fixtures and a reusable continuity/history boundary is ready to design.
 - A second non-endodontic primary workflow repeats the operative runner shape.
 - Localization becomes a product requirement rather than a future possibility.

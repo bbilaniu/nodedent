@@ -135,7 +135,7 @@ Status: implemented by extracting active-canal chamber depth and estimated WL se
 
 Reasoning level needed: high. Radiology boundaries affect shared clinical documentation and future event semantics, and any clinical behavior must remain limited to source-backed or explicitly clinician-entered documentation.
 
-Status: implemented by creating [Shared Radiology Module](shared-radiology-module.md). The staged decision is to keep current radiograph case setup fields for one more cycle, define `shared.radiology` as the future module identity, and preserve `radiographs.reviewed` as the compatibility capability.
+Status: implemented by creating [Shared Radiology Module](shared-radiology-module.md). The staged decision was to keep current radiograph case setup fields for one more cycle, define `shared.radiology` as the module identity, and preserve `radiographs.reviewed` as the compatibility capability.
 
 - Decide whether radiographs remain as case setup fields for one more cycle or become a shared `shared.radiology` module.
 - If split out, write a dedicated shared radiology module spec before implementation.

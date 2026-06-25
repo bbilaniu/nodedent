@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-19
+completed_on: 2026-06-25
 ---
 
 # Shared Radiology Module

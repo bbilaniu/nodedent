@@ -44,7 +44,7 @@ Known friction:
 - Do not add cleaning, hygiene, perio, or broader operative clinical protocol steps in this spec.
 - Do not invent clinical guidance, sequencing, materials, adequacy rules, or recommendations.
 - Do not edit clinical source material in `docs/source/`.
-- Keep radiology implementation details in the active shared radiology spec.
+- Keep radiology implementation history in the archived shared radiology spec and future imaging work in the long-term roadmap unless a new active radiology spec is opened.
 - Do not merge endodontic closure and operative final restoration capabilities.
 - Do not create a universal target model for canals, surfaces, quadrants, sextants, and arches.
 - Do not replace the existing workflow engine or event ledger.
