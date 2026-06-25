@@ -25,6 +25,14 @@ Then fix any `STILL FAILING` or `PARTIAL` items.
 
 ---
 
+## Relationship to Endodontic Continuation Roadmap
+
+`docs/specs/endodontic-continuation-and-usability-roadmap.md` remains the broader sequencing document for multi-visit continuation, scenario fixtures, note/export ergonomics, and chairside usability.
+
+This document is the tactical QA checklist for concrete note-output defects found in the current generated full note, compact note, and JSON/export behavior. When there is overlap, the roadmap should describe the phase and intent; this document should preserve the issue-level acceptance criteria and regression targets.
+
+Future file-system, rotary-file size, cone, and gauge catalog import/export should live in a separate catalog spec. That work should not be folded into this note-output QA document or the continuation roadmap except as a cross-reference.
+
 ## No-Model-Change Implementation Breakdown
 
 The JSON sample is not ready to be treated as a stable contract yet. The first implementation pass should therefore focus on making the current note outputs honest using existing state, without adding new schema fields or changing the exported data model.
@@ -75,6 +83,54 @@ The JSON sample is not ready to be treated as a stable contract yet. The first i
 Fix issues `1`, `2`, `3`, `4`, `5`, `7`, `15`, `21`, `22`, `23`, `24`, and `25` first. This slice should use an in-code regression case fixture based on the observed sample behavior, not the not-yet-stable backing JSON contract.
 
 The first pass should not add consent, findings, final obturation PA, restoration-detail, irrigation-detail, or structured difficulty-reason fields. Those should become separate model/schema/UI/import/export tasks after the note renderer is no longer producing contradictions from existing state.
+
+### First implementation slice status
+
+Implemented in the first pass:
+
+* Added output status derivation so notes/export do not blindly preserve stale `RCT initiated` or `RCT planned` labels when final state proves completion.
+* Removed hardcoded rubber-dam language from the compact note; anesthesia and isolation now render as recorded or `not recorded` from available state.
+* Changed working-length radiograph wording from `WL radiograph taken` to `WL PA status recorded` so `not taken` values are not contradicted by the decision label.
+* Split compact radiograph output into pre-op imaging, WL PA, cone-fit PA, and final obturation PA placeholders.
+* Removed autosave timestamps from the full clinical note and relabeled printable/export metadata as app metadata where it still appears.
+* Added endodontic final canal summary rendering from final `caseData.canals`, including EAL0/patency/shaping convention text when the values match that convention.
+* Kept workflow navigation events out of the human-readable full clinical note while preserving them in the audit/event output.
+* Added generic rendering helpers for blank/missing values and review statuses, with endodontic-specific summary logic kept in the note module instead of shared UI components.
+* Suppressed endodontic-only canal/protocol sections for non-endodontic output status paths.
+
+Current issue status index:
+
+| Issue | Status | Notes |
+| --- | --- | --- |
+| 1. Case status / workflow completion mismatch | SOLVED | Notes/export now prefer derived output status from completion evidence. |
+| 2. Rubber dam / isolation overclaim in compact note | SOLVED | Compact note no longer claims rubber dam from missing data. |
+| 3. Stale/intermediate measurements mixed with final measurements | PARTIAL | Final canal summary uses final canal state; broader event snapshot policy still needs more coverage. |
+| 4. Radiograph wording contradiction | SOLVED | WL decision label no longer says the radiograph was taken. |
+| 5. Radiograph types are conflated | PARTIAL | Compact output separates radiograph categories; final obturation PA still lacks its own data field. |
+| 6. Final obturation radiograph not clearly documented | STILL FAILING | Requires a distinct field or module state. |
+| 7. Autosave / timestamp inconsistency | SOLVED | Full clinical note no longer includes autosave timestamps. |
+| 8. `currentCanal` / final event mismatch | PARTIAL | Human-readable notes avoid UI navigation state; JSON export still preserves app state. |
+| 9. `small` file/cone/gauge labels | STILL FAILING | Needs separate file-system/size catalog work before mapping clinical labels. |
+| 10. EAL0 / patency / shaping relationship | SOLVED | Final canal summary can include convention text. |
+| 11. Diagnosis fields are weak or unclear | STILL FAILING | Diagnosis normalization needs separate diagnosis/model work. |
+| 12. Prior visit history missing | STILL FAILING | Prior context exists elsewhere, but this fallback prompt/output is not implemented. |
+| 13. Missing anesthesia documentation | PARTIAL | Shared anesthesia can be recorded and rendered honestly; explicit not used/not required semantics still need model support. |
+| 14. Missing or unclear isolation documentation | PARTIAL | Shared isolation can be recorded and compact overclaiming is fixed; deviation/reason fields remain future work. |
+| 15. Operative section is missing | SOLVED | Section wording now clarifies restoration/operative details without contradicting closure output. |
+| 16. Consent not documented | STILL FAILING | Consent module/fields are not implemented. |
+| 17. Pre-op clinical findings are under-documented | STILL FAILING | Structured findings module is not implemented. |
+| 18. Final restoration is too vague | PARTIAL | Wording is cautious when details are missing; full restoration-detail model remains future work. |
+| 19. Irrigation details incomplete | STILL FAILING | Concentration/volume/delivery/activation fields remain future work. |
+| 20. Difficulty flag lacks explanation | STILL FAILING | Structured difficulty reasons remain future work. |
+| 21. Workflow-switch events clutter the note | SOLVED | Workflow navigation events are excluded from the full clinical note. |
+| 22. Compact note loses important nuance | PARTIAL | Major overclaims are fixed; diagnosis, consent, difficulty, and final restoration detail still need model work. |
+| 23. Final source-of-truth summary block | SOLVED | Endodontic final canal summary is rendered from final canal state. |
+| 24. Blank fields vs `not recorded` | PARTIAL | Shared render helpers are in place; not every field has a normalized schema enum yet. |
+| 25. Event snapshots as final state | PARTIAL | Clinical summary uses final state for canal values; broader snapshot/audit separation needs more fixture coverage. |
+| 26. Shared methods overfitting risk | PARTIAL | Generic render helpers were introduced, but the broader shared renderer extraction remains incremental. |
+| 27. Suggested architecture direction | PARTIAL | First helpers and tests exist; full shared renderer architecture is deferred. |
+| 28. Independently editable note artifacts | STILL FAILING | Requires a note artifact/draft model separate from the event ledger. |
+| 29. Initial diagnosis/plan versus post-op outcome | STILL FAILING | Requires planned-care and completed-care model boundaries. |
 
 ---
 
@@ -464,6 +520,12 @@ Example:
 * audit value: `small`
 
 Do not hard-code endodontic file logic into shared rendering methods.
+
+## Product clarification
+
+When current workflow notes or source shorthand say `small`, the intended clinical reference is the small rotary file from the ProTaper Next series, not a generic qualitative size.
+
+The renderer should not hard-code that mapping. File systems, file sizes, cone labels, gauge labels, import/export behavior, display labels, and clinical/export labels should be defined in a separate file-system catalog spec before the note generator translates `small` into a clinical label.
 
 ## Status
 

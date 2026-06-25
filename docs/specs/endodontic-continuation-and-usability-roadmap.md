@@ -158,6 +158,8 @@ Acceptance criteria:
 
 Reasoning level needed: medium. Output should become more useful without turning generated notes into raw event dumps or inventing clinical meaning.
 
+`docs/specs/codex-verification-outputs.md` is the tactical QA checklist for the current note-output defects and regression targets. This roadmap owns the broader sequencing and acceptance criteria; the verification-output spec owns the issue-level fixes, statuses, and sample-output contradictions.
+
 Scope:
 
 - Compact note.
