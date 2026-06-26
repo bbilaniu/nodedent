@@ -30,6 +30,41 @@ export const DecisionGuardSchema = z.union([
   }),
 ]);
 
+const WorkflowMapTargetScopeSchema = z.object({
+  type: z.union([
+    z.literal("appointment"),
+    z.literal("fullMouth"),
+    z.literal("arch"),
+    z.literal("quadrant"),
+    z.literal("tooth"),
+    z.literal("teeth"),
+    z.literal("surface"),
+    z.literal("surfaces"),
+    z.literal("problem"),
+    z.literal("procedure"),
+    z.literal("custom"),
+  ]),
+  label: z.string(),
+  teeth: z.array(z.string()).optional(),
+  surfaces: z.array(z.string()).optional(),
+  regionLabel: z.string().optional(),
+  procedureId: z.string().optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
+});
+
+const AppointmentWorkflowInstanceStateSchema = z.object({
+  id: z.string(),
+  workflowType: z.string(),
+  workflowId: z.string().optional(),
+  label: z.string(),
+  target: WorkflowMapTargetScopeSchema,
+  status: z.union([z.literal("notStarted"), z.literal("inProgress"), z.literal("complete"), z.literal("modelOnly")]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  workflowRunId: z.string().optional(),
+  sourceEventIds: z.array(z.string()).optional(),
+});
+
 export const CapabilityRequirementSchema = z.object({
   name: z.string(),
   scopeKind: WorkflowScopeKindSchema.optional(),
@@ -102,6 +137,8 @@ export const EndoCaseSchema = z.object({
   events: z.array(ClinicalEventSchema).optional(),
   closure: ClosureRecordSchema.nullable(),
   currentNodeId: z.string().optional(),
+  workflowInstances: z.array(AppointmentWorkflowInstanceStateSchema).optional(),
+  activeWorkflowInstanceId: z.string().optional(),
 });
 
 export type DecisionOptionInput = z.infer<typeof DecisionOptionSchema>;

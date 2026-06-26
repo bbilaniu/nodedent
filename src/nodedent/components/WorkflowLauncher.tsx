@@ -62,6 +62,7 @@ export function WorkflowLauncher({
   onOpenPriorVisit,
   onOpenNewCaseConfirm,
   onOpenPrimaryWorkflowSetup,
+  onAddOperativeInstance,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
@@ -79,7 +80,8 @@ export function WorkflowLauncher({
   onOpenSavedCases: () => void;
   onOpenPriorVisit: () => void;
   onOpenNewCaseConfirm: () => void;
-  onOpenPrimaryWorkflowSetup: (workflowId: string) => void;
+  onOpenPrimaryWorkflowSetup: (workflowId: string, workflowInstanceId?: string) => void;
+  onAddOperativeInstance?: () => void;
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
   onOpenRadiologyWorkflow: () => void;
@@ -91,6 +93,7 @@ export function WorkflowLauncher({
   const workflowMapActions = getAppointmentWorkflowMapActions(workflowMap, {
     onContinueEndodonticWorkflow,
     onOpenPrimaryWorkflowSetup,
+    onAddOperativeInstance,
     onOpenCaseSetupStatus,
     onOpenAnesthesiaWorkflow,
     onOpenIsolationWorkflow,

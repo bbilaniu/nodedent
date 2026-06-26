@@ -1,5 +1,6 @@
 import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
+import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 
 export const STORAGE_KEY = "endo-chairside-guide-current-case";
 export const CASE_INDEX_KEY = "endo-chairside-guide-case-index";
@@ -70,6 +71,8 @@ export const initialCase: EndoCase = {
   canals: [blankCanal("Main")],
   globalEvents: [],
   closure: null,
+  workflowInstances: [],
+  activeWorkflowInstanceId: "",
 };
 
 export function makeDefaultNewCanalName(existingCanals: CanalRecord[] = []) {
@@ -122,7 +125,7 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
       })
     : initialCase.canals;
 
-  return {
+  const normalizedCase = {
     ...initialCase,
     ...data,
     priorVisit: { ...(initialCase.priorVisit || {}), ...asRecord(data.priorVisit) },
@@ -131,4 +134,14 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
     globalEvents,
     autosavedAt,
   } as EndoCase;
+  const workflowInstances = normalizeWorkflowInstances(normalizedCase, typeof data.currentNodeId === "string" ? data.currentNodeId : undefined, autosavedAt);
+  const activeWorkflowInstanceId = typeof data.activeWorkflowInstanceId === "string" && workflowInstances.some((instance) => instance.id === data.activeWorkflowInstanceId)
+    ? data.activeWorkflowInstanceId
+    : "";
+
+  return {
+    ...normalizedCase,
+    workflowInstances,
+    activeWorkflowInstanceId,
+  };
 }

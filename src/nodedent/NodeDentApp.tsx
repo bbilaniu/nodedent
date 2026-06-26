@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
+import type { AppointmentWorkflowInstanceState, CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
@@ -44,6 +44,7 @@ import {
   type OperativeWorkflowSetupState,
   upsertOperativeScopeRecordedEvent,
 } from "./workflow/operative";
+import { normalizeWorkflowInstances, surfacesTarget, toothTarget } from "./workflow/workflowInstances";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "./workflow/anesthesia";
 import {
   anesthesiaEventTypes,
@@ -108,6 +109,26 @@ const DARK_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference_inverted_dar
 
 function makeWorkflowRunId(prefix: string) {
   return `run_${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function makeWorkflowInstanceId(workflowType: string) {
+  return `instance_${workflowType.replaceAll(".", "_").replaceAll("-", "_")}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+}
+
+function createOperativeWorkflowInstance(caseData: EndoCase, workflowRunId = makeWorkflowRunId("operative_direct")): AppointmentWorkflowInstanceState {
+  const now = new Date().toISOString();
+  return {
+    id: makeWorkflowInstanceId("operative.direct-restoration"),
+    workflowType: "operative.direct-restoration",
+    workflowId: operativeDirectRestorationWorkflowId,
+    label: "Operative direct restoration",
+    target: toothTarget(caseData.tooth, "Operative target not set"),
+    status: "notStarted",
+    createdAt: now,
+    updatedAt: now,
+    workflowRunId,
+    sourceEventIds: [],
+  };
 }
 
 function getSavedCaseIndex(): SavedCaseSummary[] {
@@ -189,8 +210,18 @@ export default function NodeDentApp() {
   const activeCanalStatus = getCanalStatus(activeCanal);
   const hasActivePrimaryWorkflow = Boolean(activePrimaryWorkflowId);
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
-  const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
-  const latestOperativeRestorationEvent = useMemo(() => getOperativeRestorationEvents(caseData).at(-1), [caseData.globalEvents]);
+  const workflowInstances = useMemo(() => normalizeWorkflowInstances(caseData, currentNodeId), [caseData, currentNodeId]);
+  const activeWorkflowInstance = workflowInstances.find((instance) => instance.id === caseData.activeWorkflowInstanceId);
+  const activeOperativeWorkflowInstance = activeWorkflowInstance?.workflowType === "operative.direct-restoration" ? activeWorkflowInstance : undefined;
+  const activeOperativeWorkflowRunId = activeOperativeWorkflowInstance?.workflowRunId;
+  const operativeSetup = useMemo(
+    () => getLatestOperativeWorkflowSetup(caseData, activeOperativeWorkflowRunId, activeOperativeWorkflowInstance?.id),
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowRunId, caseData.globalEvents]
+  );
+  const latestOperativeRestorationEvent = useMemo(
+    () => getOperativeRestorationEvents(caseData, activeOperativeWorkflowRunId, activeOperativeWorkflowInstance?.id).at(-1),
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowRunId, caseData.globalEvents]
+  );
   const outputCaseData = useMemo(
     () => getCaseForActiveWorkflowOutput(caseData, activePrimaryWorkflowId),
     [activePrimaryWorkflowId, caseData]
@@ -456,6 +487,7 @@ export default function NodeDentApp() {
     setEmbeddedWorkflowLaunch(null);
     setIsWorkflowLauncherOpen(false);
     setRootWorkflowRunId(makeWorkflowRunId("endo_root"));
+    setCasePanelWorkflowId("");
     setIsSavedCasesOpen(false);
     setIsPriorVisitOpen(false);
   }
@@ -467,11 +499,43 @@ export default function NodeDentApp() {
     setIsCasePanelOpen(true);
   }
 
-  function activatePrimaryWorkflow(workflowId: string) {
+  function activatePrimaryWorkflow(workflowId: string, workflowInstanceId?: string) {
     if (workflowId !== endodonticRootWorkflowId && workflowId !== operativeDirectRestorationWorkflowId) return;
+    const existingInstances = normalizeWorkflowInstances(caseData, currentNodeId);
+    let nextInstanceId = workflowInstanceId;
+    let nextWorkflowRunId = makeWorkflowRunId(workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root");
+    let createdInstance: AppointmentWorkflowInstanceState | null = null;
+
+    if (workflowId === endodonticRootWorkflowId) {
+      const endodonticInstance = existingInstances.find((instance) => instance.workflowType === "endo.rct");
+      nextInstanceId = endodonticInstance?.id || "instance_endo_current";
+      nextWorkflowRunId = endodonticInstance?.workflowRunId || nextWorkflowRunId;
+    }
+
+    if (workflowId === operativeDirectRestorationWorkflowId) {
+      const selectedInstance = existingInstances.find((instance) => instance.id === workflowInstanceId && instance.workflowType === "operative.direct-restoration");
+      if (selectedInstance) {
+        nextInstanceId = selectedInstance.id;
+        nextWorkflowRunId = selectedInstance.workflowRunId || nextWorkflowRunId;
+      } else {
+        createdInstance = createOperativeWorkflowInstance(caseData, nextWorkflowRunId);
+        nextInstanceId = createdInstance.id;
+      }
+    }
+
+    setCaseData((prev) => {
+      const normalizedInstances = normalizeWorkflowInstances(prev, currentNodeId);
+      const hasSelectedInstance = nextInstanceId ? normalizedInstances.some((instance) => instance.id === nextInstanceId) : false;
+      const nextInstances = createdInstance && !hasSelectedInstance ? [...normalizedInstances, createdInstance] : normalizedInstances;
+      return {
+        ...prev,
+        workflowInstances: nextInstances,
+        activeWorkflowInstanceId: nextInstanceId || "",
+      };
+    });
     setActivePrimaryWorkflowId(workflowId);
     setCasePanelWorkflowId(workflowId);
-    setRootWorkflowRunId(makeWorkflowRunId(workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"));
+    setRootWorkflowRunId(nextWorkflowRunId);
     setIsWorkflowLauncherOpen(false);
   }
 
@@ -483,7 +547,10 @@ export default function NodeDentApp() {
 
   function updateOperativeSetup(updates: Partial<OperativeWorkflowSetupState>) {
     setCaseData((prev) => {
-      const nextSetup = { ...getLatestOperativeWorkflowSetup(prev), ...updates };
+      const activeInstance = normalizeWorkflowInstances(prev, currentNodeId).find((instance) => instance.id === prev.activeWorkflowInstanceId && instance.workflowType === "operative.direct-restoration");
+      const workflowRunId = activeInstance?.workflowRunId || rootWorkflowRunId;
+      const workflowInstanceId = activeInstance?.id || prev.activeWorkflowInstanceId;
+      const nextSetup = { ...getLatestOperativeWorkflowSetup(prev, workflowRunId, workflowInstanceId), ...updates };
       const scope = createOperativeSetupScope(nextSetup, prev.tooth);
       const details = buildOperativeSetupEventDetails(nextSetup, prev.tooth);
       const event = makeRuntimeEvent({
@@ -494,13 +561,29 @@ export default function NodeDentApp() {
         label: "Operative setup recorded",
         workflowId: operativeDirectRestorationWorkflowId,
         workflowVersion: operativeDirectRestorationWorkflowVersion,
+        workflowRunId,
         scope,
       });
-      event.details = { ...event.details, ...details };
+      event.details = { ...event.details, ...details, workflowInstanceId };
+      const nextTarget = scope.surfaces?.length ? surfacesTarget(scope.tooth || prev.tooth, scope.surfaces) : toothTarget(scope.tooth || prev.tooth, "Operative target not set");
+      const nextInstances = normalizeWorkflowInstances(prev, currentNodeId).map((instance) =>
+        instance.id === workflowInstanceId
+          ? {
+              ...instance,
+              target: nextTarget,
+              status: instance.status === "complete" ? "complete" as const : "inProgress" as const,
+              updatedAt: event.timestamp,
+              workflowRunId,
+              sourceEventIds: Array.from(new Set([...(instance.sourceEventIds || []), event.id])),
+            }
+          : instance
+      );
 
       return {
         ...prev,
         globalEvents: upsertOperativeScopeRecordedEvent(prev.globalEvents, event),
+        workflowInstances: nextInstances,
+        activeWorkflowInstanceId: workflowInstanceId || prev.activeWorkflowInstanceId,
       };
     });
     setValidationMessage(null);
@@ -509,6 +592,8 @@ export default function NodeDentApp() {
   function recordOperativeRestoration(record: { outcome: string; notes: string }) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const { eventId, timestamp } = createRuntimeEventArgs();
+    const workflowInstanceId = activeOperativeWorkflowInstance?.id || caseData.activeWorkflowInstanceId;
+    const workflowRunId = activeOperativeWorkflowRunId || rootWorkflowRunId;
     const event = buildOperativeRestorationPlacedEvent({
       id: eventId,
       timestamp,
@@ -519,12 +604,25 @@ export default function NodeDentApp() {
         notes: record.notes,
       },
       fallbackTooth: caseData.tooth,
-      workflowRunId: rootWorkflowRunId,
+      workflowRunId,
+      workflowInstanceId,
     });
 
     setCaseData((prev) => ({
       ...prev,
       globalEvents: [...prev.globalEvents, event],
+      workflowInstances: normalizeWorkflowInstances(prev, currentNodeId).map((instance) =>
+        instance.id === workflowInstanceId
+          ? {
+              ...instance,
+              target: event.scope?.surfaces?.length ? surfacesTarget(event.scope.tooth || event.tooth, event.scope.surfaces) : toothTarget(event.scope?.tooth || event.tooth || prev.tooth),
+              status: "complete" as const,
+              updatedAt: event.timestamp,
+              workflowRunId,
+              sourceEventIds: Array.from(new Set([...(instance.sourceEventIds || []), event.id])),
+            }
+          : instance
+      ),
     }));
     setCopied(false);
     setValidationMessage(null);
@@ -1066,6 +1164,7 @@ export default function NodeDentApp() {
               onOpenPriorVisit={openPriorVisit}
               onOpenNewCaseConfirm={openNewCaseConfirm}
               onOpenPrimaryWorkflowSetup={activatePrimaryWorkflow}
+              onAddOperativeInstance={() => activatePrimaryWorkflow(operativeDirectRestorationWorkflowId)}
               onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
               onOpenIsolationWorkflow={() => openIsolationWorkflow()}
               onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
@@ -1191,6 +1290,7 @@ export default function NodeDentApp() {
             onOpenPriorVisit={openPriorVisit}
             onOpenNewCaseConfirm={openNewCaseConfirm}
             onOpenPrimaryWorkflowSetup={activatePrimaryWorkflow}
+            onAddOperativeInstance={() => activatePrimaryWorkflow(operativeDirectRestorationWorkflowId)}
             onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
             onOpenIsolationWorkflow={() => openIsolationWorkflow()}
             onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}

@@ -97,6 +97,7 @@ import {
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowHasOperativeTargetPanel } from "../workflow/targetPanels";
 import { buildAppointmentWorkflowMap, workflowMapDefinitions } from "../workflow/workflowMap";
+import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -781,6 +782,140 @@ test("appointment workflow map actions route ready items and leave model-only it
   assert.equal(actions.definitionActions["hygiene.cleaning"].disabled, true);
   assert.equal(actions.definitionActions["extraction.surgery"].onClick, undefined);
   assert.equal(actions.definitionActions["hygiene.cleaning"].onClick, undefined);
+});
+
+test("workflow instances preserve multiple operative targets and scope shared modules", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    workflowInstances: [
+      {
+        id: "instance_endo_36",
+        workflowType: "endo.rct",
+        workflowId: endodonticRootWorkflowId,
+        label: "Endodontic RCT",
+        target: { type: "tooth", label: "tooth 36", teeth: ["36"] },
+        status: "inProgress",
+        createdAt: "2026-01-01T09:00:00.000Z",
+        updatedAt: "2026-01-01T09:00:00.000Z",
+        workflowRunId: "run_endo_36",
+      },
+      {
+        id: "instance_operative_45_mod",
+        workflowType: "operative.direct-restoration",
+        workflowId: operativeDirectRestorationWorkflowId,
+        label: "Operative direct restoration",
+        target: { type: "surfaces", label: "tooth 45 surfaces M O D", teeth: ["45"], surfaces: ["M", "O", "D"] },
+        status: "inProgress",
+        createdAt: "2026-01-01T09:05:00.000Z",
+        updatedAt: "2026-01-01T09:05:00.000Z",
+        workflowRunId: "run_operative_45",
+      },
+      {
+        id: "instance_operative_46_o",
+        workflowType: "operative.direct-restoration",
+        workflowId: operativeDirectRestorationWorkflowId,
+        label: "Operative direct restoration",
+        target: { type: "surface", label: "tooth 46 surface O", teeth: ["46"], surfaces: ["O"] },
+        status: "notStarted",
+        createdAt: "2026-01-01T09:10:00.000Z",
+        updatedAt: "2026-01-01T09:10:00.000Z",
+        workflowRunId: "run_operative_46",
+      },
+    ],
+    globalEvents: [
+      {
+        id: "evt_anesthesia_45_46",
+        timestamp: "2026-01-01T09:15:00.000Z",
+        type: anesthesiaEventTypes.adequacyConfirmed,
+        workflowId: sharedAnesthesiaWorkflowId,
+        tooth: "45",
+        canal: "N/A",
+        scope: { kind: "custom", teeth: ["45", "46"] },
+        details: { teeth: ["45", "46"], response: "adequate" },
+      },
+    ],
+  });
+  const anesthesiaEvent = caseData.globalEvents[0];
+  anesthesiaEvent.capabilitiesSatisfied = [buildAnesthesiaAdequateCapability(anesthesiaEvent)];
+
+  const map = buildAppointmentWorkflowMap(caseData, "access-chamber");
+  const operativeInstances = map.workflowInstances.filter((instance) => instance.workflowType === "operative.direct-restoration");
+  const anesthesiaModule = map.sharedModules.find((module) => module.moduleType === "shared.anesthesia");
+
+  assert.equal(operativeInstances.length, 2);
+  assert.deepEqual(operativeInstances.map((instance) => instance.id), ["instance_operative_45_mod", "instance_operative_46_o"]);
+  assert.deepEqual(operativeInstances[0].target.surfaces, ["M", "O", "D"]);
+  assert.deepEqual(operativeInstances[1].target.surfaces, ["O"]);
+  assert.deepEqual(anesthesiaModule?.usedBy.sort(), ["instance_operative_45_mod", "instance_operative_46_o"].sort());
+  assert.equal(anesthesiaModule?.usedBy.includes("instance_endo_36"), false);
+});
+
+test("workflow instance normalization migrates legacy cases and export round-trips durable instances", () => {
+  const operativeSetupEvent: ClinicalEvent = {
+    id: "evt_legacy_operative_scope",
+    timestamp: "2026-01-01T09:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowRunId: "run_legacy_operative",
+    tooth: "31",
+    canal: "N/A",
+    scope: { kind: "surface", tooth: "31", surfaces: ["O"] },
+    details: { tooth: "31", surfaces: ["O"] },
+  };
+  const legacyCase = baseCase({
+    tooth: "30",
+    globalEvents: [operativeSetupEvent],
+    workflowInstances: undefined,
+  });
+
+  const migrated = normalizeWorkflowInstances(legacyCase, "access-chamber", "2026-01-01T09:10:00.000Z");
+  assert.deepEqual(migrated.map((instance) => instance.id), ["instance_endo_current", "instance_operative_current"]);
+  assert.equal(migrated[1].workflowRunId, "run_legacy_operative");
+  assert.deepEqual(migrated[1].target.teeth, ["31"]);
+  assert.deepEqual(migrated[1].target.surfaces, ["O"]);
+
+  const exported = buildJsonExport({ ...legacyCase, workflowInstances: migrated, activeWorkflowInstanceId: "instance_operative_current" }, "operative-restoration-record");
+  const imported = normalizeImportedEndoCase(exported, "2026-01-01T09:20:00.000Z");
+  assert.deepEqual(imported.workflowInstances?.map((instance) => instance.id), migrated.map((instance) => instance.id));
+  assert.equal(imported.activeWorkflowInstanceId, "instance_operative_current");
+  assert.equal(imported.workflowInstances?.find((instance) => instance.id === "instance_operative_current")?.workflowRunId, "run_legacy_operative");
+});
+
+test("workflow map actions route selected operative instance ids", () => {
+  const map = buildAppointmentWorkflowMap(baseCase({
+    workflowInstances: [
+      {
+        id: "instance_operative_45",
+        workflowType: "operative.direct-restoration",
+        workflowId: operativeDirectRestorationWorkflowId,
+        label: "Operative direct restoration",
+        target: { type: "surface", label: "tooth 45 surface O", teeth: ["45"], surfaces: ["O"] },
+        status: "inProgress",
+        createdAt: "2026-01-01T09:00:00.000Z",
+        updatedAt: "2026-01-01T09:00:00.000Z",
+        workflowRunId: "run_operative_45",
+      },
+    ],
+  }));
+  const openedPrimaryWorkflows: Array<{ workflowId: string; workflowInstanceId?: string }> = [];
+  let operativeAdds = 0;
+  const actions = getAppointmentWorkflowMapActions(map, {
+    onContinueEndodonticWorkflow: () => undefined,
+    onOpenPrimaryWorkflowSetup: (workflowId, workflowInstanceId) => openedPrimaryWorkflows.push({ workflowId, workflowInstanceId }),
+    onAddOperativeInstance: () => { operativeAdds += 1; },
+    onOpenCaseSetupStatus: () => undefined,
+    onOpenAnesthesiaWorkflow: () => undefined,
+    onOpenIsolationWorkflow: () => undefined,
+    onOpenRadiologyWorkflow: () => undefined,
+  });
+
+  actions.instanceActions.instance_operative_45.onClick?.();
+  actions.definitionActions["operative.direct-restoration"].onClick?.();
+
+  assert.deepEqual(openedPrimaryWorkflows, [{ workflowId: operativeDirectRestorationWorkflowId, workflowInstanceId: "instance_operative_45" }]);
+  assert.equal(operativeAdds, 1);
+  assert.equal(actions.definitionActions["extraction.surgery"].disabled, true);
+  assert.equal(actions.definitionActions["hygiene.cleaning"].disabled, true);
 });
 
 test("workflow launcher derives operative progress from operative events", () => {

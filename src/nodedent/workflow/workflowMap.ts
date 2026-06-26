@@ -1,35 +1,11 @@
-import type { ClinicalEvent, EndoCase, WorkflowScope } from "../types";
-import { getCanalStatus } from "../engine/deriveCanalStatus";
-import { getCaseStatus } from "../engine/deriveCaseStatus";
+import type { AppointmentWorkflowInstanceState, ClinicalEvent, EndoCase, WorkflowMapTargetKind, WorkflowMapTargetScope } from "../types";
 import { sharedAnesthesiaWorkflowId } from "./anesthesia";
 import { sharedIsolationWorkflowId } from "./isolation";
-import { getLatestOperativeWorkflowSetup, getOperativeRestorationEvents, normalizeOperativeSurfaces, operativeDirectRestorationWorkflowId } from "./operative";
+import { operativeDirectRestorationWorkflowId } from "./operative";
 import { sharedRadiologyWorkflowId } from "./radiology";
 import { endodonticRootWorkflowId } from "./registry";
 import { getCaseCapabilitySummary } from "./selectors";
-
-export type WorkflowMapTargetKind =
-  | "appointment"
-  | "fullMouth"
-  | "arch"
-  | "quadrant"
-  | "tooth"
-  | "teeth"
-  | "surface"
-  | "surfaces"
-  | "problem"
-  | "procedure"
-  | "custom";
-
-export type WorkflowMapTargetScope = {
-  type: WorkflowMapTargetKind;
-  label: string;
-  teeth?: string[];
-  surfaces?: string[];
-  regionLabel?: string;
-  procedureId?: string;
-  details?: Record<string, unknown>;
-};
+import { normalizeWorkflowInstances, toothTarget, workflowScopeToWorkflowMapTarget } from "./workflowInstances";
 
 export type WorkflowMapDefinition = {
   workflowType: string;
@@ -48,6 +24,8 @@ export type AppointmentWorkflowInstance = {
   target: WorkflowMapTargetScope;
   statusLabel: string;
   sourceWorkflowId?: string;
+  workflowRunId?: string;
+  sourceEventIds?: string[];
 };
 
 export type AppointmentSharedModule = {
@@ -212,40 +190,6 @@ function appointmentScope(label = "Appointment"): WorkflowMapTargetScope {
   return { type: "appointment", label };
 }
 
-function toothScope(tooth?: string, fallback = "Tooth not set"): WorkflowMapTargetScope {
-  return tooth ? { type: "tooth", label: `tooth ${tooth}`, teeth: [tooth] } : appointmentScope(fallback);
-}
-
-function workflowScopeToMapTarget(scope?: WorkflowScope, fallbackLabel = "Appointment"): WorkflowMapTargetScope {
-  if (!scope) return appointmentScope(fallbackLabel);
-  if (scope.surfaces?.length) {
-    const teeth = scope.tooth ? [scope.tooth] : scope.teeth;
-    return {
-      type: "surfaces",
-      label: `${teeth?.length ? `tooth ${compactList(teeth)} ` : ""}surfaces ${compactList(scope.surfaces)}`.trim(),
-      teeth,
-      surfaces: scope.surfaces,
-      procedureId: scope.procedureId,
-    };
-  }
-  if (scope.surface) {
-    const teeth = scope.tooth ? [scope.tooth] : scope.teeth;
-    return {
-      type: "surface",
-      label: `${teeth?.length ? `tooth ${compactList(teeth)} ` : ""}surface ${scope.surface}`.trim(),
-      teeth,
-      surfaces: [scope.surface],
-      procedureId: scope.procedureId,
-    };
-  }
-  if (scope.teeth?.length) return { type: "teeth", label: `teeth ${compactList(scope.teeth)}`, teeth: scope.teeth, regionLabel: scope.regionLabel };
-  if (scope.tooth) return toothScope(scope.tooth);
-  if (scope.kind === "quadrant") return { type: "quadrant", label: scope.regionLabel || "quadrant", regionLabel: scope.regionLabel };
-  if (scope.kind === "procedure") return { type: "procedure", label: scope.procedureId || scope.regionLabel || "procedure", procedureId: scope.procedureId, regionLabel: scope.regionLabel };
-  if (scope.regionLabel) return { type: "custom", label: scope.regionLabel, regionLabel: scope.regionLabel };
-  return { type: "custom", label: scope.label || fallbackLabel };
-}
-
 function collectEvents(caseData: EndoCase) {
   const seen = new Set<string>();
   return [...(caseData.globalEvents || []), ...(caseData.events || []), ...(caseData.canals || []).flatMap((canal) => canal.events || [])]
@@ -262,54 +206,6 @@ function latestWorkflowEvent(events: readonly ClinicalEvent[], workflowId: strin
   return events.filter((event) => event.workflowId === workflowId).at(-1);
 }
 
-function hasEndodonticActivity(caseData: EndoCase, currentNodeId?: string) {
-  return Boolean(
-    caseData.tooth ||
-      currentNodeId && currentNodeId !== "preop" ||
-      caseData.globalEvents.some((event) => !event.workflowId || event.workflowId === endodonticRootWorkflowId) ||
-      caseData.canals.some((canal) => (canal.events || []).length > 0 || getCanalStatus(canal) !== "notStarted")
-  );
-}
-
-function endodonticInstance(caseData: EndoCase, currentNodeId?: string): AppointmentWorkflowInstance | undefined {
-  if (!hasEndodonticActivity(caseData, currentNodeId)) return undefined;
-
-  return {
-    id: "instance_endo_current",
-    workflowType: "endo.rct",
-    label: "Endodontic RCT",
-    target: {
-      ...toothScope(caseData.tooth),
-      details: {
-        canals: caseData.canals.map((canal) => ({ name: canal.name, status: getCanalStatus(canal) })),
-      },
-    },
-    statusLabel: getCaseStatus(caseData),
-    sourceWorkflowId: endodonticRootWorkflowId,
-  };
-}
-
-function operativeInstance(caseData: EndoCase): AppointmentWorkflowInstance | undefined {
-  const setup = getLatestOperativeWorkflowSetup(caseData);
-  const restorationEvents = getOperativeRestorationEvents(caseData);
-  const latestRestorationEvent = restorationEvents.at(-1);
-  const surfaces = normalizeOperativeSurfaces(setup.surfaces || latestRestorationEvent?.scope?.surfaces || latestRestorationEvent?.scope?.surface);
-  const tooth = setup.tooth || latestRestorationEvent?.scope?.tooth || latestRestorationEvent?.tooth || caseData.tooth;
-  const hasSetup = Boolean(setup.tooth || setup.surfaces || setup.restorationIntent || setup.material || setup.shade);
-  if (!hasSetup && !latestRestorationEvent) return undefined;
-
-  return {
-    id: "instance_operative_current",
-    workflowType: "operative.direct-restoration",
-    label: "Operative direct restoration",
-    target: surfaces.length
-      ? { type: surfaces.length > 1 ? "surfaces" : "surface", label: `tooth ${tooth || "not set"} surfaces ${compactList(surfaces)}`, teeth: tooth ? [tooth] : undefined, surfaces }
-      : toothScope(tooth),
-    statusLabel: latestRestorationEvent ? "Restoration recorded" : "Setup recorded",
-    sourceWorkflowId: operativeDirectRestorationWorkflowId,
-  };
-}
-
 function targetsOverlap(moduleScope: WorkflowMapTargetScope, instanceTarget: WorkflowMapTargetScope) {
   if (moduleScope.type === "appointment") return true;
   const moduleTeeth = moduleScope.teeth || [];
@@ -323,17 +219,56 @@ function usedByInstances(moduleScope: WorkflowMapTargetScope, instances: readonl
   return instances.filter((instance) => targetsOverlap(moduleScope, instance.target)).map((instance) => instance.id);
 }
 
+function statusLabelForInstance(instance: AppointmentWorkflowInstanceState) {
+  if (instance.workflowType === "operative.direct-restoration") {
+    if (instance.status === "complete") return "Restoration recorded";
+    if (instance.status === "inProgress") return "Setup recorded";
+    return "Not started";
+  }
+  if (instance.workflowType === "endo.rct") {
+    if (instance.status === "complete") return "Completed";
+    if (instance.status === "inProgress") return "In progress";
+    return "Not started";
+  }
+  return instance.status === "modelOnly" ? "Model only" : instance.status;
+}
+
+function mapWorkflowInstance(instance: AppointmentWorkflowInstanceState): AppointmentWorkflowInstance {
+  return {
+    id: instance.id,
+    workflowType: instance.workflowType,
+    label: instance.label,
+    target: instance.target,
+    statusLabel: statusLabelForInstance(instance),
+    sourceWorkflowId: instance.workflowId,
+    workflowRunId: instance.workflowRunId,
+    sourceEventIds: instance.sourceEventIds || [],
+  };
+}
+
 export function buildAppointmentWorkflowMap(caseData: EndoCase, currentNodeId?: string): AppointmentWorkflowMap {
   const events = collectEvents(caseData);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
-  const workflowInstances = [endodonticInstance(caseData, currentNodeId), operativeInstance(caseData)].filter(Boolean) as AppointmentWorkflowInstance[];
-  const diagnosisScope = capabilitySummary.diagnosis.scope ? workflowScopeToMapTarget(capabilitySummary.diagnosis.scope) : toothScope(caseData.tooth);
-  const radiologyScope = capabilitySummary.radiographs.scope ? workflowScopeToMapTarget(capabilitySummary.radiographs.scope) : toothScope(caseData.tooth);
+  const workflowInstances = normalizeWorkflowInstances(caseData, currentNodeId).map(mapWorkflowInstance);
   const anesthesiaEvent = latestWorkflowEvent(events, sharedAnesthesiaWorkflowId);
   const isolationEvent = latestWorkflowEvent(events, sharedIsolationWorkflowId);
   const radiologyEvent = latestWorkflowEvent(events, sharedRadiologyWorkflowId);
-  const anesthesiaScope = capabilitySummary.anesthesia.scope ? workflowScopeToMapTarget(capabilitySummary.anesthesia.scope) : workflowScopeToMapTarget(anesthesiaEvent?.scope, "Anesthesia scope not recorded");
-  const isolationScope = capabilitySummary.isolation.scope ? workflowScopeToMapTarget(capabilitySummary.isolation.scope) : workflowScopeToMapTarget(isolationEvent?.scope, "Isolation scope not recorded");
+  const diagnosisScope = capabilitySummary.diagnosis.scope ? workflowScopeToWorkflowMapTarget(capabilitySummary.diagnosis.scope) : toothTarget(caseData.tooth);
+  const radiologyScope = radiologyEvent?.scope
+    ? workflowScopeToWorkflowMapTarget(radiologyEvent.scope)
+    : capabilitySummary.radiographs.scope
+      ? workflowScopeToWorkflowMapTarget(capabilitySummary.radiographs.scope)
+      : toothTarget(caseData.tooth);
+  const anesthesiaScope = anesthesiaEvent?.scope
+    ? workflowScopeToWorkflowMapTarget(anesthesiaEvent.scope, "Anesthesia scope not recorded")
+    : capabilitySummary.anesthesia.scope
+      ? workflowScopeToWorkflowMapTarget(capabilitySummary.anesthesia.scope)
+      : workflowScopeToWorkflowMapTarget(undefined, "Anesthesia scope not recorded");
+  const isolationScope = isolationEvent?.scope
+    ? workflowScopeToWorkflowMapTarget(isolationEvent.scope, "Isolation scope not recorded")
+    : capabilitySummary.isolation.scope
+      ? workflowScopeToWorkflowMapTarget(capabilitySummary.isolation.scope)
+      : workflowScopeToWorkflowMapTarget(undefined, "Isolation scope not recorded");
 
   const sharedModules: AppointmentSharedModule[] = [
     {
@@ -349,7 +284,7 @@ export function buildAppointmentWorkflowMap(caseData: EndoCase, currentNodeId?: 
       moduleType: "shared.radiology",
       label: "Shared Radiology",
       scope: radiologyScope,
-      statusLabel: capabilitySummary.radiographs.satisfied ? "Recorded" : "Not recorded",
+      statusLabel: radiologyEvent || capabilitySummary.radiographs.satisfied ? "Recorded" : "Not recorded",
       usedBy: usedByInstances(radiologyScope, workflowInstances),
       sourceEventId: radiologyEvent?.id,
     },
@@ -358,7 +293,7 @@ export function buildAppointmentWorkflowMap(caseData: EndoCase, currentNodeId?: 
       moduleType: "shared.anesthesia",
       label: "Shared Anesthesia",
       scope: anesthesiaScope,
-      statusLabel: capabilitySummary.anesthesia.satisfied ? "Ready" : capabilitySummary.anesthesia.needsReassessment ? "Review" : "Not recorded",
+      statusLabel: anesthesiaEvent || capabilitySummary.anesthesia.satisfied ? "Ready" : capabilitySummary.anesthesia.needsReassessment ? "Review" : "Not recorded",
       usedBy: usedByInstances(anesthesiaScope, workflowInstances),
       sourceEventId: anesthesiaEvent?.id,
     },
@@ -367,7 +302,7 @@ export function buildAppointmentWorkflowMap(caseData: EndoCase, currentNodeId?: 
       moduleType: "shared.isolation",
       label: "Shared Isolation",
       scope: isolationScope,
-      statusLabel: capabilitySummary.isolation.satisfied ? "Ready" : capabilitySummary.isolation.needsReassessment ? "Review" : "Not recorded",
+      statusLabel: isolationEvent || capabilitySummary.isolation.satisfied ? "Ready" : capabilitySummary.isolation.needsReassessment ? "Review" : "Not recorded",
       usedBy: usedByInstances(isolationScope, workflowInstances),
       sourceEventId: isolationEvent?.id,
     },

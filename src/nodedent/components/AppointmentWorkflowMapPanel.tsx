@@ -6,7 +6,8 @@ import { cx, panelSurface, sectionText, statusBadge, workspaceSurface } from "./
 
 export type WorkflowMapActionHandlers = {
   onContinueEndodonticWorkflow: () => void;
-  onOpenPrimaryWorkflowSetup: (workflowId: string) => void;
+  onOpenPrimaryWorkflowSetup: (workflowId: string, workflowInstanceId?: string) => void;
+  onAddOperativeInstance?: () => void;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
@@ -58,7 +59,7 @@ export function getAppointmentWorkflowMapActions(
         id: instance.id,
         label: "Enter workflow",
         disabled: false,
-        onClick: () => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration"),
+        onClick: () => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration", instance.id),
       }];
     }
 
@@ -118,9 +119,9 @@ export function getAppointmentWorkflowMapActions(
     if (definition.workflowType === "operative.direct-restoration") {
       return [definition.workflowType, {
         id: definition.workflowType,
-        label: "Enter workflow",
+        label: "Add operative instance",
         disabled: false,
-        onClick: () => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration"),
+        onClick: handlers.onAddOperativeInstance || (() => handlers.onOpenPrimaryWorkflowSetup("operative.direct-restoration")),
       }];
     }
 
@@ -154,7 +155,17 @@ export function AppointmentWorkflowMapPanel({
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1.1fr_1fr]">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Workflow instances</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Workflow instances</p>
+            <button
+              type="button"
+              onClick={actions.definitionActions["operative.direct-restoration"]?.onClick}
+              disabled={actions.definitionActions["operative.direct-restoration"]?.disabled}
+              className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Add operative instance
+            </button>
+          </div>
           <div className="mt-2 grid gap-2">
             {map.workflowInstances.length ? (
               map.workflowInstances.map((instance) => {

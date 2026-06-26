@@ -253,6 +253,7 @@ export function buildOperativeRestorationPlacedEvent({
   fallbackTooth = "",
   workflowRunId,
   parentWorkflowRunId,
+  workflowInstanceId,
 }: {
   id: string;
   timestamp: string;
@@ -260,6 +261,7 @@ export function buildOperativeRestorationPlacedEvent({
   fallbackTooth?: string;
   workflowRunId?: string;
   parentWorkflowRunId?: string | null;
+  workflowInstanceId?: string;
 }): ClinicalEvent {
   const scope = createOperativeRestorationScope(record, fallbackTooth);
   const event: ClinicalEvent = {
@@ -277,6 +279,7 @@ export function buildOperativeRestorationPlacedEvent({
     details: buildOperativeRestorationEventDetails(record, fallbackTooth),
   };
 
+  if (workflowInstanceId) event.details = { ...event.details, workflowInstanceId };
   event.capabilitiesSatisfied = [buildFinalRestorationPlacedCapability(event)];
   return event;
 }
@@ -291,6 +294,12 @@ export function isOperativeRestorationPlacedEvent(
   event?: ClinicalEvent | null
 ): event is ClinicalEvent & { type: typeof finalRestorationPlacedEventType; workflowId: typeof operativeDirectRestorationWorkflowId } {
   return event?.type === finalRestorationPlacedEventType && event.workflowId === operativeDirectRestorationWorkflowId;
+}
+
+function eventMatchesOperativeInstance(event: ClinicalEvent, workflowRunId?: string, workflowInstanceId?: string) {
+  if (workflowRunId && event.workflowRunId !== workflowRunId) return false;
+  if (workflowInstanceId && event.details?.workflowInstanceId !== workflowInstanceId) return false;
+  return true;
 }
 
 export function getOperativeRestorationRecordFromEvent(event?: ClinicalEvent | null): OperativeRestorationRecordState {
@@ -314,8 +323,14 @@ export function getOperativeRestorationRecordFromEvent(event?: ClinicalEvent | n
   };
 }
 
-export function getOperativeRestorationEvents(caseData: Pick<EndoCase, "globalEvents">) {
-  return (caseData.globalEvents || []).filter(isOperativeRestorationPlacedEvent);
+export function getOperativeRestorationEvents(
+  caseData: Pick<EndoCase, "globalEvents">,
+  workflowRunId?: string,
+  workflowInstanceId?: string
+) {
+  return (caseData.globalEvents || [])
+    .filter(isOperativeRestorationPlacedEvent)
+    .filter((event) => eventMatchesOperativeInstance(event, workflowRunId, workflowInstanceId));
 }
 
 function formatOperativeParts(parts: Array<string | undefined>) {
@@ -369,13 +384,29 @@ export function getOperativeSetupFromEvent(event?: ClinicalEvent | null): Operat
   };
 }
 
-export function getLatestOperativeWorkflowSetup(caseData: Pick<EndoCase, "globalEvents">): OperativeWorkflowSetupState {
-  const latestEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
+export function getLatestOperativeWorkflowSetup(
+  caseData: Pick<EndoCase, "globalEvents">,
+  workflowRunId?: string,
+  workflowInstanceId?: string
+): OperativeWorkflowSetupState {
+  const latestEvent = (caseData.globalEvents || [])
+    .filter(isOperativeScopeRecordedEvent)
+    .filter((event) => eventMatchesOperativeInstance(event, workflowRunId, workflowInstanceId))
+    .at(-1);
   return getOperativeSetupFromEvent(latestEvent);
 }
 
 export function upsertOperativeScopeRecordedEvent(events: ClinicalEvent[] = [], nextEvent: ClinicalEvent) {
-  return [...events.filter((event) => !isOperativeScopeRecordedEvent(event)), nextEvent];
+  const nextInstanceId = nextEvent.details?.workflowInstanceId;
+  return [
+    ...events.filter((event) => {
+      if (!isOperativeScopeRecordedEvent(event)) return true;
+      if (nextEvent.workflowRunId) return event.workflowRunId !== nextEvent.workflowRunId;
+      if (nextInstanceId) return event.details?.workflowInstanceId !== nextInstanceId;
+      return false;
+    }),
+    nextEvent,
+  ];
 }
 
 export function isOperativeSurfaceScope(scope?: WorkflowScope | null) {

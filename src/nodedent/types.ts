@@ -56,6 +56,44 @@ export type WorkflowScope = {
   details?: Record<string, unknown>;
 };
 
+export type WorkflowMapTargetKind =
+  | "appointment"
+  | "fullMouth"
+  | "arch"
+  | "quadrant"
+  | "tooth"
+  | "teeth"
+  | "surface"
+  | "surfaces"
+  | "problem"
+  | "procedure"
+  | "custom";
+
+export type WorkflowMapTargetScope = {
+  type: WorkflowMapTargetKind;
+  label: string;
+  teeth?: string[];
+  surfaces?: string[];
+  regionLabel?: string;
+  procedureId?: string;
+  details?: Record<string, unknown>;
+};
+
+export type AppointmentWorkflowInstanceStatus = "notStarted" | "inProgress" | "complete" | "modelOnly";
+
+export type AppointmentWorkflowInstanceState = {
+  id: string;
+  workflowType: string;
+  workflowId?: string;
+  label: string;
+  target: WorkflowMapTargetScope;
+  status: AppointmentWorkflowInstanceStatus;
+  createdAt: string;
+  updatedAt: string;
+  workflowRunId?: string;
+  sourceEventIds?: string[];
+};
+
 export type KnownCapabilityName =
   | "diagnosis.recorded"
   | "radiographs.reviewed"
@@ -193,6 +231,8 @@ export type EndoCase = {
   events?: ClinicalEvent[];
   closure: ClosureRecord | null;
   currentNodeId?: string;
+  workflowInstances?: AppointmentWorkflowInstanceState[];
+  activeWorkflowInstanceId?: string;
 };
 
 export type DecisionGuard =

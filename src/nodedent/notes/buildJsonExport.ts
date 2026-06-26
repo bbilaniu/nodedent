@@ -8,6 +8,7 @@ import {
   getOperativeRestorationRecordFromEvent,
   isOperativeScopeRecordedEvent,
 } from "../workflow/operative";
+import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { renderMeasurementValue, renderRecordedValue } from "./rendering";
@@ -16,6 +17,7 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
   const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const hasOperativeOutput = Boolean(latestOperativeSetupEvent || operativeRestorationEvents.length);
+  const workflowInstances = normalizeWorkflowInstances(caseData, currentNodeId || caseData.currentNodeId || undefined);
 
   return {
     currentNodeId: currentNodeId || caseData.currentNodeId || inferCurrentNodeIdFromEvents(caseData),
@@ -32,6 +34,8 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     preOp: caseData.preOp,
     canals: (caseData.canals || []).map((canal) => ({ ...canal, events: canal.events || [], status: statusLabels[getCanalStatus(canal)] })),
     closure: caseData.closure,
+    workflowInstances,
+    activeWorkflowInstanceId: caseData.activeWorkflowInstanceId,
     operative: hasOperativeOutput
       ? {
           setup: latestOperativeSetupEvent
