@@ -30,6 +30,7 @@ import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
 import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
 import { endodonticRootWorkflowId } from "./workflow/registry";
+import { isNoTreatmentSelected, noTreatmentSelectedProcedure } from "./workflow/procedures";
 import {
   buildOperativeSetupEventDetails,
   buildOperativeRestorationPlacedEvent,
@@ -239,7 +240,7 @@ export default function NodeDentApp() {
         id: caseId,
         patientNumber: snapshot.patientNumber || "No patient #",
         tooth: snapshot.tooth || "Tooth ___",
-        procedureType: snapshot.procedureType || "RCT",
+        procedureType: snapshot.procedureType || noTreatmentSelectedProcedure,
         currentNodeId,
         canalCount: snapshot.canals?.length || 0,
         eventCount: snapshot.globalEvents?.length || 0,
@@ -447,6 +448,13 @@ export default function NodeDentApp() {
     setActivePrimaryWorkflowId(workflowId);
     setCasePanelWorkflowId(workflowId);
     setRootWorkflowRunId(makeWorkflowRunId(workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"));
+    setCaseData((prev) => {
+      if (!isNoTreatmentSelected(prev.procedureType)) return prev;
+      return {
+        ...prev,
+        procedureType: workflowId === operativeDirectRestorationWorkflowId ? "Direct restoration" : "RCT",
+      };
+    });
     setIsWorkflowLauncherOpen(false);
   }
 

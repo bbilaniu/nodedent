@@ -1,11 +1,14 @@
 import { z } from "zod";
 import { CanalRecordSchema } from "./CanalRecord.schema";
 import { ClinicalEventSchema, ClosureRecordSchema, WorkflowScopeKindSchema, WorkflowScopeSchema } from "./ClinicalEvent.schema";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 
 export const ProcedureTypeSchema = z.union([
+  z.literal(noTreatmentSelectedProcedure),
   z.literal("RCT"),
   z.literal("Retreatment"),
   z.literal("Emergency pulpectomy"),
+  z.literal("Direct restoration"),
 ]);
 
 export const DecisionGuardSchema = z.union([

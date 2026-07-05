@@ -1,12 +1,17 @@
 import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 
 export const STORAGE_KEY = "endo-chairside-guide-current-case";
 export const CASE_INDEX_KEY = "endo-chairside-guide-case-index";
 export const CASE_RECORD_PREFIX = "endo-chairside-guide-case-record:";
 
 export const caseStatusOptions = [
+  noTreatmentSelectedProcedure,
   "RCT planned",
+  "Retreatment planned",
+  "Emergency pulpectomy planned",
+  "Direct restoration planned",
   "RCT initiated",
   "RCT completed",
   "Medicated and temporized",
@@ -17,7 +22,7 @@ export const caseStatusOptions = [
 export function makeCaseId(caseData: Pick<EndoCase, "patientNumber" | "tooth" | "procedureType">) {
   const patient = String(caseData.patientNumber || "no-patient").trim() || "no-patient";
   const tooth = String(caseData.tooth || "unknown-tooth").trim() || "unknown-tooth";
-  const procedure = String(caseData.procedureType || "RCT").trim() || "RCT";
+  const procedure = String(caseData.procedureType || noTreatmentSelectedProcedure).trim() || noTreatmentSelectedProcedure;
   return `${patient}__${tooth}__${procedure}`.replaceAll(" ", "-");
 }
 
@@ -45,7 +50,7 @@ export const initialCase: EndoCase = {
   patientNumber: "",
   autosavedAt: "",
   tooth: "",
-  procedureType: "RCT",
+  procedureType: noTreatmentSelectedProcedure,
   caseStatus: "",
   nextVisitPlan: "",
   priorVisit: {

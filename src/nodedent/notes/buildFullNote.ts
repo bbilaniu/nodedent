@@ -5,6 +5,7 @@ import { appendSection, groupEventsByPrefix } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { getPriorVisitLines } from "./priorVisit";
 import { getCapabilityStatus } from "../workflow/selectors";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
@@ -20,7 +21,7 @@ export function buildFullNote(caseData: EndoCase) {
     bwReviewed ? "BW" : null,
     caseData.preOp?.cbctReviewed ? "CBCT" : null,
   ].filter(Boolean);
-  lines.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}`);
+  lines.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   if (caseData.patientNumber) lines.push(`Patient #: ${caseData.patientNumber}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   if (caseData.autosavedAt) lines.push(`Autosaved: ${new Date(caseData.autosavedAt).toLocaleString()}`);

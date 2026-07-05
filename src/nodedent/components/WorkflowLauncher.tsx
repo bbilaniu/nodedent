@@ -17,6 +17,7 @@ import {
   getOperativeRestorationEvents,
   operativeDirectRestorationWorkflowId,
 } from "../workflow/operative";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -84,12 +85,14 @@ export function WorkflowLauncher({
   const operativeStarted = hasOperativeSetupProgress(caseData);
   const operativeStatusLabel = operativeCompleted ? "Complete" : operativeStarted ? "In progress" : "Not started";
   const operativeLaunchLabel = operativeCompleted ? "Review workflow" : operativeStarted ? "Resume workflow" : "Start workflow";
+  const procedureLabel = caseData.procedureType || noTreatmentSelectedProcedure;
+  const caseStatusLabel = getCaseStatus(caseData);
   const activeCaseFacts = [
     `Patient ${caseData.patientNumber || "not set"}`,
     `Tooth ${caseData.tooth || "not set"}`,
-    caseData.procedureType || "RCT",
-    getCaseStatus(caseData),
-  ];
+    procedureLabel,
+    caseStatusLabel,
+  ].filter((fact, index, facts) => index === facts.indexOf(fact));
 
   const content = (
       <section className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}>
@@ -110,58 +113,60 @@ export function WorkflowLauncher({
           ) : null}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[1.2fr_1fr]">
-          <section className={panelSurface.muted}>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h3 className={sectionText.titleSmall}>Workflow quick actions</h3>
-                <p className="mt-1 text-lg font-bold text-brand-navy">{currentNodeTitle}</p>
-                <p className="mt-1 text-sm leading-6 text-brand-slate">
-                  {currentNodePhase} · Active canal {caseData.currentCanal || "not set"} · Autosaved {formatTimestamp(caseData.autosavedAt)}
-                </p>
+        <div className={cx("grid gap-4", presentation === "modal" ? "xl:grid-cols-[1.2fr_1fr]" : "xl:grid-cols-1")}>
+          {presentation === "modal" ? (
+            <section className={panelSurface.muted}>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                  <h3 className={sectionText.titleSmall}>Workflow quick actions</h3>
+                  <p className="mt-1 text-lg font-bold text-brand-navy">{currentNodeTitle}</p>
+                  <p className="mt-1 text-sm leading-6 text-brand-slate">
+                    {currentNodePhase} · Active canal {caseData.currentCanal || "not set"} · Autosaved {formatTimestamp(caseData.autosavedAt)}
+                  </p>
+                </div>
+                <span className={cx(statusBadge.base, endodonticStarted ? statusBadge.ready : statusBadge.neutral)}>
+                  {endodonticStarted ? "Fast resume" : "Start"}
+                </span>
               </div>
-              <span className={cx(statusBadge.base, endodonticStarted ? statusBadge.ready : statusBadge.neutral)}>
-                {endodonticStarted ? "Fast resume" : "Start"}
-              </span>
-            </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-              <button
-                type="button"
-                onClick={onContinueEndodonticWorkflow}
-                className={panelActionButton.primary}
-              >
-                {endodonticLaunchLabel}
-              </button>
-              <button
-                type="button"
-                onClick={onOpenCaseSetupStatus}
-                className={panelActionButton.secondary}
-              >
-                Case Setup & Status
-              </button>
-              <button
-                type="button"
-                onClick={onOpenSavedCases}
-                className={panelActionButton.info}
-              >
-                Saved cases ({savedCaseCount})
-              </button>
-              <button
-                type="button"
-                onClick={onOpenPriorVisit}
-                className={panelActionButton.warning}
-              >
-                Prior visit
-              </button>
-              <button
-                type="button"
-                onClick={onOpenNewCaseConfirm}
-                className={panelActionButton.secondary}
-              >
-                New case
-              </button>
-            </div>
-          </section>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                <button
+                  type="button"
+                  onClick={onContinueEndodonticWorkflow}
+                  className={panelActionButton.primary}
+                >
+                  {endodonticLaunchLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenCaseSetupStatus}
+                  className={panelActionButton.secondary}
+                >
+                  Case Setup & Status
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenSavedCases}
+                  className={panelActionButton.info}
+                >
+                  Saved cases ({savedCaseCount})
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenPriorVisit}
+                  className={panelActionButton.warning}
+                >
+                  Prior visit
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenNewCaseConfirm}
+                  className={panelActionButton.secondary}
+                >
+                  New case
+                </button>
+              </div>
+            </section>
+          ) : null}
 
           <section className={panelSurface.muted}>
             <h3 className={sectionText.titleSmall}>Shared module status</h3>

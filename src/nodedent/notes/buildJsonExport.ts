@@ -10,6 +10,7 @@ import {
 } from "../workflow/operative";
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
@@ -60,7 +61,7 @@ export function buildPrintableSummary(caseData: EndoCase) {
   lines.push("============================");
   lines.push(`Patient #: ${caseData.patientNumber || "________________"}`);
   lines.push(`Tooth: ${caseData.tooth || "____"}`);
-  lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
+  lines.push(`Procedure: ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   lines.push(`Date/autosave: ${caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleString() : new Date().toLocaleString()}`);
   lines.push("");
@@ -82,7 +83,7 @@ export function buildEventLogExport(caseData: EndoCase) {
   lines.push("====================");
   lines.push(`Patient #: ${caseData.patientNumber || ""}`);
   lines.push(`Tooth: ${caseData.tooth || ""}`);
-  lines.push(`Procedure: ${caseData.procedureType || "RCT"}`);
+  lines.push(`Procedure: ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   lines.push("");
 

@@ -7,6 +7,7 @@ import type { AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
+import { procedureOptions } from "../workflow/procedures";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
@@ -68,7 +69,7 @@ function CaseIdentitySection({
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
-        <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={["RCT", "Retreatment", "Emergency pulpectomy"]} />
+        <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={procedureOptions} />
       </div>
     </section>
   );

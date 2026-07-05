@@ -78,6 +78,7 @@ import {
   sharedDiagnosisWorkflowId,
   upsertOperativeScopeRecordedEvent,
 } from "../workflow/operative";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import {
   buildRadiographsReviewedCapability,
   formatRadiologyEventFragment,
@@ -107,6 +108,7 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
     ...initialCase,
     patientNumber: "123",
     tooth: "30",
+    procedureType: "RCT",
     preOp: { ...initialCase.preOp, estimatedChamberDepth: "5" },
     currentCanal: "MB",
     canals: [canal],
@@ -263,6 +265,7 @@ test("protocol option targets resolve to existing nodes", () => {
 });
 
 test("new cases leave radiograph review unchecked by default", () => {
+  assert.equal(initialCase.procedureType, noTreatmentSelectedProcedure);
   assert.equal(initialCase.preOp.radiographsReviewed, false);
   assert.equal(initialCase.preOp.paReviewed, false);
   assert.equal(initialCase.preOp.bwReviewed, false);
@@ -317,6 +320,7 @@ test("shared radiology reviewed events satisfy radiograph readiness", () => {
   assert.match(eventFragment(event), /reviewed by clinician/);
   assert.match(buildFullNote(caseData), /Radiology:\n- Radiograph review recorded/);
   assert.equal(ClinicalEventSchema.safeParse(caseData.globalEvents[0]).success, true);
+  assert.equal(buildJsonExport({ ...initialCase, tooth: "36", globalEvents: [event] }, "preop").caseStatus, noTreatmentSelectedProcedure);
 });
 
 test("handoff nodes are intentional and resolvable", () => {
@@ -673,6 +677,33 @@ test("workflow launcher exposes operative runner entry", () => {
   assert.equal(markup.includes("Radiology"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
   assert.equal(markup.includes("Model only"), false);
+});
+
+test("workflow launcher page view starts from workflow selection instead of endodontic quick actions", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: initialCase,
+    currentNodeTitle: "Pre-op setup",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    presentation: "page",
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.equal(markup.includes("Workflow quick actions"), false);
+  assert.equal(markup.includes("Pre-op setup"), false);
+  assert.equal(markup.includes("Active canal"), false);
+  assert.equal(markup.includes("Primary workflows"), true);
+  assert.equal(markup.match(new RegExp(noTreatmentSelectedProcedure, "g"))?.length, 1);
 });
 
 test("workflow launcher uses state-aware operative workflow labels", () => {
@@ -1616,6 +1647,27 @@ test("completed RCT closure records cleanup rinse final restoration and export s
   assert.match(buildCompactNote(result.updatedCaseData), /Visit status: RCT completed/);
   assert.match(buildCompactNote(result.updatedCaseData), /Final restoration placed/);
   assert.match(buildFullNote(result.updatedCaseData), /Pulp chamber rinsed until residual sealer was removed/);
+});
+
+test("persisted planned status does not override started or completed RCT events", () => {
+  const accessEvent = { id: "evt_access", timestamp: "2026-01-01T00:00:00.000Z", type: "access.completed", canal: "MB" };
+  const closureEvent = { id: "evt_closure", timestamp: "2026-01-01T00:00:00.000Z", type: "closure.finalRestoration", canal: "MB" };
+  const startedCase = baseCase({
+    caseStatus: "RCT planned",
+    canals: [{ ...blankCanal("MB"), events: [accessEvent] }],
+    globalEvents: [accessEvent],
+  });
+  const completedCase = baseCase({
+    caseStatus: "RCT planned",
+    canals: [{ ...blankCanal("MB"), events: [accessEvent, closureEvent] }],
+    globalEvents: [accessEvent, closureEvent],
+    closure: { type: "closure.finalRestoration" },
+  });
+
+  assert.equal(buildJsonExport(startedCase, "access").caseStatus, "RCT initiated");
+  assert.match(buildCompactNote(startedCase), /Visit status: RCT initiated/);
+  assert.equal(buildJsonExport(completedCase, "endodontic-pathway-complete").caseStatus, "RCT completed");
+  assert.match(buildCompactNote(completedCase), /Visit status: RCT completed/);
 });
 
 test("temporary closure after completed obturation is still a completed RCT", () => {

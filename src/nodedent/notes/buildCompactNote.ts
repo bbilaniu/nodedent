@@ -1,6 +1,7 @@
 import type { EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
+import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import {
   formatOperativeRestorationEventFragment,
   formatOperativeSetupEventFragment,
@@ -17,7 +18,7 @@ export function buildCompactNote(caseData: EndoCase) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
   const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const note = [];
-  note.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || "RCT"}.`);
+  note.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}.`);
   if (caseData.patientNumber) note.push(`Patient #: ${caseData.patientNumber}.`);
   note.push(`Visit status: ${getCaseStatus(caseData)}.`);
   const priorVisitLines = getPriorVisitLines(caseData);
