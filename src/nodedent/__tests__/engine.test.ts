@@ -664,13 +664,83 @@ test("workflow launcher exposes operative runner entry", () => {
   }));
 
   assert.equal(markup.includes("Operative direct restoration"), true);
+  assert.equal(markup.includes("Workflow quick actions"), true);
+  assert.equal(markup.includes("Active endodontic workflow"), false);
   assert.equal(markup.includes("Not started"), true);
   assert.equal(markup.includes("Start workflow"), true);
   assert.equal(markup.includes("Continue workflow"), false);
-  assert.equal(markup.includes("Start / resume workflow"), true);
+  assert.equal(markup.includes("Start / resume workflow"), false);
   assert.equal(markup.includes("Radiology"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
   assert.equal(markup.includes("Model only"), false);
+});
+
+test("workflow launcher uses state-aware operative workflow labels", () => {
+  const noop = () => {};
+  const operativeSetupEvent = {
+    id: "evt_operative_setup_launcher",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    scope: createOperativeSurfaceScope({ tooth: "30", surfaces: "MO" }),
+    details: buildOperativeSetupEventDetails({
+      tooth: "30",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+    }),
+  };
+  const inProgressMarkup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: baseCase({ globalEvents: [operativeSetupEvent] }),
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+  const completionEvent = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_complete_launcher",
+    timestamp: "2026-01-01T11:00:00.000Z",
+    record: {
+      tooth: "30",
+      surfaces: "MO",
+      restorationIntent: "direct restoration",
+      material: "composite",
+      shade: "A2",
+      outcome: "placed",
+      notes: "",
+    },
+  });
+  const completedMarkup = renderToStaticMarkup(React.createElement(WorkflowLauncher, {
+    caseData: baseCase({ globalEvents: [completionEvent] }),
+    currentNodeTitle: "Pre-op",
+    currentNodePhase: "Pre-op",
+    savedCaseCount: 0,
+    onClose: noop,
+    onContinueEndodonticWorkflow: noop,
+    onOpenCaseSetupStatus: noop,
+    onOpenSavedCases: noop,
+    onOpenPriorVisit: noop,
+    onOpenNewCaseConfirm: noop,
+    onOpenPrimaryWorkflowSetup: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.match(inProgressMarkup, /Operative direct restoration[\s\S]*In progress[\s\S]*Resume workflow/);
+  assert.match(completedMarkup, /Operative direct restoration[\s\S]*Complete[\s\S]*Review workflow/);
+  assert.equal(inProgressMarkup.includes("Start / resume workflow"), false);
+  assert.equal(completedMarkup.includes("Start / resume workflow"), false);
 });
 
 test("workflow launcher switches endodontic action after the first node", () => {

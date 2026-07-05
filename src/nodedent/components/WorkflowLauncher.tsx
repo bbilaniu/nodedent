@@ -12,6 +12,11 @@ import {
 import { sharedIsolationWorkflowId } from "../workflow/isolation";
 import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
 import { sharedRadiologyWorkflowId } from "../workflow/radiology";
+import {
+  getLatestOperativeWorkflowSetup,
+  getOperativeRestorationEvents,
+  operativeDirectRestorationWorkflowId,
+} from "../workflow/operative";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -24,6 +29,11 @@ function formatTimestamp(timestamp?: string) {
 
 function compactScopeList(scopes: readonly string[]) {
   return scopes.join(", ");
+}
+
+function hasOperativeSetupProgress(caseData: EndoCase) {
+  const setup = getLatestOperativeWorkflowSetup(caseData);
+  return Object.values(setup).some((value) => value.trim());
 }
 
 export function WorkflowLauncher({
@@ -70,6 +80,10 @@ export function WorkflowLauncher({
   const endodonticStarted = currentNodePhase !== "Pre-op" || (currentNodeTitle !== "Pre-op setup" && currentNodeTitle !== "Pre-op");
   const endodonticStatusLabel = endodonticStarted ? "In progress" : "Not started";
   const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : "Start workflow";
+  const operativeCompleted = getOperativeRestorationEvents(caseData).length > 0;
+  const operativeStarted = hasOperativeSetupProgress(caseData);
+  const operativeStatusLabel = operativeCompleted ? "Complete" : operativeStarted ? "In progress" : "Not started";
+  const operativeLaunchLabel = operativeCompleted ? "Review workflow" : operativeStarted ? "Resume workflow" : "Start workflow";
   const activeCaseFacts = [
     `Patient ${caseData.patientNumber || "not set"}`,
     `Tooth ${caseData.tooth || "not set"}`,
@@ -100,7 +114,7 @@ export function WorkflowLauncher({
           <section className={panelSurface.muted}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
-                <h3 className={sectionText.titleSmall}>Active endodontic workflow</h3>
+                <h3 className={sectionText.titleSmall}>Workflow quick actions</h3>
                 <p className="mt-1 text-lg font-bold text-brand-navy">{currentNodeTitle}</p>
                 <p className="mt-1 text-sm leading-6 text-brand-slate">
                   {currentNodePhase} · Active canal {caseData.currentCanal || "not set"} · Autosaved {formatTimestamp(caseData.autosavedAt)}
@@ -178,8 +192,9 @@ export function WorkflowLauncher({
             <div className="mt-3 grid gap-3">
               {primaryEntries.map((entry) => {
                 const isEndo = entry.workflowId === endodonticRootWorkflowId;
-                const statusLabel = isEndo ? endodonticStatusLabel : entry.statusLabel;
-                const launchLabel = isEndo ? endodonticLaunchLabel : entry.launchLabel;
+                const isOperative = entry.workflowId === operativeDirectRestorationWorkflowId;
+                const statusLabel = isEndo ? endodonticStatusLabel : isOperative ? operativeStatusLabel : entry.statusLabel;
+                const launchLabel = isEndo ? endodonticLaunchLabel : isOperative ? operativeLaunchLabel : entry.launchLabel;
                 return (
                   <div key={entry.workflowId} className={workspaceSurface.launcherCard}>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
