@@ -12,6 +12,7 @@ This folder separates clinical source material, active product specs, architectu
 ## Active Product And Implementation Specs
 
 - [Implement Changesets and establish the NodeDent release-versioning baseline](specs/Implement-Changesets.md)
+- [Global footer and application-version display](specs/global-footer-and-application-version.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
