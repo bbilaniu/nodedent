@@ -11,7 +11,6 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Active Product And Implementation Specs
 
-- [Implement Changesets and establish the NodeDent release-versioning baseline](specs/Implement-Changesets.md)
 - [Global footer and application-version display](specs/global-footer-and-application-version.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
@@ -22,6 +21,7 @@ This folder separates clinical source material, active product specs, architectu
 ## Engineering Guides
 
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
+- [Versioning and releases](versioning.md)
 
 ## Generated Documentation
 
@@ -38,6 +38,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Archived Implemented Specs
 
+- [Changesets and release-versioning baseline](specs/archive/Implement-Changesets.md)
 - [Codex MVP implementation instructions](specs/archive/codex-endo-guide-mvp-instructions.md)
 - [Codex refactor instructions](specs/archive/codex-endo-guide-refactor.md)
 - [Case setup and shared readiness refactor](specs/archive/case-setup-and-shared-readiness-refactor.md)

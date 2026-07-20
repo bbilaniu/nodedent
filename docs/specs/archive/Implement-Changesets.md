@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-07-20
+completed_on: 2026-07-20
 ---
 
 # Implement Changesets and establish the NodeDent release-versioning baseline  
