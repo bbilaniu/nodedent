@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -25,27 +25,35 @@ The historical [2026-07-11 website review](../reviews/2026-07-11-website-review.
 - Authentication, authorization, auditability, retention, deletion, and key-management responsibilities.
 - The operational burden NodeDent is prepared to support.
 
-## Proposed Decision Process
+## Decision
 
-Before NodeDent represents itself as suitable for routine use with real patient information:
+NodeDent supports **prototype/no-PHI mode** for its current release stage. Real patient identifiers and protected health information must not be entered, stored, imported, or transmitted through the application.
 
-1. Select exactly one supported mode for the next release stage.
-2. Document prohibited uses and the supported device/profile environment.
+The product must make this boundary explicit with a persistent warning and must not represent the current browser-storage architecture as suitable for routine clinical recordkeeping. Acceptance of this ADR selects the supported mode; it does not mean that every enforcement and integrity control has already been implemented.
+
+Local clinical mode and authenticated clinical mode remain possible future deployment models. Their requirements are retained below so that later implementation is deliberate rather than inferred from incremental storage changes.
+
+Before NodeDent changes its supported mode or represents itself as suitable for routine use with real patient information:
+
+1. Select either local clinical mode or authenticated clinical mode for that release stage.
+2. Document permitted and prohibited uses and the supported device/profile environment.
 3. Obtain a privacy/security review appropriate to the intended jurisdiction and clinic setting.
 4. Define the threat model, retention/deletion rules, backup/recovery behavior, and export boundary.
 5. Update product copy, persistence architecture, tests, and deployment controls to enforce the selected mode.
 
-Until that decision is accepted and implemented, NodeDent should be treated as prototype/no-PHI software. This proposed ADR does not select encryption, server storage, authentication, or a specific regulatory framework.
+This ADR does not select encryption, server storage, authentication, or a specific regulatory framework for a future clinical mode.
 
 ## Consequences
 
 - Privacy-sensitive persistence work must reference this ADR and avoid silently selecting a deployment model.
+- Product copy and application surfaces must clearly prohibit use with real patient information until this decision is superseded and the replacement mode is implemented.
 - Random encounter identifiers, safer filenames, import validation, destructive-action protection, and visible storage failures can proceed because they improve every mode.
 - Encryption, authentication, server persistence, inactivity locking, telemetry, and offline guarantees remain blocked on the selected deployment mode and threat model.
+- Local clinical and authenticated clinical requirements remain documented future options, not supported capabilities.
 - Product metadata and public indexing decisions must remain consistent with the supported mode.
 
 ## Follow-Up
 
-- Resolve this ADR before claiming support for real patient identifiers.
+- Add and verify the persistent prototype/no-PHI warning.
 - Implement mode-independent integrity and recovery work through [Local data integrity and recovery](../specs/local-data-integrity-and-recovery.md).
-- Revisit this decision when server persistence, multi-user access, clinic synchronization, or formal clinical deployment is proposed.
+- Revisit and supersede this decision when server persistence, multi-user access, clinic synchronization, local clinical use, or formal clinical deployment is proposed.

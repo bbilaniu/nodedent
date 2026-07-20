@@ -11,9 +11,15 @@ Establish required pull-request and deployment evidence for NodeDent's existing 
 
 This spec owns ASSURE-01 and ASSURE-02 from the [2026-07-11 website review](../reviews/2026-07-11-website-review.md).
 
-## Current Baseline
+## Baseline Before Implementation
 
 The repository has a GitHub Pages workflow that runs `npm ci` and `npm run build` after pushes to `main`. Because `build` includes TypeScript checking, deployment receives a build/type gate, but there is no pull-request trigger and no explicit domain-test, documentation-lifecycle, end-to-end, or accessibility gate.
+
+## Implementation Progress
+
+The `CI` workflow now provides a stable `Quality` job on pull requests and pushes to `main`. It installs locked dependencies and runs versioning validation, typechecking, domain tests, documentation lifecycle validation, and the production build as separately named steps. The existing Pages workflow continues to build the exact commit it deploys.
+
+The remaining work in this spec includes branch-protection configuration, browser and accessibility coverage, focused visual snapshots, deployed-site smoke testing, release evidence, and a documented dependency-audit policy.
 
 ## Required Outcomes
 
