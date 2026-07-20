@@ -88,6 +88,8 @@ From a clean release-preparation branch, review all pending Changesets, then use
 
 ```sh
 npm run version
+npm install --package-lock-only --ignore-scripts
+npm run versioning:check
 npm run test
 npm run typecheck
 npm run build
@@ -95,8 +97,22 @@ npm run docs:check
 npm run release
 ```
 
-`npm run version` consumes pending Changesets and updates package versions and the changelog. Commit and review those generated version/changelog changes before tagging. `npm run release` creates Git tags only and should run only from the reviewed release commit. NodeDent is private and nothing in this release flow publishes it to npm.
+`npm run version` consumes pending Changesets and updates package versions and the changelog. Changesets does not reliably synchronize the root version metadata in `package-lock.json` for this private single-package application, so refresh the lockfile metadata and run the invariant check before validation. Commit and review the generated version, lockfile, and changelog changes before tagging. `npm run release` creates Git tags only and should run only from the reviewed release commit. NodeDent is private and nothing in this release flow publishes it to npm.
 
-## Current tooling follow-up
+## Ongoing versioning validation
 
-`scripts/check-versioning.mjs` was written as a one-time baseline validator. It still expects package version `0.1.0` and exactly one pending minor Changeset, so those assertions are obsolete after the `1.0.0` baseline was established. Do not treat that script's current failure as evidence that a new Changeset is required. Generalize the script in a separate tooling change before making `npm run versioning:check` a required ongoing CI gate.
+Run:
+
+```sh
+npm run versioning:check
+```
+
+The ongoing check validates:
+
+- package name, privacy, semantic version, Changesets dependency, and release scripts;
+- root package name/version alignment between `package.json` and `package-lock.json`;
+- a matching current-version heading in `CHANGELOG.md`;
+- the repository's Changesets configuration; and
+- every pending Changeset when zero or more are present.
+
+For this single-package repository, each pending Changeset must target `nodedent` exactly once, use a patch, minor, or major bump, and include a non-empty release summary. The check intentionally allows no pending Changesets between feature changes and after a versioning release.
