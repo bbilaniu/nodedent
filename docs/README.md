@@ -14,6 +14,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Accessible interaction](specs/accessible-interaction.md)
 - [Automated assurance](specs/automated-assurance.md)
 - [Global footer and application-version display](specs/global-footer-and-application-version.md)
+- [GUI consistency and design system](specs/gui-consistency-and-design-system.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [Local data integrity and recovery](specs/local-data-integrity-and-recovery.md)
