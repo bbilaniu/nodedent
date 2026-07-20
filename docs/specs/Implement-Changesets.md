@@ -1,3 +1,8 @@
+---
+status: active
+created_on: 2026-07-20
+---
+
 # Implement Changesets and establish the NodeDent release-versioning baseline  
   
 ## Goal  
@@ -230,6 +235,8 @@ Add a concise release/versioning document, preferably:
 docs/versioning.md
 
 ```
+
+Add the new versioning guide to ==docs/README.md== under Engineering Guides so it is discoverable.
   
   
 Document the distinction between:  
@@ -268,7 +275,7 @@ A general UI, build, documentation, or unrelated workflow change must not automa
   
 ### Persisted-data schema version  
   
-Persisted/exported data must use its own explicit schema version.  
+Persisted/exported formats should use their own explicit schema versions rather than reusing the application semantic version. The current general case JSON export does not expose a top-level schema version; introducing one and adding the corresponding migration behavior are outside the scope of this task. Existing independently versioned persisted formats, such as user-catalog storage, must remain unchanged.
   
 Document that the schema version:  
   
@@ -289,8 +296,10 @@ Examples:
 - visual fixes;  
 - accessibility fixes;  
 - wording corrections;  
-- tests and documentation;  
+- release-worthy documentation or test-backed corrections when they accompany an observable patch;
 - bug fixes that do not alter persisted data or clinical meaning.  
+
+Tests-only and documentation-only changes normally do not require a Changeset, as described in the contributor guidance below.
   
 ### Minor  
   
@@ -308,7 +317,7 @@ Also document that after ==1.0.0==, incompatible public behavior should use a ma
   
 ### 7. Add contributor guidance  
   
-Update the most appropriate contributor-facing documentation. If there is no contributor guide or README, add a concise section to ==docs/versioning.md==.  
+Add the contributor guidance below to ==docs/versioning.md== and link that guide from ==docs/README.md==. Do not treat the documentation index itself as the contributor guide.
   
 Explain when a Changeset is required.  
   
@@ -363,13 +372,14 @@ Clarify that:
 Add a lightweight non-destructive validation script or test that confirms:  
   
 - the package name is ==nodedent==;  
+- the package version remains ==0.1.0==;
 - the package remains private;  
 - ==.changeset/config.json== exists;  
 - private package versioning is enabled;  
 - private package tagging is enabled;  
 - the Changesets base branch is ==main==;  
-- at least one pending catch-up Changeset exists;  
-- the pending Changeset references =="nodedent": minor==.  
+- exactly one pending Changeset exists, excluding ==.changeset/README.md==;
+- that pending Changeset references =="nodedent": minor==.
   
 Prefer a small Node script such as:  
   
@@ -406,6 +416,16 @@ docs:workflow-graph
   
   
 Do not modify clinical tests except where package renaming or versioning documentation requires it.  
+
+### 10. Complete the spec-document lifecycle
+
+This file is a tracked active implementation spec. After all acceptance criteria are satisfied:
+
+- move ==docs/specs/Implement-Changesets.md== to ==docs/specs/archive/Implement-Changesets.md==;
+- change its frontmatter status to ==implemented==;
+- preserve ==created_on: 2026-07-20== and add the actual ==completed_on== date in ==YYYY-MM-DD== format;
+- update ==docs/README.md== so the spec moves from Active Product And Implementation Specs to Archived Implemented Specs; and
+- run ==npm run docs:check== after the move.
   
 ## Validation  
   
@@ -462,7 +482,9 @@ The task is complete when:
 - Workflow versions remain unchanged.  
 - Persisted-data schemas remain unchanged.  
 - ==docs/versioning.md== explains application, workflow, and schema versions.  
+- ==docs/versioning.md== is linked from ==docs/README.md==.
 - The bump and contributor policies are documented.  
+- This implementation spec is archived with completed lifecycle metadata and its ==docs/README.md== entry is updated.
 - ==npm run versioning:check== passes.  
 - Existing typechecks, tests, builds, and documentation checks pass.  
 - No Git tags, GitHub releases, commits, pushes, or npm publications are created.  
