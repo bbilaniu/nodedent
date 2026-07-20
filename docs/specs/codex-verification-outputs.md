@@ -4,6 +4,12 @@ created_on: 2026-06-24
 ---
 # CODEX task brief: Clinical note generator QA — state consistency, missing-data handling, and avoiding endodontic overfitting
 
+## Recovery provenance
+
+Four unmerged note-output commits (`66ba94f`, `a8a813f`, `17012eb`, and `5b2456c`) are present on `note-artifacts-and-treatment-plan-model` and are also contained in `codex/2026-06-24-hardening`. They include clinically meaningful missing-data, difficulty-reason, diagnosis, prior-context, radiograph, and final-state rendering work.
+
+Recover this work through this spec against current `main`; do not merge the ancestor note branch separately or fold its note behavior into [Repeatable workflow instances](repeatable-workflow-instances.md). Current `main` changed workflow-neutral case defaults and overlapping note/status paths after those commits, so the fixes require a focused port with regression review rather than a wholesale branch merge.
+
 Please audit the current clinical note template/generator against the attached sample output containing:
 
 1. Full note
