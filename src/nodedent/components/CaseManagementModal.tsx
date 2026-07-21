@@ -15,6 +15,7 @@ import { protocolNodes } from "../protocol/nodes";
 import { workflowHasEndodonticTargetPanel } from "../workflow/targetPanels";
 import { SelectInput, TextInput } from "./FormControls";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
+import { PrototypeDataWarning } from "./PrototypeDataWarning";
 
 type SavedCaseSummary = {
   id: string;
@@ -96,6 +97,8 @@ export function CaseManagementModal({
             Close
           </button>
         </div>
+
+        <PrototypeDataWarning compact className="mb-4" />
 
         <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -191,6 +194,8 @@ export function SavedCasesModal({
           </div>
           <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">Close</button>
         </div>
+
+        <PrototypeDataWarning compact className="mb-4" />
 
         <div className="rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
           <h3 className="mb-3 text-sm font-semibold text-brand-navy">Import / library actions</h3>
@@ -312,6 +317,8 @@ export function PriorVisitModal({
             <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs font-bold text-brand-slate hover:bg-brand-light-node">Close</button>
           </div>
         </div>
+
+        <PrototypeDataWarning compact className="mb-4" />
 
         <div className="grid gap-3 md:grid-cols-2">
           <TextInput label="Prior visit date / timing" value={caseData.priorVisit?.priorVisitDate || ""} onChange={(value) => updatePriorVisit({ priorVisitDate: value })} placeholder="optional" />

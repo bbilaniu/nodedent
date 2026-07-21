@@ -28,10 +28,14 @@ Repeatable workflows inside one encounter are separate and owned by [Repeatable 
 
 ### Safer exports
 
-- Default to non-identifying timestamp/UUID-based filenames.
+- Use the patient number as the only case-specific value in the default filename; do not include patient name, tooth, procedure, date of birth, or other patient-specific details.
+- Sanitize the patient number for filesystem safety and use a generic fallback when it is blank.
+- In the current prototype/no-PHI mode, require the patient number to be synthetic. Do not describe a patient-number filename as de-identified or safe for sharing.
 - Explain what full JSON exports contain before download.
-- Keep any identifying filename opt-in explicit and warning-backed.
+- Reassess filename policy before supporting real patient information because a real chart number can identify a patient within a clinic.
 - Define a separate de-identified/share-safe export only if its removal rules can be tested.
+
+Initial implementation: JSON downloads use a filesystem-safe patient number as their only case-specific filename value. Persistent prototype warnings state that the number must be synthetic, that the full JSON contains the case record, and that the number appears in the filename. A separately validated share-safe export remains future work.
 
 ### Destructive actions
 

@@ -6,8 +6,9 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
-import { CaseManagementModal } from "../components/CaseManagementModal";
+import { CaseManagementModal, SavedCasesModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
+import { PrototypeDataWarning } from "../components/PrototypeDataWarning";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
 import { SharedWorkflowRunnerModal } from "../components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
@@ -18,6 +19,7 @@ import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
 import { buildJsonExport } from "../notes/buildJsonExport";
 import { buildPatientSummary } from "../notes/buildPatientSummary";
+import { buildCaseExportFilename } from "../notes/exportFilename";
 import { eventFragment } from "../notes/fragments";
 import { inferCurrentNodeIdFromEvents } from "../engine/getCurrentNode";
 import { getManualResumeNodeForCanal } from "../engine/resume";
@@ -116,6 +118,40 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
     ...overrides,
   };
 }
+
+test("prototype warning prohibits real patient data and explains export exposure", () => {
+  const markup = renderToStaticMarkup(React.createElement(PrototypeDataWarning));
+
+  assert.equal(markup.includes("Prototype only — do not enter real patient information"), true);
+  assert.equal(markup.includes("Use only synthetic patient numbers and case details"), true);
+  assert.equal(markup.includes("patient number is included in the filename"), true);
+});
+
+test("case export filenames contain only a sanitized patient number", () => {
+  assert.equal(buildCaseExportFilename(" SYN-123 "), "nodedent-case-SYN-123.json");
+  assert.equal(buildCaseExportFilename("demo/12:34"), "nodedent-case-demo-12-34.json");
+  assert.equal(buildCaseExportFilename("../"), "nodedent-case-synthetic-patient.json");
+});
+
+test("saved-case import and resume surface repeats the prototype warning", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(SavedCasesModal, {
+    savedCases: [],
+    importText: "",
+    showImportBox: true,
+    onClose: noop,
+    onToggleImportBox: noop,
+    onImportTextChange: noop,
+    onImportCaseJson: noop,
+    onClearSavedCurrentCase: noop,
+    onResetAllSavedCases: noop,
+    onLoadSavedCase: noop,
+    onDeleteSavedCase: noop,
+  }));
+
+  assert.equal(markup.includes("Prototype only — do not enter real patient information"), true);
+  assert.equal(markup.includes("Paste exported case JSON here"), true);
+});
 
 function radiologyReviewedEvent(tooth = "30") {
   const event = {

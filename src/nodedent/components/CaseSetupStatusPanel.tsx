@@ -67,7 +67,13 @@ function CaseIdentitySection({
     <section className={panelSurface.muted}>
       <h3 className={sectionText.titleSmall}>Patient and procedure</h3>
       <div className="mt-3 grid gap-3">
-        <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
+        <TextInput
+          label="Patient #"
+          value={caseData.patientNumber}
+          onChange={(value) => onUpdateCase({ patientNumber: value })}
+          placeholder="synthetic patient number"
+          helperText="Prototype mode: use a synthetic number only. This number is included in JSON export filenames."
+        />
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
         <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={procedureOptions} />
       </div>

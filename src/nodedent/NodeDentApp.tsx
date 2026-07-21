@@ -9,6 +9,7 @@ import { MeasurementPanel } from "./components/MeasurementPanel";
 import { NotePreview } from "./components/NotePreview";
 import { OperativeWorkflowRunner } from "./components/OperativeWorkflowRunner";
 import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
+import { PrototypeDataWarning } from "./components/PrototypeDataWarning";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { SharedReadinessCard } from "./components/SharedReadinessCard";
 import { WorkflowLauncher } from "./components/WorkflowLauncher";
@@ -23,6 +24,7 @@ import { buildCompactNote } from "./notes/buildCompactNote";
 import { buildEventLogExport, buildJsonExport, buildPrintableSummary } from "./notes/buildJsonExport";
 import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
+import { buildCaseExportFilename } from "./notes/exportFilename";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
@@ -669,7 +671,7 @@ export default function NodeDentApp() {
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `endo-case-${caseData.patientNumber || "no-patient"}-${caseData.tooth || "tooth"}.json`;
+    anchor.download = buildCaseExportFilename(caseData.patientNumber);
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -964,6 +966,7 @@ export default function NodeDentApp() {
   return (
     <div className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
       <div className="mx-auto max-w-[96rem] space-y-4">
+        <PrototypeDataWarning />
         <header className="rounded-3xl border border-brand-light-node bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -1268,6 +1271,9 @@ export default function NodeDentApp() {
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
               <h2 className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
               <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+              <div className="mt-4">
+                <PrototypeDataWarning compact />
+              </div>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"

@@ -54,6 +54,6 @@ This ADR does not select encryption, server storage, authentication, or a specif
 
 ## Follow-Up
 
-- Add and verify the persistent prototype/no-PHI warning.
+- Maintain and verify the persistent prototype/no-PHI warning across case creation, setup, import, resume, and export surfaces.
 - Implement mode-independent integrity and recovery work through [Local data integrity and recovery](../specs/local-data-integrity-and-recovery.md).
 - Revisit and supersede this decision when server persistence, multi-user access, clinic synchronization, local clinical use, or formal clinical deployment is proposed.
