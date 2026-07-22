@@ -346,26 +346,29 @@ export function IsolationWorkflowRunner({
             />
           </div>
           {selectedOption ? (
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-start">
-              <button
-                type="button"
-                onClick={applySelectedOption}
-                className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
-              >
-                Record {selectedOption.label.toLowerCase()}
-                <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
-              </button>
-              {onUserCatalogItemsChange ? (
+            <>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-start">
                 <button
                   type="button"
-                  onClick={saveCatalogItems}
-                  disabled={!canSaveShortcuts}
-                  className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+                  onClick={applySelectedOption}
+                  className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
                 >
-                  Save shortcuts
+                  Record {selectedOption.label.toLowerCase()}
+                  <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
                 </button>
-              ) : null}
-            </div>
+                {onUserCatalogItemsChange ? (
+                  <button
+                    type="button"
+                    onClick={saveCatalogItems}
+                    disabled={!canSaveShortcuts}
+                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+                  >
+                    Save shortcuts
+                  </button>
+                ) : null}
+              </div>
+              {onUserCatalogItemsChange ? <p className="mt-2 text-xs leading-5 text-amber-900">Reusable shortcuts are patient-independent preferences stored outside the vault. Do not save chart numbers, patient facts, or identifiers in a shortcut.</p> : null}
+            </>
           ) : null}
         </div>
       ) : null}

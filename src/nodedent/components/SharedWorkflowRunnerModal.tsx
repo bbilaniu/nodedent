@@ -11,6 +11,7 @@ import { sharedRadiologyWorkflow, sharedRadiologyWorkflowId } from "../workflow/
 import { AnesthesiaWorkflowRunner } from "./AnesthesiaWorkflowRunner";
 import { IsolationWorkflowRunner } from "./IsolationWorkflowRunner";
 import { RadiologyWorkflowRunner } from "./RadiologyWorkflowRunner";
+import { ClinicalDataNotice } from "./ClinicalDataNotice";
 
 function getWorkflowForLaunch(launch: EmbeddedWorkflowLaunch): WorkflowDefinition | undefined {
   if (launch.workflowId === sharedIsolationWorkflowId) return sharedIsolationWorkflow;
@@ -79,42 +80,46 @@ export function SharedWorkflowRunnerModal({
           </button>
         </div>
 
-        {launch.workflowId === sharedIsolationWorkflowId ? (
-          <IsolationWorkflowRunner
-            launch={launch}
-            caseData={caseData}
-            parentWorkflowRunId={parentWorkflowRunId}
-            latestIsolationEvent={latestIsolationEvent}
-            userCatalogItems={userIsolationCatalogItems}
-            onUserCatalogItemsChange={onUserIsolationCatalogItemsChange}
-            onClose={onClose}
-            onRecordIsolationEvent={onRecordIsolationEvent}
-          />
-        ) : launch.workflowId === sharedAnesthesiaWorkflowId ? (
-          <AnesthesiaWorkflowRunner
-            launch={launch}
-            caseData={caseData}
-            parentWorkflowRunId={parentWorkflowRunId}
-            latestAnesthesiaEvent={latestAnesthesiaEvent}
-            userCatalogItems={userAnesthesiaCatalogItems}
-            onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
-            onClose={onClose}
-            onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
-          />
-        ) : launch.workflowId === sharedRadiologyWorkflowId ? (
-          <RadiologyWorkflowRunner
-            launch={launch}
-            caseData={caseData}
-            parentWorkflowRunId={parentWorkflowRunId}
-            latestRadiologyEvent={latestRadiologyEvent}
-            onClose={onClose}
-            onRecordRadiologyEvent={onRecordRadiologyEvent}
-          />
-        ) : (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-            This shared workflow is not available in the embedded runner yet.
-          </div>
-        )}
+        <ClinicalDataNotice compact />
+
+        <div className="mt-4">
+          {launch.workflowId === sharedIsolationWorkflowId ? (
+            <IsolationWorkflowRunner
+              launch={launch}
+              caseData={caseData}
+              parentWorkflowRunId={parentWorkflowRunId}
+              latestIsolationEvent={latestIsolationEvent}
+              userCatalogItems={userIsolationCatalogItems}
+              onUserCatalogItemsChange={onUserIsolationCatalogItemsChange}
+              onClose={onClose}
+              onRecordIsolationEvent={onRecordIsolationEvent}
+            />
+          ) : launch.workflowId === sharedAnesthesiaWorkflowId ? (
+            <AnesthesiaWorkflowRunner
+              launch={launch}
+              caseData={caseData}
+              parentWorkflowRunId={parentWorkflowRunId}
+              latestAnesthesiaEvent={latestAnesthesiaEvent}
+              userCatalogItems={userAnesthesiaCatalogItems}
+              onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
+              onClose={onClose}
+              onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
+            />
+          ) : launch.workflowId === sharedRadiologyWorkflowId ? (
+            <RadiologyWorkflowRunner
+              launch={launch}
+              caseData={caseData}
+              parentWorkflowRunId={parentWorkflowRunId}
+              latestRadiologyEvent={latestRadiologyEvent}
+              onClose={onClose}
+              onRecordRadiologyEvent={onRecordRadiologyEvent}
+            />
+          ) : (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+              This shared workflow is not available in the embedded runner yet.
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

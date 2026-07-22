@@ -65,9 +65,10 @@ function CaseIdentitySection({
 }) {
   return (
     <section className={panelSurface.muted}>
-      <h3 className={sectionText.titleSmall}>Patient and procedure</h3>
+      <h3 className={sectionText.titleSmall}>Chart and procedure</h3>
       <div className="mt-3 grid gap-3">
-        <TextInput label="Patient #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number" />
+        <TextInput label="Patient chart #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number only" />
+        <p className="-mt-2 text-xs leading-5 text-amber-900">Use the clinic chart number only. Do not enter a name, exact birth date, contact detail, health number, or insurance identifier.</p>
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
         <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={procedureOptions} />
       </div>

@@ -14,7 +14,7 @@ The root `package.json` and Changesets manage the semantic version of the comple
 
 The catch-up Changeset that established this baseline has been consumed. There is no pending baseline transition. Future application releases start from `1.0.0` and follow ordinary semantic versioning.
 
-The application version does not automatically determine workflow-definition or persisted-data compatibility.
+The global application footer displays `NodeDent v{version}` using this `package.json` value. Changesets updates the displayed value when it versions the application. The footer version does not automatically determine workflow-definition or persisted-data compatibility, and clinical notes and structured exports do not automatically include it.
 
 ### Workflow-definition versions
 
@@ -30,7 +30,7 @@ Bump a workflow version only when that workflow's behavior changes, including it
 
 Persisted and exported formats should use explicit schema versions that are independent of the application semantic version. Schema changes should use explicit migrations and occur only when persisted or imported data compatibility changes.
 
-The general case JSON export does not currently expose a top-level schema version. Adding one requires a separately reviewed compatibility and migration change. Existing independently versioned user-catalog storage formats remain unchanged by the Changesets baseline.
+The general case JSON export exposes its independent top-level `schemaVersion: 1`. Future incompatible schema changes require separately reviewed compatibility and migration work. Existing independently versioned user-catalog storage formats remain independent from the application version.
 
 ## Semantic version bump policy
 

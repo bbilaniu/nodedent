@@ -17,7 +17,7 @@ The repository has a GitHub Pages workflow that runs `npm ci` and `npm run build
 
 ## Implementation Progress
 
-The `CI` workflow now provides a stable `Quality` job on pull requests and pushes to `main`. It installs locked dependencies and runs versioning validation, typechecking, domain tests, documentation lifecycle validation, and the production build as separately named steps. The existing Pages workflow continues to build the exact commit it deploys.
+The `CI` workflow now provides a stable `Quality` job on pull requests and pushes to `main`. It installs locked dependencies and runs versioning validation, typechecking, domain tests, documentation lifecycle validation, the production build, and the clinical security boundary check as separately named steps. The security check verifies the production network-blocking CSP, rejects common network APIs in the clinical source tree, and guards the case-storage boundary. The existing Pages workflow builds and security-checks the exact commit it deploys.
 
 The remaining work in this spec includes branch-protection configuration, browser and accessibility coverage, focused visual snapshots, deployed-site smoke testing, release evidence, and a documented dependency-audit policy.
 

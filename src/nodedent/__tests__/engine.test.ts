@@ -4,10 +4,14 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { version as packageVersion } from "../../../package.json";
+import { applicationVersion } from "../applicationVersion";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
+import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
+import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
 import { SharedWorkflowRunnerModal } from "../components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
@@ -106,6 +110,8 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
 
   return {
     ...initialCase,
+    encounterId: "11111111-1111-4111-8111-111111111111",
+    createdAt: "2026-01-01T00:00:00.000Z",
     patientNumber: "123",
     tooth: "30",
     procedureType: "RCT",
@@ -116,6 +122,26 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
     ...overrides,
   };
 }
+
+test("global footer exposes the package application version and privacy policy", () => {
+  const markup = renderToStaticMarkup(React.createElement(AppFooter));
+
+  assert.equal(applicationVersion, packageVersion);
+  assert.match(markup, /<footer/);
+  assert.ok(markup.includes(`NodeDent v${packageVersion}`));
+  assert.ok(markup.includes(`aria-label="NodeDent application version ${packageVersion}"`));
+  assert.ok(markup.includes(`href="${PRIVACY_POLICY_HASH}"`));
+  assert.match(markup, />Privacy policy<\/a>/);
+});
+
+test("privacy policy states the local clinical and telemetry boundaries", () => {
+  const markup = renderToStaticMarkup(React.createElement(PrivacyPolicyPage));
+
+  assert.match(markup, /<h1[^>]*>Privacy policy<\/h1>/);
+  assert.match(markup, /does not transmit chart numbers, clinical facts, notes, vault contents/i);
+  assert.match(markup, /future deployment may enable reviewed operational telemetry that contains no patient data/i);
+  assert.match(markup, /ADR 0008 remains proposed/i);
+});
 
 function radiologyReviewedEvent(tooth = "30") {
   const event = {

@@ -30,9 +30,11 @@ After the implementation gate below is complete, NodeDent will support a **const
 - Names, exact dates of birth, addresses, contact details, government health numbers, insurance identifiers, and other unnecessary direct identifiers are prohibited.
 - Real clinical data may be used only on a clinic-controlled device, operating-system account, and browser profile over HTTPS.
 - The clinic must apply device encryption, automatic screen locking, controlled physical access, approved browser extensions, and a retention/deletion policy.
-- NodeDent does not send clinical data to a NodeDent server, telemetry service, analytics service, or structured EMR integration.
+- NodeDent does not transmit chart numbers, clinical facts, notes, vault contents, exports, or other patient data to a NodeDent server, telemetry service, analytics service, remote logging service, or structured EMR integration.
+- Reviewed operational telemetry may be permitted only when it excludes patient data and linkable clinical identifiers, documents its provider, purpose, fields, retention, access, and processing location, and receives the applicable clinic privacy and security review before activation. Technical telemetry may still be personal information even when it is not patient data.
 - ClearDent or Dentrix remains the official clinical record. The clinician transfers the final plain-text note and verifies it in that system.
 - NodeDent must state that browser-held and exported records contain identifying clinical information; it must not describe chart-number records as anonymous, de-identified, or non-PHI.
+- NodeDent must publish an accessible product privacy policy linked before vault access and from the global application footer. The product policy supplements rather than replaces the clinic's own privacy notice and assessment.
 
 NodeDent will use a new protected clinical-storage namespace. Existing prototype `localStorage` records will **not** be migrated, copied, or silently imported into it. The application may detect legacy data and offer explicit export or deletion, but clinical mode starts with an empty protected store. Legacy deletion must remain an explicit, confirmed user action.
 
@@ -76,10 +78,10 @@ Before clinical deployment in another province or territory, the clinic or deplo
 This ADR does not authorize real patient data immediately. [ADR 0007](0007-define-clinical-data-deployment-mode.md) remains controlling until all of the following are complete:
 
 1. The protected storage, locking, failure, export, deletion, and legacy-data boundaries are implemented and tested.
-2. Product warnings and deployment documentation match this decision.
-3. NodeDent has no unintended clinical-data network transmission.
+2. Product warnings, the accessible product privacy policy, and deployment documentation match this decision.
+3. NodeDent has no unintended patient-data network transmission. Any future non-patient operational telemetry is separately reviewed, documented, allowlisted, and verified against the exclusion boundary above before activation.
 4. A threat-model review and dependency/security review are complete.
-5. The Alberta clinic completes the privacy and operational review required for its intended use, including a PIA where applicable.
+5. A qualified clinic privacy lead completes and records the privacy and operational review required for the intended use, including a PIA where applicable. An external consultant is not inherently required unless the applicable obligations or clinic policy require one.
 6. This ADR is accepted and ADR 0007 is marked superseded.
 
 ## Consequences
@@ -89,3 +91,11 @@ This ADR does not authorize real patient data immediately. [ADR 0007](0007-defin
 - Browser storage remains temporary working storage and cannot replace the clinic EMR.
 - No legacy storage migration will be built or tested.
 - Structured ClearDent or Dentrix integration remains outside this decision.
+
+## Implementation Status
+
+The technical implementation now includes the versioned encrypted IndexedDB vault, memory-only key lifecycle, explicit and inactivity locking, visibility/page-exit locking, optimistic revision conflicts, encrypted whole-vault backup and authenticated restore, versioned plaintext case import/export, safe default filenames, legacy-storage detection without migration, destructive confirmations, persistent warnings, an in-application privacy policy linked from the vault screen and global footer, production network-blocking CSP, and automated storage/security boundary tests.
+
+The current build sends no application telemetry and blocks application network connections. This decision permits a future, separately reviewed operational telemetry configuration only when it contains no patient data and meets the documentation and verification conditions above.
+
+The [local clinical deployment guide](../guides/local-clinical-deployment.md) and [threat model](../security/local-clinical-threat-model.md) document the operational boundary and residual risks. A qualified clinic privacy lead is available, but the formal intended-deployment review and PIA determination are not recorded by this ADR. The requested threat/dependency analysis remains pending as a separate review. ADR 0008 remains **Proposed**: browser/manual failure testing, that security analysis, the clinic's recorded privacy and operational assessment, and any required PIA remain acceptance gates. The code changes and product privacy policy do not by themselves authorize real patient data.

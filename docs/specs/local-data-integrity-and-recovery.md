@@ -17,6 +17,24 @@ This spec is a design and implementation target, not authorization to enter real
 
 The primary deployment assessment is Alberta. The architecture should remain assessable elsewhere in Canada, including Quebec, but implementation must not claim nationwide or province-specific compliance without the applicable operational and legal review.
 
+## Implementation Progress
+
+The first protected-storage implementation provides:
+
+- random encounter UUIDs and a new IndexedDB namespace;
+- PBKDF2-SHA-256 key derivation and AES-256-GCM authenticated record encryption through Web Crypto;
+- a passphrase-derived, non-extractable key retained only by the unlocked in-memory session;
+- explicit, 15-minute inactivity, hidden-tab, page-exit, and cross-tab locking;
+- transactional writes, monotonic revisions, stale-write rejection, visible save failures, and 30-day retention-review flags;
+- destructive confirmations including unrecoverable-vault deletion, plus encrypted whole-vault backup/restore with verifier and per-record authentication before replacement;
+- required kind/version and Zod validation for plaintext case imports;
+- explicit plaintext copy/download warnings and safe chart/discipline/random-suffix filenames;
+- detection, raw plaintext backup, and confirmed deletion of legacy records without parsing or migration;
+- a production CSP with `connect-src 'none'` plus CI checks for the CSP, accidental network APIs, and case `localStorage` regression;
+- unit tests covering ciphertext-only records, unlock failure, revision conflict, backup tampering, legacy separation, and filenames.
+
+The implementation and operational boundary are described in the [local clinical deployment guide](../guides/local-clinical-deployment.md) and [local clinical threat model](../security/local-clinical-threat-model.md). Remaining work before ADR 0008 can be accepted includes browser/manual failure scenarios, reviewed purge and index-repair procedures, independent threat/dependency review, and the clinic's Alberta privacy/operational assessment and PIA decision.
+
 ## Required Outcomes
 
 ### Stable encounter identity
@@ -38,7 +56,7 @@ Repeatable workflows inside one encounter are separate and owned by [Repeatable 
 - Use `YYYY_MM_DD_<chart-number>_<discipline>_<encounter-suffix>.json` for plaintext case exports.
 - Sanitize the chart number, use a controlled discipline code, and exclude name, date of birth, procedure, diagnosis, area, and tooth from the default filename.
 - Use a short random encounter suffix to prevent same-day collisions without adding patient facts.
-- Keep an encrypted NodeDent backup format as a future compatible extension of the protected store.
+- Keep the encrypted NodeDent whole-vault backup as the preferred recovery artifact and authenticate every record before replacing an existing vault.
 - Define a separate de-identified/share-safe export only if its removal rules can be tested.
 
 ### Destructive actions
@@ -78,7 +96,7 @@ Repeatable workflows inside one encounter are separate and owned by [Repeatable 
 
 - Require HTTPS and a clinic-controlled device, operating-system account, and browser profile.
 - Document full-disk encryption, automatic screen locking, physical access, approved-extension, backup, and secure-deletion expectations.
-- Add a restrictive content security policy and prohibit analytics, telemetry, remote logging, and unintended clinical-data network requests.
+- Add a restrictive content security policy and prohibit patient data in analytics, telemetry, remote logging, and other network requests. The current build blocks application network connections entirely; any future non-patient operational telemetry requires a separately reviewed allowlist, privacy-policy update, and verification tests.
 - Treat dependency integrity, build provenance, and deployed-commit verification as part of the clinical threat model.
 - State that application encryption protects a locked vault at rest but not an unlocked compromised browser or device.
 - Keep ClearDent or Dentrix as the sole official record and make successful text transfer a clinician-verified action.

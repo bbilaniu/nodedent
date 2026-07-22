@@ -1,8 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
+import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
+import { ClinicalVaultGate, type ClinicalVaultAccess } from "./components/ClinicalVaultGate";
+import { AppFooter, PRIVACY_POLICY_HASH } from "./components/AppFooter";
+import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
 import { MeasurementPanel } from "./components/MeasurementPanel";
@@ -23,12 +27,15 @@ import { buildCompactNote } from "./notes/buildCompactNote";
 import { buildEventLogExport, buildJsonExport, buildPrintableSummary } from "./notes/buildJsonExport";
 import { buildFullNote } from "./notes/buildFullNote";
 import { buildPatientSummary } from "./notes/buildPatientSummary";
+import { buildClinicalExportFilename, buildVaultBackupFilename } from "./notes/exportFilename";
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { CLINICAL_VAULT_IDLE_TIMEOUT_MS, ClinicalVaultError, type ClinicalVaultSession, type SavedCaseSummary } from "./state/clinicalVault";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
-import { blankCanal, CASE_INDEX_KEY, CASE_RECORD_PREFIX, initialCase, makeCaseId, makeDefaultNewCanalName, normalizeImportedEndoCase, STORAGE_KEY } from "./state/persistence";
+import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
+import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
 import { isNoTreatmentSelected, noTreatmentSelectedProcedure } from "./workflow/procedures";
 import {
@@ -78,17 +85,6 @@ type HistoryEntry = {
   currentNodeId: string;
 };
 
-type SavedCaseSummary = {
-  id: string;
-  patientNumber: string;
-  tooth: string;
-  procedureType: string;
-  currentNodeId?: string;
-  canalCount?: number;
-  eventCount?: number;
-  autosavedAt: string;
-};
-
 type ThemeMode = "light" | "dark";
 type PrimaryWorkflowId = typeof endodonticRootWorkflowId | typeof operativeDirectRestorationWorkflowId;
 
@@ -98,14 +94,6 @@ const DARK_FAVICON_PATH = "/nodedent_connected_tooth_icon_reference_inverted_dar
 
 function makeWorkflowRunId(prefix: string) {
   return `run_${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function getSavedCaseIndex(): SavedCaseSummary[] {
-  try {
-    return JSON.parse(window.localStorage.getItem(CASE_INDEX_KEY) || "[]");
-  } catch {
-    return [];
-  }
 }
 
 function getInitialTheme(): ThemeMode {
@@ -127,32 +115,107 @@ function createRuntimeEventArgs() {
   };
 }
 
+type StorageStatus = "loading" | "saving" | "saved" | "failed" | "conflict";
+
+class ClinicalWorkspaceErrorBoundary extends React.Component<
+  { children: React.ReactNode; onFatalError: () => void; onLock: () => void },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch() {
+    this.props.onFatalError();
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <main className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
+        <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-2xl place-items-center">
+          <section className="w-full rounded-3xl border border-red-300 bg-white p-6 shadow-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-800">Protected workspace locked</p>
+            <h1 className="mt-2 text-2xl font-bold">NodeDent encountered an unexpected display error</h1>
+            <p className="mt-3 text-sm leading-6 text-brand-slate">The in-memory vault key was cleared. No diagnostic containing clinical data was sent anywhere. Return to the lock screen and reopen the protected case.</p>
+            <button type="button" onClick={this.props.onLock} className="mt-4 rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep">Return to vault lock screen</button>
+          </section>
+        </div>
+      </main>
+    );
+  }
+}
+
+function downloadFile(content: BlobPart, type: string, filename: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function NodeDentApp() {
-  const [caseData, setCaseData] = useState<EndoCase>(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (!saved) return initialCase;
-      const parsed = JSON.parse(saved);
-      return normalizeImportedEndoCase(parsed, parsed.autosavedAt || new Date().toISOString());
-    } catch {
-      return initialCase;
-    }
-  });
+  const [vaultAccess, setVaultAccess] = useState<ClinicalVaultAccess | null>(null);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(() => window.location.hash === PRIVACY_POLICY_HASH);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const shouldShowPrivacyPolicy = window.location.hash === PRIVACY_POLICY_HASH;
+      if (shouldShowPrivacyPolicy && vaultAccess) {
+        vaultAccess.session.close();
+        setVaultAccess(null);
+      }
+      setShowPrivacyPolicy(shouldShowPrivacyPolicy);
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [vaultAccess]);
+
+  let content: React.ReactNode;
+
+  if (showPrivacyPolicy) {
+    content = <PrivacyPolicyPage />;
+  } else if (!vaultAccess) {
+    content = <ClinicalVaultGate onAccess={setVaultAccess} />;
+  } else {
+    const lockAndReset = () => {
+      vaultAccess.session.close();
+      setVaultAccess(null);
+    };
+
+    content = (
+      <ClinicalWorkspaceErrorBoundary onFatalError={() => vaultAccess.session.close()} onLock={lockAndReset}>
+        <ClinicalWorkspace access={vaultAccess} onLocked={lockAndReset} />
+      </ClinicalWorkspaceErrorBoundary>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-brand-light-slate">
+      {content}
+      <AppFooter />
+    </div>
+  );
+}
+
+function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; onLocked: () => void }) {
+  const { session, persistentStorage } = access;
+  const [caseData, setCaseData] = useState<EndoCase>(createFreshCase);
   const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
   const [userIsolationCatalogItems, setUserIsolationCatalogItems] = useState(() => loadUserIsolationCatalogItems());
-  const [currentNodeId, setCurrentNodeId] = useState(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      return saved ? getSavedCurrentNodeId(JSON.parse(saved)) : "preop";
-    } catch {
-      return "preop";
-    }
-  });
+  const [currentNodeId, setCurrentNodeId] = useState("preop");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [newCanalName, setNewCanalName] = useState("");
   const [renameCanalName, setRenameCanalName] = useState("");
   const [noteMode, setNoteMode] = useState("compact");
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState("");
   const [validationMessage, setValidationMessage] = useState<ValidationMessage | null>(null);
   const [selectedProgressPhase, setSelectedProgressPhase] = useState("Pre-op");
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
@@ -168,8 +231,19 @@ export default function NodeDentApp() {
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
-  const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>(getSavedCaseIndex);
+  const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
+  const [isVaultReady, setIsVaultReady] = useState(false);
+  const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
+  const [storageMessage, setStorageMessage] = useState("Opening protected storage…");
+  const revisionByEncounter = useRef(new Map<string, number>());
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+  const latestCaseData = useRef(caseData);
+  const latestNodeId = useRef(currentNodeId);
+  const lockInProgress = useRef(false);
+  const controlChannel = useRef<BroadcastChannel | null>(null);
+  const tabId = useRef(globalThis.crypto.randomUUID());
+  const storageStatusRef = useRef(storageStatus);
 
   const currentNode = protocolNodes[currentNodeId] || protocolNodes.preop;
   const activeCanal = useMemo(
@@ -218,43 +292,159 @@ export default function NodeDentApp() {
     [caseData, currentNode.id, activeCanal?.name]
   );
 
+  latestCaseData.current = caseData;
+  latestNodeId.current = currentNodeId;
+  storageStatusRef.current = storageStatus;
+
+  const refreshSavedCases = useCallback(async () => {
+    const cases = await session.listCases();
+    setSavedCases(cases);
+    return cases;
+  }, [session]);
+
+  const queueCaseSave = useCallback((snapshot: EndoCase, nodeId: string) => {
+    const queuedSnapshot = structuredClone(snapshot);
+    const job = saveQueue.current.then(async () => {
+      setStorageStatus("saving");
+      setStorageMessage("Encrypting and saving…");
+      const expectedRevision = revisionByEncounter.current.get(queuedSnapshot.encounterId) || 0;
+      const saved = await session.saveCase(queuedSnapshot, nodeId, expectedRevision);
+      revisionByEncounter.current.set(queuedSnapshot.encounterId, saved.revision);
+      setStorageStatus("saved");
+      setStorageMessage(`Saved ${new Date(saved.savedAt).toLocaleTimeString()}`);
+      await refreshSavedCases();
+    });
+    saveQueue.current = job.catch((error) => {
+      const conflict = error instanceof ClinicalVaultError && error.code === "CONFLICT";
+      setStorageStatus(conflict ? "conflict" : "failed");
+      setStorageMessage(error instanceof Error ? error.message : "Protected storage failed.");
+    });
+    return job;
+  }, [refreshSavedCases, session]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const activeSnapshot = await session.loadActiveCase();
+        if (cancelled) return;
+        if (activeSnapshot) {
+          revisionByEncounter.current.set(activeSnapshot.encounterId, activeSnapshot.revision);
+          setCaseData(activeSnapshot.caseData);
+          setCurrentNodeId(activeSnapshot.currentNodeId);
+          setStorageMessage(`Saved ${new Date(activeSnapshot.savedAt).toLocaleTimeString()}`);
+        } else {
+          const fresh = createFreshCase();
+          const saved = await session.saveCase(fresh, "preop", 0);
+          if (cancelled) return;
+          revisionByEncounter.current.set(fresh.encounterId, saved.revision);
+          setCaseData(saved.caseData);
+          setCurrentNodeId("preop");
+          setStorageMessage(`Saved ${new Date(saved.savedAt).toLocaleTimeString()}`);
+        }
+        await refreshSavedCases();
+        if (!cancelled) {
+          setStorageStatus("saved");
+          setIsVaultReady(true);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setStorageStatus("failed");
+          setStorageMessage(error instanceof Error ? error.message : "Could not open protected storage.");
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshSavedCases, session]);
+
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = themeMode;
-    document.documentElement.style.colorScheme = themeMode;
     document
       .getElementById("app-favicon")
       ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
-    window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    } catch {
+      // Theme persistence is optional and never contains clinical data.
+    }
   }, [themeMode]);
 
   useEffect(() => {
+    if (!isVaultReady) return;
     const timeoutId = window.setTimeout(() => {
-      const autosavedAt = new Date().toISOString();
-      const snapshot = { ...caseData, autosavedAt, currentNodeId };
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-      const caseId = makeCaseId(snapshot);
-      window.localStorage.setItem(`${CASE_RECORD_PREFIX}${caseId}`, JSON.stringify(snapshot));
-      const summary: SavedCaseSummary = {
-        id: caseId,
-        patientNumber: snapshot.patientNumber || "No patient #",
-        tooth: snapshot.tooth || "Tooth ___",
-        procedureType: snapshot.procedureType || noTreatmentSelectedProcedure,
-        currentNodeId,
-        canalCount: snapshot.canals?.length || 0,
-        eventCount: snapshot.globalEvents?.length || 0,
-        autosavedAt,
-      };
-      setSavedCases((prev) => {
-        const next = [summary, ...prev.filter((item) => item.id !== caseId)].slice(0, 12);
-        window.localStorage.setItem(CASE_INDEX_KEY, JSON.stringify(next));
-        return next;
-      });
+      void queueCaseSave(caseData, currentNodeId).catch(() => undefined);
     }, 500);
-
     return () => window.clearTimeout(timeoutId);
-  }, [caseData, currentNodeId]);
+  }, [caseData, currentNodeId, isVaultReady, queueCaseSave]);
+
+  const lockVault = useCallback(async (flush = true, broadcast = true) => {
+    if (lockInProgress.current) return;
+    lockInProgress.current = true;
+    if (flush && isVaultReady && storageStatusRef.current !== "conflict") {
+      try {
+        await queueCaseSave(latestCaseData.current, latestNodeId.current);
+        await saveQueue.current;
+      } catch {
+        // Locking must still complete when storage is unavailable.
+      }
+    }
+    if (broadcast) controlChannel.current?.postMessage({ type: "lock-all", sender: tabId.current });
+    onLocked();
+  }, [isVaultReady, onLocked, queueCaseSave]);
+
+  useEffect(() => {
+    if (!isVaultReady || typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel("nodedent-clinical-vault-control-v1");
+    controlChannel.current = channel;
+    channel.onmessage = (event) => {
+      const message = event.data as { type?: string; sender?: string };
+      if (message.sender === tabId.current) return;
+      if (message.type === "lock-all" || message.type === "lock-other-tabs") void lockVault(false, false);
+    };
+    channel.postMessage({ type: "lock-other-tabs", sender: tabId.current });
+    return () => {
+      controlChannel.current = null;
+      channel.close();
+    };
+  }, [isVaultReady, lockVault]);
+
+  useEffect(() => {
+    if (!isVaultReady) return;
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") void lockVault(true, true);
+    };
+    const handlePageHide = () => {
+      controlChannel.current?.postMessage({ type: "lock-all", sender: tabId.current });
+      session.close();
+      onLocked();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, [isVaultReady, lockVault, onLocked, session]);
+
+  useEffect(() => {
+    if (!isVaultReady) return;
+    let timerId = 0;
+    const resetTimer = () => {
+      window.clearTimeout(timerId);
+      timerId = window.setTimeout(() => void lockVault(true, true), CLINICAL_VAULT_IDLE_TIMEOUT_MS);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart"];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
+    resetTimer();
+    return () => {
+      window.clearTimeout(timerId);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
+    };
+  }, [isVaultReady, lockVault]);
 
   function updateCase(updates: Partial<EndoCase>) {
     setCaseData((prev) => ({ ...prev, ...updates }));
@@ -418,7 +608,8 @@ export default function NodeDentApp() {
   }
 
   function startNewCase() {
-    const fresh = { ...initialCase, autosavedAt: new Date().toISOString(), tooth: "", currentCanal: "Main", canals: [blankCanal("Main")] };
+    const fresh = createFreshCase();
+    revisionByEncounter.current.set(fresh.encounterId, 0);
     setCaseData(fresh);
     setCurrentNodeId("preop");
     setHistory([]);
@@ -623,64 +814,113 @@ export default function NodeDentApp() {
     setValidationMessage(null);
   }
 
-  function loadSavedCase(caseId: string) {
+  async function loadSavedCase(caseId: string) {
     try {
-      const saved = JSON.parse(window.localStorage.getItem(`${CASE_RECORD_PREFIX}${caseId}`) || "null");
-      if (!saved) return;
-      const normalized = normalizeImportedEndoCase(saved, saved.autosavedAt || new Date().toISOString());
-      setCaseData(normalized);
-      setCurrentNodeId(getSavedCurrentNodeId(normalized));
+      await saveQueue.current;
+      const saved = await session.loadCase(caseId);
+      if (!saved) throw new Error("Protected case not found.");
+      revisionByEncounter.current.set(saved.encounterId, saved.revision);
+      setCaseData(saved.caseData);
+      setCurrentNodeId(saved.currentNodeId);
       setHistory([]);
       setValidationMessage(null);
       setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
-    } catch {
-      setValidationMessage({ optionLabel: "Load saved case", missing: ["Could not load saved case from local storage"] });
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not load protected case.");
     }
   }
 
-  function deleteSavedCase(caseId: string) {
-    window.localStorage.removeItem(`${CASE_RECORD_PREFIX}${caseId}`);
-    setSavedCases((prev) => {
-      const next = prev.filter((item) => item.id !== caseId);
-      window.localStorage.setItem(CASE_INDEX_KEY, JSON.stringify(next));
-      return next;
-    });
+  async function deleteSavedCase(caseId: string) {
+    const summary = savedCases.find((item) => item.id === caseId);
+    if (!window.confirm(`Delete the protected local case for chart ${summary?.patientNumber || "not recorded"}? This does not delete the official EMR record.`)) return;
+    try {
+      await saveQueue.current;
+      await session.deleteCase(caseId);
+      revisionByEncounter.current.delete(caseId);
+      await refreshSavedCases();
+      if (caseData.encounterId === caseId) startNewCase();
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not delete protected case.");
+    }
   }
 
-  function clearSavedCurrentCase() {
-    const caseId = makeCaseId(caseData);
-    window.localStorage.removeItem(STORAGE_KEY);
-    window.localStorage.removeItem(`${CASE_RECORD_PREFIX}${caseId}`);
-    deleteSavedCase(caseId);
-    startNewCase();
+  async function clearSavedCurrentCase() {
+    if (!window.confirm(`Delete the current protected local case for chart ${caseData.patientNumber || "not recorded"} and start a blank case? The official EMR record is not affected.`)) return;
+    try {
+      await saveQueue.current;
+      await session.deleteCase(caseData.encounterId);
+      revisionByEncounter.current.delete(caseData.encounterId);
+      startNewCase();
+      await refreshSavedCases();
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not clear the current protected case.");
+    }
   }
 
-  function resetAllSavedCases() {
-    Object.keys(window.localStorage).forEach((key) => {
-      if (key.startsWith(CASE_RECORD_PREFIX) || key === STORAGE_KEY || key === CASE_INDEX_KEY) window.localStorage.removeItem(key);
-    });
-    setSavedCases([]);
-    startNewCase();
+  async function resetAllSavedCases() {
+    const confirmation = window.prompt(`Type DELETE ${savedCases.length} CASES to remove every protected local case. ClearDent and Dentrix records are not affected.`);
+    if (confirmation !== `DELETE ${savedCases.length} CASES`) return;
+    try {
+      await saveQueue.current;
+      await session.clearCases();
+      revisionByEncounter.current.clear();
+      setSavedCases([]);
+      startNewCase();
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not reset protected cases.");
+    }
   }
 
   function downloadCaseJson() {
-    const blob = new Blob([JSON.stringify(buildJsonExport(caseData, currentNodeId), null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `endo-case-${caseData.patientNumber || "no-patient"}-${caseData.tooth || "tooth"}.json`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    if (!window.confirm("Download a plaintext NodeDent case JSON? It contains the chart number and full clinical workflow record. Store and transfer it only through approved clinic systems.")) return;
+    const exportCase = { ...caseData, revision: revisionByEncounter.current.get(caseData.encounterId) || caseData.revision || 0 };
+    downloadFile(
+      JSON.stringify(buildJsonExport(exportCase, currentNodeId), null, 2),
+      "application/json",
+      buildClinicalExportFilename(exportCase, "json")
+    );
+  }
+
+  async function downloadEncryptedVaultBackup() {
+    try {
+      await saveQueue.current;
+      const backup = await session.exportEncryptedBackup();
+      downloadFile(JSON.stringify(backup), "application/octet-stream", buildVaultBackupFilename());
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not export the encrypted vault backup.");
+    }
+  }
+
+  function downloadDisplayedText() {
+    if (noteMode === "json") {
+      downloadCaseJson();
+      return;
+    }
+    if (!window.confirm("Download this plaintext clinical output? Verify the chart number and destination record in ClearDent or Dentrix.")) return;
+    downloadFile(displayedNote, "text/plain;charset=utf-8", buildClinicalExportFilename(caseData, "txt"));
   }
 
   function importCaseJson() {
     try {
+      if (importText.length > 1_000_000) throw new Error("Case JSON exceeds the 1 MB import limit.");
       const parsed = JSON.parse(importText);
-      const imported = normalizeImportedEndoCase(parsed);
+      if (parsed?.exportKind !== "nodedent-case") throw new Error("A versioned NodeDent case export is required.");
+      if (parsed?.schemaVersion !== 1) throw new Error("Unsupported or missing case schema version.");
+      const validation = EndoCaseSchema.safeParse(normalizeImportedEndoCase(parsed));
+      if (!validation.success) throw new Error(`Invalid case structure: ${validation.error.issues[0]?.message || "schema validation failed"}`);
+      const imported = validation.data as EndoCase;
+      const duplicate = savedCases.find((item) => item.id === imported.encounterId);
+      if (duplicate && !window.confirm(`Replace the protected local case for chart ${duplicate.patientNumber} with this explicitly imported JSON?`)) return;
+      if (!duplicate) imported.encounterId = createEncounterId();
       imported.caseStatus = hydrateCaseStatusOverride(parsed);
+      imported.revision = duplicate?.revision || 0;
+      revisionByEncounter.current.set(imported.encounterId, duplicate?.revision || 0);
       setCaseData(imported);
       setCurrentNodeId(getSavedCurrentNodeId(imported));
       setHistory([]);
@@ -689,8 +929,8 @@ export default function NodeDentApp() {
       setIsSavedCasesOpen(false);
       setImportText("");
       setValidationMessage(null);
-    } catch {
-      setValidationMessage({ optionLabel: "Import JSON", missing: ["Invalid JSON or unsupported case format"] });
+    } catch (error) {
+      setValidationMessage({ optionLabel: "Import JSON", missing: [error instanceof Error ? error.message : "Invalid JSON or unsupported case format"] });
     }
   }
 
@@ -955,15 +1195,48 @@ export default function NodeDentApp() {
     try {
       await navigator.clipboard.writeText(displayedNote);
       setCopied(true);
+      setCopyError("");
       setTimeout(() => setCopied(false), 1200);
     } catch {
       setCopied(false);
+      setCopyError("Clipboard access was blocked. Select the preview text and copy it manually.");
     }
+  }
+
+  if (!isVaultReady) {
+    return (
+      <main className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
+        <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-2xl place-items-center">
+          <section className="w-full rounded-3xl border border-brand-light-node bg-white p-6 shadow-xl">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">NodeDent protected clinical workspace</p>
+            <h1 className="mt-2 text-2xl font-bold">{storageStatus === "failed" ? "Protected storage could not open" : "Opening protected storage…"}</h1>
+            <p role={storageStatus === "failed" ? "alert" : "status"} className={`mt-3 rounded-2xl border p-4 text-sm leading-6 ${storageStatus === "failed" ? "border-red-300 bg-red-50 text-red-900" : "border-brand-light-node bg-brand-light-slate text-brand-slate"}`}>
+              {storageMessage}
+            </p>
+            <button type="button" onClick={() => void lockVault(false)} className="mt-4 rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold hover:bg-brand-light-slate">
+              Return to vault lock screen
+            </button>
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (
     <div className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
       <div className="mx-auto max-w-[96rem] space-y-4">
+        <ClinicalDataNotice />
+        {!persistentStorage ? (
+          <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            This browser did not grant persistent storage. It may remove the encrypted vault under storage pressure; download encrypted backups regularly.
+          </div>
+        ) : null}
+        {storageStatus === "failed" || storageStatus === "conflict" ? (
+          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
+            <p><strong>Protected autosave needs attention.</strong> {storageMessage} The current in-memory work will not overwrite a newer record. If clinic policy permits, export the current plaintext JSON before locking; otherwise lock and reopen the protected case.</p>
+            <button type="button" onClick={downloadCaseJson} className="shrink-0 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-bold text-red-900 hover:bg-red-100">Export current JSON</button>
+          </div>
+        ) : null}
         <header className="rounded-3xl border border-brand-light-node bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
@@ -976,10 +1249,15 @@ export default function NodeDentApp() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Patient: {caseData.patientNumber || "—"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Chart: {caseData.patientNumber || "—"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Tooth: {caseData.tooth || "—"}</span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Autosaved: {caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleTimeString() : "not yet"}</span>
+              <span
+                role="status"
+                className={`inline-flex min-h-9 items-center justify-center rounded-full border px-3 py-1.5 font-semibold leading-none ${storageStatus === "failed" || storageStatus === "conflict" ? "border-red-300 bg-red-50 text-red-900" : storageStatus === "saving" ? "border-amber-300 bg-amber-50 text-amber-950" : "border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+              >
+                Vault: {storageMessage}
+              </span>
               {hasActivePrimaryWorkflow ? (
                 <button
                   type="button"
@@ -1027,6 +1305,13 @@ export default function NodeDentApp() {
                 className={headerActionButton.secondary}
               >
                 New case
+              </button>
+              <button
+                type="button"
+                onClick={() => void lockVault()}
+                className={headerActionButton.secondary}
+              >
+                Lock vault
               </button>
             </div>
           </div>
@@ -1149,8 +1434,13 @@ export default function NodeDentApp() {
               noteMode={noteMode}
               displayedNote={displayedNote}
               copied={copied}
-              onNoteModeChange={setNoteMode}
+              copyError={copyError}
+              onNoteModeChange={(mode) => {
+                setNoteMode(mode);
+                setCopyError("");
+              }}
               onCopyDisplayedNote={copyDisplayedNote}
+              onDownloadDisplayedText={downloadDisplayedText}
             />
             <EventLog events={caseData.globalEvents} />
           </aside>
@@ -1248,6 +1538,7 @@ export default function NodeDentApp() {
             onResetAllSavedCases={resetAllSavedCases}
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
+            onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
           />
         ) : null}
 
@@ -1267,7 +1558,7 @@ export default function NodeDentApp() {
             <section className="w-full max-w-md rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
               <h2 className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
-              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved locally. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
