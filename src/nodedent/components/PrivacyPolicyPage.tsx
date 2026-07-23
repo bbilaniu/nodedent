@@ -30,7 +30,7 @@ export function PrivacyPolicyPage() {
 
         <PolicySection title="Who is responsible">
           <p>The clinic operating NodeDent controls the patient information entered on its device and remains responsible for access, retention, disclosure, incident response, and responding to privacy requests. Contact the clinic's privacy officer through the clinic's established contact channel for a request or concern involving patient information.</p>
-          <p>ClearDent or Dentrix remains the official clinical record. NodeDent is a temporary workflow and note-generation workspace.</p>
+          <p>EMRs such as ClearDent or Dentrix remain the official record. NodeDent is a temporary workflow and note-generation workspace.</p>
         </PolicySection>
 
         <PolicySection title="Information used by NodeDent">

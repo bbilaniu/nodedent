@@ -8,7 +8,7 @@ export function ClinicalDataNotice({ compact = false }: { compact?: boolean }) {
     >
       <p className="text-sm font-bold">Identifying clinical information</p>
       <p className="mt-1 text-xs leading-5">
-        NodeDent stores chart numbers and case details in this clinic browser profile until they are deleted. The locked vault is encrypted, but copied or downloaded text and JSON are plaintext. ClearDent or Dentrix remains the official record. Do not enter names, exact birth dates, contact details, government health numbers, or insurance identifiers. Clinical deployment still requires the clinic's privacy and operational approval.
+        NodeDent stores chart numbers and case details in this clinic browser profile until they are deleted. The locked vault is encrypted, but copied or downloaded text and JSON are plaintext. EMRs such as ClearDent or Dentrix remain the official record. Do not enter names, exact birth dates, contact details, government health numbers, or insurance identifiers. Clinical deployment still requires the clinic's privacy and operational approval.
       </p>
     </aside>
   );

@@ -161,7 +161,7 @@ export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVau
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">NodeDent protected clinical workspace</p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight">{hasVault ? "Unlock clinical vault" : "Create clinical vault"}</h1>
           <p className="mt-3 text-sm leading-6 text-brand-slate">
-            Use only on a clinic-controlled, encrypted device and browser profile. ClearDent or Dentrix remains the official record. NodeDent does not recover forgotten vault passphrases.
+            Use only on a clinic-controlled, encrypted device and browser profile. EMRs such as ClearDent or Dentrix remain the official record. NodeDent does not recover forgotten vault passphrases.
           </p>
           <p className="mt-2 text-sm leading-6 text-brand-slate">
             Review the <a href={PRIVACY_POLICY_HASH} className="font-semibold text-brand-navy underline decoration-brand-light-node underline-offset-4 hover:decoration-brand-navy focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint">NodeDent privacy policy</a> before creating or unlocking a clinical vault.
