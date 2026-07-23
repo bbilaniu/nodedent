@@ -15,7 +15,6 @@
     "types": ["node"]
   },
   "include": [
-    "endo_chairside_guide_canvas.jsx",
     "scripts/**/*.ts",
     "src/**/*",
     "vite.config.ts"
