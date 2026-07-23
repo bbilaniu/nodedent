@@ -418,9 +418,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       if (document.visibilityState === "hidden") void lockVault(true, true);
     };
     const handlePageHide = () => {
-      controlChannel.current?.postMessage({ type: "lock-all", sender: tabId.current });
-      session.close();
-      onLocked();
+      void lockVault(true, true);
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("pagehide", handlePageHide);
@@ -428,7 +426,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("pagehide", handlePageHide);
     };
-  }, [isVaultReady, lockVault, onLocked, session]);
+  }, [isVaultReady, lockVault]);
 
   useEffect(() => {
     if (!isVaultReady) return;
@@ -816,6 +814,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
   async function loadSavedCase(caseId: string) {
     try {
+      await queueCaseSave(latestCaseData.current, latestNodeId.current);
       await saveQueue.current;
       const saved = await session.loadCase(caseId);
       if (!saved) throw new Error("Protected case not found.");
