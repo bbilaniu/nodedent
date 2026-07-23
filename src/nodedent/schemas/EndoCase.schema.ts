@@ -75,6 +75,9 @@ export const ProtocolNodeSchema = z.object({
 });
 
 export const EndoCaseSchema = z.object({
+  encounterId: z.string().trim().min(1),
+  createdAt: z.string().optional(),
+  revision: z.number().int().nonnegative().optional(),
   patientNumber: z.string(),
   autosavedAt: z.string().optional(),
   tooth: z.string().trim().min(1),

@@ -9,22 +9,14 @@ import type { RadiologyEventDetails } from "../workflow/radiology";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
+import type { SavedCaseSummary } from "../state/clinicalVault";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { isBlank } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { workflowHasEndodonticTargetPanel } from "../workflow/targetPanels";
 import { SelectInput, TextInput } from "./FormControls";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
-
-type SavedCaseSummary = {
-  id: string;
-  patientNumber: string;
-  tooth: string;
-  procedureType: string;
-  canalCount?: number;
-  eventCount?: number;
-  autosavedAt: string;
-};
+import { ClinicalDataNotice } from "./ClinicalDataNotice";
 
 export function CaseManagementModal({
   caseData,
@@ -97,7 +89,9 @@ export function CaseManagementModal({
           </button>
         </div>
 
-        <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+        <ClinicalDataNotice compact />
+
+        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-brand-navy">Case audit</h3>
@@ -148,7 +142,7 @@ export function CaseManagementModal({
           />
         </div>
         <div className="mt-4">
-          <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download current case JSON</button>
+          <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download plaintext NodeDent case JSON</button>
         </div>
       </section>
     </div>
@@ -167,6 +161,7 @@ export function SavedCasesModal({
   onResetAllSavedCases,
   onLoadSavedCase,
   onDeleteSavedCase,
+  onDownloadEncryptedVaultBackup,
 }: {
   savedCases: SavedCaseSummary[];
   importText: string;
@@ -179,6 +174,7 @@ export function SavedCasesModal({
   onResetAllSavedCases: () => void;
   onLoadSavedCase: (caseId: string) => void;
   onDeleteSavedCase: (caseId: string) => void;
+  onDownloadEncryptedVaultBackup: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
@@ -187,15 +183,18 @@ export function SavedCasesModal({
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-blue">Saved cases</p>
             <h2 className="mt-1 text-2xl font-bold text-brand-navy">Resume saved workflow</h2>
-            <p className="mt-1 text-sm text-brand-slate">Open an app-tracked autosave or import a system-recorded case JSON.</p>
+            <p className="mt-1 text-sm text-brand-slate">Open an encrypted local autosave or explicitly import a NodeDent case JSON.</p>
           </div>
           <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">Close</button>
         </div>
 
-        <div className="rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
+        <ClinicalDataNotice compact />
+
+        <div className="mt-4 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
           <h3 className="mb-3 text-sm font-semibold text-brand-navy">Import / library actions</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <button onClick={onToggleImportBox} className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Import case JSON</button>
+            <button onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">Download encrypted vault backup</button>
             <div className="flex gap-2">
               <button onClick={onClearSavedCurrentCase} className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100">Clear current</button>
               <button onClick={onResetAllSavedCases} className="flex-1 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">Reset all</button>
@@ -203,7 +202,8 @@ export function SavedCasesModal({
           </div>
           {showImportBox ? (
             <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
-              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste exported case JSON here" className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue" />
+              <p className="mb-2 text-xs leading-5 text-amber-900">Pasted JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
+              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste explicitly exported NodeDent case JSON here" className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue" />
               <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-blue-light">Resume imported workflow</button>
             </div>
           ) : null}
@@ -217,6 +217,7 @@ export function SavedCasesModal({
                 <button onClick={() => onLoadSavedCase(item.id)} className="w-full rounded-lg p-2 text-left text-xs text-brand-slate hover:bg-brand-light-slate">
                   <strong>{item.patientNumber}</strong> · tooth {item.tooth} · {item.procedureType}
                   <span className="mt-1 block text-brand-slate">{new Date(item.autosavedAt).toLocaleString()} · {item.canalCount || 0} canal(s) · {item.eventCount || 0} event(s)</span>
+                  {item.expired ? <span className="mt-2 inline-flex rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-950">Past retention review date</span> : null}
                   <span className="mt-2 inline-flex rounded-lg bg-brand-blue-light/20 px-2 py-1 text-[11px] font-bold text-brand-navy">Resume saved workflow</span>
                 </button>
                 <button onClick={() => onDeleteSavedCase(item.id)} className="mt-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">Delete saved case</button>
@@ -313,7 +314,9 @@ export function PriorVisitModal({
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <ClinicalDataNotice compact />
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           <TextInput label="Prior visit date / timing" value={caseData.priorVisit?.priorVisitDate || ""} onChange={(value) => updatePriorVisit({ priorVisitDate: value })} placeholder="optional" />
           <SelectInput label="Medication present" value={caseData.priorVisit?.medicationPresent || ""} onChange={(value) => updatePriorVisit({ medicationPresent: value as NonNullable<EndoCase["priorVisit"]>["medicationPresent"] })} options={["", "yes", "no", "unknown"]} />
           <label className="flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950">

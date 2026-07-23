@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-07-20
+completed_on: 2026-07-22
 ---
 
 # Add a global footer with the NodeDent application version

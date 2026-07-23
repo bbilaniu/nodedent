@@ -219,6 +219,7 @@ export function AnesthesiaEventForm({
           />
         ) : null}
       </div>
+      {mode === "administration" && onSaveCatalogItems ? <p className="mt-2 text-xs leading-5 text-amber-900">Reusable shortcuts are patient-independent preferences stored outside the vault. Do not save chart numbers, patient facts, or identifiers in a shortcut.</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

@@ -18,6 +18,11 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
   const hasOperativeOutput = Boolean(latestOperativeSetupEvent || operativeRestorationEvents.length);
 
   return {
+    exportKind: "nodedent-case",
+    schemaVersion: 1,
+    encounterId: caseData.encounterId,
+    createdAt: caseData.createdAt,
+    revision: caseData.revision,
     currentNodeId: currentNodeId || caseData.currentNodeId || inferCurrentNodeIdFromEvents(caseData),
     patientNumber: caseData.patientNumber,
     autosavedAt: caseData.autosavedAt,

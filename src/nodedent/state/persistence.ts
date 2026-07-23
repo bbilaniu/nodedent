@@ -2,9 +2,9 @@ import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 
-export const STORAGE_KEY = "endo-chairside-guide-current-case";
-export const CASE_INDEX_KEY = "endo-chairside-guide-case-index";
-export const CASE_RECORD_PREFIX = "endo-chairside-guide-case-record:";
+export const LEGACY_STORAGE_KEY = "endo-chairside-guide-current-case";
+export const LEGACY_CASE_INDEX_KEY = "endo-chairside-guide-case-index";
+export const LEGACY_CASE_RECORD_PREFIX = "endo-chairside-guide-case-record:";
 
 export const caseStatusOptions = [
   noTreatmentSelectedProcedure,
@@ -19,11 +19,8 @@ export const caseStatusOptions = [
   "Resume next visit",
 ];
 
-export function makeCaseId(caseData: Pick<EndoCase, "patientNumber" | "tooth" | "procedureType">) {
-  const patient = String(caseData.patientNumber || "no-patient").trim() || "no-patient";
-  const tooth = String(caseData.tooth || "unknown-tooth").trim() || "unknown-tooth";
-  const procedure = String(caseData.procedureType || noTreatmentSelectedProcedure).trim() || noTreatmentSelectedProcedure;
-  return `${patient}__${tooth}__${procedure}`.replaceAll(" ", "-");
+export function createEncounterId() {
+  return globalThis.crypto.randomUUID();
 }
 
 export const blankCanal = (name: string): CanalRecord => ({
@@ -47,6 +44,9 @@ export const blankCanal = (name: string): CanalRecord => ({
 });
 
 export const initialCase: EndoCase = {
+  encounterId: "",
+  createdAt: "",
+  revision: 0,
   patientNumber: "",
   autosavedAt: "",
   tooth: "",
@@ -76,6 +76,20 @@ export const initialCase: EndoCase = {
   globalEvents: [],
   closure: null,
 };
+
+export function createFreshCase(now = new Date().toISOString()): EndoCase {
+  return {
+    ...initialCase,
+    encounterId: createEncounterId(),
+    createdAt: now,
+    autosavedAt: now,
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+  };
+}
 
 export function makeDefaultNewCanalName(existingCanals: CanalRecord[] = []) {
   const now = new Date();
@@ -130,6 +144,9 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
   return {
     ...initialCase,
     ...data,
+    encounterId: typeof data.encounterId === "string" && data.encounterId.trim() ? data.encounterId : createEncounterId(),
+    createdAt: typeof data.createdAt === "string" && data.createdAt ? data.createdAt : autosavedAt,
+    revision: typeof data.revision === "number" && Number.isInteger(data.revision) && data.revision >= 0 ? data.revision : 0,
     priorVisit: { ...(initialCase.priorVisit || {}), ...asRecord(data.priorVisit) },
     canals: importedCanals,
     currentCanal: typeof data.currentCanal === "string" && data.currentCanal ? data.currentCanal : importedCanals[0]?.name || initialCase.currentCanal,

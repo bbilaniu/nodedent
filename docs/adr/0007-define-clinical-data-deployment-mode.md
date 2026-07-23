@@ -4,6 +4,8 @@
 
 Accepted
 
+[ADR 0008](0008-adopt-constrained-local-clinical-mode.md) proposes replacing this decision with a constrained local clinical mode. Until that ADR is accepted and its implementation gate is complete, this no-PHI decision remains controlling.
+
 ## Context
 
 NodeDent currently persists complete case records in browser `localStorage` and supports JSON and human-readable exports. The stored record can contain patient identifiers and clinical content. Record keys and export filenames can also expose patient-derived metadata.
@@ -55,5 +57,5 @@ This ADR does not select encryption, server storage, authentication, or a specif
 ## Follow-Up
 
 - Add and verify the persistent prototype/no-PHI warning.
-- Implement mode-independent integrity and recovery work through [Local data integrity and recovery](../specs/local-data-integrity-and-recovery.md).
+- Implement mode-independent integrity and recovery work through [Local clinical data security, integrity, and recovery](../specs/local-data-integrity-and-recovery.md).
 - Revisit and supersede this decision when server persistence, multi-user access, clinic synchronization, local clinical use, or formal clinical deployment is proposed.

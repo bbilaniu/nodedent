@@ -13,11 +13,10 @@ This folder separates clinical source material, active product specs, architectu
 
 - [Accessible interaction](specs/accessible-interaction.md)
 - [Automated assurance](specs/automated-assurance.md)
-- [Global footer and application-version display](specs/global-footer-and-application-version.md)
 - [GUI consistency and design system](specs/gui-consistency-and-design-system.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
-- [Local data integrity and recovery](specs/local-data-integrity-and-recovery.md)
+- [Local clinical data security, integrity, and recovery](specs/local-data-integrity-and-recovery.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [Repeatable workflow instances](specs/repeatable-workflow-instances.md)
@@ -26,7 +25,12 @@ This folder separates clinical source material, active product specs, architectu
 ## Engineering Guides
 
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
+- [Local clinical deployment guide](guides/local-clinical-deployment.md)
 - [Versioning and releases](versioning.md)
+
+## Security
+
+- [Local clinical threat model](security/local-clinical-threat-model.md)
 
 ## Generated Documentation
 
@@ -45,9 +49,12 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0005: Support Seeded Customizable Clinical Documentation Catalogs](adr/0005-support-seeded-customizable-documentation-catalogs.md)
 - [ADR 0006: Define Autosave And Draft Workflow State Policy](adr/0006-define-autosave-and-draft-workflow-state-policy.md)
 - [ADR 0007: Define the Supported Clinical-Data Deployment Mode](adr/0007-define-clinical-data-deployment-mode.md)
+- [ADR 0008: Adopt a Constrained Local Clinical Mode](adr/0008-adopt-constrained-local-clinical-mode.md)
+- [ADR 0009: Defer Structured EMR Interoperability](adr/0009-defer-structured-emr-interoperability.md)
 
 ## Archived Implemented Specs
 
+- [Global footer and application-version display](specs/archive/global-footer-and-application-version.md)
 - [Changesets and release-versioning baseline](specs/archive/Implement-Changesets.md)
 - [Codex MVP implementation instructions](specs/archive/codex-endo-guide-mvp-instructions.md)
 - [Codex refactor instructions](specs/archive/codex-endo-guide-refactor.md)

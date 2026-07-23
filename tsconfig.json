@@ -8,13 +8,13 @@
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "noEmit": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "target": "ES2022",
     "types": ["node"]
   },
   "include": [
-    "endo_chairside_guide_canvas.jsx",
     "scripts/**/*.ts",
     "src/**/*",
     "vite.config.ts"
