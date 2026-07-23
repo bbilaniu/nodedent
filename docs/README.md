@@ -40,6 +40,10 @@ This folder separates clinical source material, active product specs, architectu
 
 - [NodeDent website review — 2026-07-11](reviews/2026-07-11-website-review.md)
 
+## Deployment Readiness Reviews
+
+- [Local clinical deployment readiness — 2026-07-22](reviews/2026-07-22-local-clinical-deployment-readiness.md)
+
 ## Architectural Decisions
 
 - [ADR 0001: Create an Endodontic Decision Guide and Note Generator](adr/0001-create-decision-guide-and-note-generator.md)
