@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.3
+
+### Patch Changes
+
+- a57e9db: Add a post-unlock case entry screen that distinguishes untouched vault placeholders from meaningful active cases and only offers saved-case review when another meaningful case exists.
+
 ## 2.0.2
 
 ### Patch Changes
