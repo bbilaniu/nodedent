@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- 2cc1870: Give encrypted backup restore its own passphrase field and show actionable validation errors instead of silently disabling the restore action when its required input is missing.
+
 ## 2.0.0
 
 ### Major Changes
