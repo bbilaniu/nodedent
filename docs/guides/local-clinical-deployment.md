@@ -34,6 +34,9 @@ Before unlocking NodeDent with approved clinical data, the clinic must verify:
 
 Run `npm run build` followed by `npm run security:check` against the exact artifact before deployment. Review dependency advisories and build provenance under the clinic's release process.
 
+For v2.0.0, record the approved configuration and manual evidence in the
+[clinical device, browser, and synthetic-test checklist](clinical-device-browser-and-synthetic-test-checklist.md).
+
 ## Vault Setup And Daily Use
 
 1. Create a unique vault passphrase of at least 12 characters. NodeDent does not store or recover it.
@@ -72,3 +75,8 @@ Stop using NodeDent for clinical data and follow the clinic's incident process i
 The current build sends no application telemetry and blocks application network connections. Re-run the privacy/security assessment before changing the hosting origin, CSP, analytics/telemetry policy, storage model, browser profile model, retention period, data fields, supported province, or EMR transfer method. Any future operational telemetry must exclude patient data and linkable clinical identifiers, be documented in the product privacy policy, and be technically verified before activation. Structured EMR connectivity requires a separate decision under [ADR 0009](../adr/0009-defer-structured-emr-interoperability.md).
 
 Official background sources are linked from [ADR 0008](../adr/0008-adopt-constrained-local-clinical-mode.md), including Alberta OIPC guidance and the applicable federal and Quebec materials. The clinic must determine which obligations apply to its organization and intended deployment.
+
+The [clinical operator training and collection-notice package](clinical-operator-training-and-collection-notice.md)
+provides the v2.0.0 training baseline and a privacy-lead-controlled notice
+template. Do not deploy its placeholder notice or treat repository text as
+clinic approval.
