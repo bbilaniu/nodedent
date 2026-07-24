@@ -37,6 +37,7 @@ export function isMeaningfulCase(caseData: EndoCase, currentNodeId: string) {
   }
 
   if ((caseData.globalEvents || []).length > 0 || caseData.canals.length > 1) return true;
+  if ((caseData.workflowInstances || []).length > 0) return true;
 
   return caseData.canals.some((canal) => {
     if (canal.name !== "Main" || (canal.events || []).length > 0) return true;

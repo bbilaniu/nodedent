@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CanalRecordSchema } from "./CanalRecord.schema";
 import { ClinicalEventSchema, ClosureRecordSchema, WorkflowScopeKindSchema, WorkflowScopeSchema } from "./ClinicalEvent.schema";
-import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { multidisciplinaryProcedure, noTreatmentSelectedProcedure } from "../workflow/procedures";
 
 export const ProcedureTypeSchema = z.union([
   z.literal(noTreatmentSelectedProcedure),
@@ -9,7 +9,23 @@ export const ProcedureTypeSchema = z.union([
   z.literal("Retreatment"),
   z.literal("Emergency pulpectomy"),
   z.literal("Direct restoration"),
+  z.literal(multidisciplinaryProcedure),
 ]);
+
+const PrimaryWorkflowInstanceSchema = z.object({
+  id: z.string().trim().min(1),
+  workflowType: z.string().trim().min(1),
+  workflowId: z.string().trim().min(1),
+  discipline: z.string().trim().min(1),
+  label: z.string().trim().min(1),
+  procedureLabel: z.string(),
+  target: WorkflowScopeSchema,
+  status: z.union([z.literal("notStarted"), z.literal("inProgress"), z.literal("complete")]),
+  createdAt: z.string().trim().min(1),
+  updatedAt: z.string().trim().min(1),
+  workflowRunId: z.string().trim().min(1),
+  sourceEventIds: z.array(z.string()),
+});
 
 export const DecisionGuardSchema = z.union([
   z.object({
@@ -108,6 +124,8 @@ export const EndoCaseSchema = z.object({
   events: z.array(ClinicalEventSchema).optional(),
   closure: ClosureRecordSchema.nullable(),
   currentNodeId: z.string().optional(),
+  workflowInstances: z.array(PrimaryWorkflowInstanceSchema).optional(),
+  activeWorkflowInstanceId: z.string().optional(),
 });
 
 export type DecisionOptionInput = z.infer<typeof DecisionOptionSchema>;

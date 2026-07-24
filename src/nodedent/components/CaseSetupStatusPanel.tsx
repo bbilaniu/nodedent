@@ -6,16 +6,26 @@ import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
-import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
-import { procedureOptions } from "../workflow/procedures";
+import {
+  createOperativeSetupScope,
+  operativeDirectRestorationWorkflowId,
+  type OperativeWorkflowSetupState,
+} from "../workflow/operative";
+import { endodonticProcedureOptions } from "../workflow/procedures";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
+import { endodonticRootWorkflowId } from "../workflow/registry";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
+import {
+  canRemovePrimaryWorkflow,
+  normalizeWorkflowInstances,
+  selectablePrimaryWorkflows,
+} from "../workflow/workflowInstances";
 import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel } from "./sharedModuleUi";
-import { cx, panelActionButton, panelSurface, sectionText } from "./uiStyles";
+import { cx, panelActionButton, panelSurface, sectionText, statusBadge } from "./uiStyles";
 
 type CaseSetupFocusRefs = Record<CaseSetupFocusTarget, React.RefObject<HTMLElement | null>>;
 
@@ -65,13 +75,111 @@ function CaseIdentitySection({
 }) {
   return (
     <section className={panelSurface.muted}>
-      <h3 className={sectionText.titleSmall}>Chart and procedure</h3>
+      <h3 className={sectionText.titleSmall}>Chart and default treatment area</h3>
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient chart #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number only" />
         <p className="-mt-2 text-xs leading-5 text-amber-900">Use the clinic chart number only. Do not enter a name, exact birth date, contact detail, health number, or insurance identifier.</p>
         <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
-        <SelectInput label="Procedure" value={caseData.procedureType} onChange={(value) => onUpdateCase({ procedureType: value })} options={procedureOptions} />
+        <p className="text-xs leading-5 text-brand-slate">This tooth is the default area for new workflow selections. Each workflow retains its own target context.</p>
       </div>
+    </section>
+  );
+}
+
+function WorkflowSelectionSection({
+  caseData,
+  currentNodeId,
+  onSelectionChange,
+  onProcedureChange,
+  onOpenWorkflow,
+}: {
+  caseData: EndoCase;
+  currentNodeId: string;
+  onSelectionChange: (workflowId: string, selected: boolean) => void;
+  onProcedureChange: (workflowId: string, procedureLabel: string) => void;
+  onOpenWorkflow: (workflowId: string) => void;
+}) {
+  const instances = normalizeWorkflowInstances(caseData, currentNodeId);
+
+  return (
+    <section className={cx(panelSurface.muted, "lg:col-span-2")}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className={sectionText.titleSmall}>Disciplines and treatment workflows</h3>
+          <p className={sectionText.description}>
+            Select every implemented primary workflow that belongs to this case. Endodontic and operative treatment may coexist.
+          </p>
+        </div>
+        <span className={cx(statusBadge.base, instances.length ? statusBadge.ready : statusBadge.neutral)}>
+          {instances.length ? `${instances.length} selected` : "None selected"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        {selectablePrimaryWorkflows.map((definition) => {
+          const instance = instances.find((item) => item.workflowId === definition.workflowId);
+          const selected = Boolean(instance);
+          const removable = instance ? canRemovePrimaryWorkflow(instance) : false;
+          const targetLabel = instance?.target.label || (caseData.tooth ? `Tooth ${caseData.tooth}` : "Target not set");
+
+          return (
+            <article
+              key={definition.workflowId}
+              className={`rounded-2xl border p-4 ${selected ? "border-brand-mint bg-brand-mint/10" : "border-brand-light-node bg-white"}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">{definition.discipline}</p>
+                  <h4 className="mt-1 text-base font-bold text-brand-navy">{definition.label}</h4>
+                  <p className="mt-1 text-xs leading-5 text-brand-slate">{definition.summary}</p>
+                </div>
+                <span className={cx(statusBadge.base, selected ? statusBadge.ready : statusBadge.neutral)}>
+                  {instance?.status === "inProgress" ? "In progress" : instance?.status === "complete" ? "Complete" : selected ? "Selected" : "Not selected"}
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs font-semibold text-brand-slate">Target: {targetLabel}</p>
+
+              {selected && definition.workflowId === endodonticRootWorkflowId ? (
+                <div className="mt-3">
+                  <SelectInput
+                    label="Endodontic procedure"
+                    value={instance?.procedureLabel || "RCT"}
+                    onChange={(value) => onProcedureChange(definition.workflowId, value)}
+                    options={endodonticProcedureOptions}
+                  />
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectionChange(definition.workflowId, !selected)}
+                  disabled={selected && !removable}
+                  className={selected
+                    ? "rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-brand-light-node disabled:text-brand-slate"
+                    : "rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep"}
+                >
+                  {selected ? removable ? "Remove from case" : "Retained with recorded activity" : "Add to case"}
+                </button>
+                {selected ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenWorkflow(definition.workflowId)}
+                    className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/20"
+                  >
+                    Open workflow
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-brand-slate">
+        A workflow with recorded clinical activity cannot be removed from the case because its event history remains part of the audit record.
+      </p>
     </section>
   );
 }
@@ -267,6 +375,7 @@ export function CaseSetupStatusPanel({
   caseData,
   activeCanal,
   activeWorkflowId,
+  currentNodeId,
   operativeSetup,
   onUpdateCase,
   onUpdateDiagnosis,
@@ -277,11 +386,15 @@ export function CaseSetupStatusPanel({
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
   onOpenOperativeWorkflowSetup,
+  onPrimaryWorkflowSelectionChange,
+  onPrimaryWorkflowProcedureChange,
+  onOpenPrimaryWorkflow,
   initialFocusSection,
 }: {
   caseData: EndoCase;
   activeCanal?: CanalRecord | null;
   activeWorkflowId: string;
+  currentNodeId: string;
   operativeSetup?: OperativeWorkflowSetupState;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onUpdateDiagnosis: (field: string, value: string) => void;
@@ -292,13 +405,21 @@ export function CaseSetupStatusPanel({
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   onOpenOperativeWorkflowSetup?: () => void;
+  onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
+  onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
+  onOpenPrimaryWorkflow: (workflowId: string) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
   const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
-  const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic";
-  const showOperativeWorkflowSetup = workflowTargetPanelKind === "operative" && Boolean(operativeSetup);
+  const selectedWorkflowInstances = normalizeWorkflowInstances(caseData, currentNodeId);
+  const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic" ||
+    selectedWorkflowInstances.some((instance) => instance.workflowId === endodonticRootWorkflowId);
+  const showOperativeWorkflowSetup = Boolean(operativeSetup) && (
+    workflowTargetPanelKind === "operative" ||
+    selectedWorkflowInstances.some((instance) => instance.workflowId === operativeDirectRestorationWorkflowId)
+  );
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
@@ -340,9 +461,19 @@ export function CaseSetupStatusPanel({
 
   return (
     <div className="grid gap-6">
-      <CaseSetupGroup title="Case identity" description="Patient, tooth, procedure, visit status, and next-visit planning.">
+      <CaseSetupGroup title="Case identity" description="Patient, default treatment area, visit status, and next-visit planning.">
         <CaseIdentitySection caseData={caseData} onUpdateCase={onUpdateCase} />
         <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
+      </CaseSetupGroup>
+
+      <CaseSetupGroup title="Treatment plan" description="Select one or more implemented disciplines without forcing the case into a single procedure.">
+        <WorkflowSelectionSection
+          caseData={caseData}
+          currentNodeId={currentNodeId}
+          onSelectionChange={onPrimaryWorkflowSelectionChange}
+          onProcedureChange={onPrimaryWorkflowProcedureChange}
+          onOpenWorkflow={onOpenPrimaryWorkflow}
+        />
       </CaseSetupGroup>
 
       <CaseSetupGroup title="Shared readiness" description="Reusable diagnosis, radiograph, anesthesia, and isolation context for the current workflow.">

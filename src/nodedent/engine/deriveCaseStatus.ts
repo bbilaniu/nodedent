@@ -21,6 +21,7 @@ const suggestedStatusLabels = new Set([
   "Retreatment planned",
   "Emergency pulpectomy planned",
   "Direct restoration planned",
+  "Multidisciplinary treatment planned",
 ]);
 
 export function deriveSuggestedCaseStatus(caseData: EndoCase) {

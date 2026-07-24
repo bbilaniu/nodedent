@@ -10,7 +10,7 @@ import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseEntryGate } from "../components/CaseEntryGate";
-import { CaseManagementModal } from "../components/CaseManagementModal";
+import { CaseSetupPage } from "../components/CaseSetupPage";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
@@ -88,7 +88,7 @@ import {
   sharedDiagnosisWorkflowId,
   upsertOperativeScopeRecordedEvent,
 } from "../workflow/operative";
-import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { multidisciplinaryProcedure, noTreatmentSelectedProcedure } from "../workflow/procedures";
 import {
   buildRadiographsReviewedCapability,
   formatRadiologyEventFragment,
@@ -106,6 +106,14 @@ import {
 } from "../workflow/registry";
 import { getCapabilityStatus, getCaseCapabilitySummary, isCapabilitySatisfied } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowHasOperativeTargetPanel } from "../workflow/targetPanels";
+import {
+  addPrimaryWorkflow,
+  canRemovePrimaryWorkflow,
+  normalizeCaseWorkflowInstances,
+  normalizeWorkflowInstances,
+  removePrimaryWorkflow,
+  updateWorkflowProcedureLabel,
+} from "../workflow/workflowInstances";
 
 function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   const canal = {
@@ -206,6 +214,101 @@ test("case entry actions only offer review when another meaningful case exists",
   assert.equal(resumableMarkup.includes("Continue current case"), true);
   assert.equal(resumableMarkup.includes("Start new case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+});
+
+test("workflow selection supports a neutral case and multiple disciplines without duplicate instances", () => {
+  const neutralCase: EndoCase = {
+    ...initialCase,
+    encounterId: "33333333-3333-4333-8333-333333333333",
+    createdAt: "2026-07-24T13:00:00.000Z",
+    tooth: "36",
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+    workflowInstances: [],
+  };
+
+  assert.equal(normalizeWorkflowInstances(neutralCase, "preop").length, 0);
+  assert.equal(normalizeWorkflowInstances(neutralCase, "operative-readiness").length, 0);
+
+  const withEndodontics = addPrimaryWorkflow(neutralCase, endodonticRootWorkflowId, "preop", {
+    now: "2026-07-24T13:01:00.000Z",
+  });
+  const multidisciplinary = addPrimaryWorkflow(withEndodontics, operativeDirectRestorationWorkflowId, "preop", {
+    now: "2026-07-24T13:02:00.000Z",
+  });
+  const repeatedSelection = addPrimaryWorkflow(multidisciplinary, operativeDirectRestorationWorkflowId, "preop", {
+    now: "2026-07-24T13:03:00.000Z",
+  });
+
+  assert.equal(multidisciplinary.procedureType, multidisciplinaryProcedure);
+  assert.equal(normalizeWorkflowInstances(multidisciplinary, "preop").length, 2);
+  assert.deepEqual(
+    normalizeWorkflowInstances(repeatedSelection, "preop").map((instance) => instance.id),
+    normalizeWorkflowInstances(multidisciplinary, "preop").map((instance) => instance.id)
+  );
+});
+
+test("workflow normalization reconciles partial legacy state and retains workflows with clinical activity", () => {
+  const legacyEndodontic = addPrimaryWorkflow(baseCase(), endodonticRootWorkflowId, "preop", {
+    now: "2026-07-24T13:10:00.000Z",
+  });
+  const partialCase = {
+    ...legacyEndodontic,
+    procedureType: "Direct restoration",
+    workflowInstances: legacyEndodontic.workflowInstances,
+  };
+  const reconciled = normalizeCaseWorkflowInstances(partialCase, "preop", "2026-07-24T13:11:00.000Z");
+  assert.equal(reconciled.workflowInstances?.length, 2);
+  assert.equal(reconciled.procedureType, multidisciplinaryProcedure);
+
+  const endodonticInstance = reconciled.workflowInstances?.find((instance) => instance.workflowId === endodonticRootWorkflowId);
+  assert.ok(endodonticInstance);
+  assert.equal(canRemovePrimaryWorkflow(endodonticInstance), true);
+
+  const withActivity = normalizeCaseWorkflowInstances({
+    ...reconciled,
+    globalEvents: [{
+      id: "evt_workflow_instance_activity",
+      timestamp: "2026-07-24T13:12:00.000Z",
+      type: "access.completed",
+      workflowId: endodonticRootWorkflowId,
+      workflowRunId: endodonticInstance.workflowRunId,
+      details: { workflowInstanceId: endodonticInstance.id },
+    }],
+  }, "access", "2026-07-24T13:12:00.000Z");
+  const activeEndodonticInstance = withActivity.workflowInstances?.find((instance) => instance.id === endodonticInstance.id);
+  assert.ok(activeEndodonticInstance);
+  assert.equal(activeEndodonticInstance.status, "inProgress");
+  assert.equal(canRemovePrimaryWorkflow(activeEndodonticInstance), false);
+  assert.equal(removePrimaryWorkflow(withActivity, endodonticRootWorkflowId, "access").workflowInstances?.length, 2);
+
+  const missingOperativeInstance = normalizeCaseWorkflowInstances({
+    ...legacyEndodontic,
+    procedureType: multidisciplinaryProcedure,
+  }, "preop", "2026-07-24T13:13:00.000Z");
+  assert.equal(missingOperativeInstance.workflowInstances?.length, 2);
+});
+
+test("workflow procedure selection and JSON import round-trip durable instance identity", () => {
+  const selected = addPrimaryWorkflow(baseCase(), operativeDirectRestorationWorkflowId, "preop", {
+    now: "2026-07-24T13:20:00.000Z",
+  });
+  const updated = updateWorkflowProcedureLabel(selected, endodonticRootWorkflowId, "Retreatment", "preop");
+  const exported = buildJsonExport(updated, "preop");
+  const imported = normalizeImportedEndoCase(exported, "2026-07-24T13:21:00.000Z");
+
+  assert.equal(updated.procedureType, multidisciplinaryProcedure);
+  assert.deepEqual(
+    imported.workflowInstances?.map((instance) => instance.id),
+    updated.workflowInstances?.map((instance) => instance.id)
+  );
+  assert.equal(
+    imported.workflowInstances?.find((instance) => instance.workflowId === endodonticRootWorkflowId)?.procedureLabel,
+    "Retreatment"
+  );
 });
 
 test("global footer exposes the package application version and privacy policy", () => {
@@ -476,7 +579,7 @@ test("workflow target panel routing keeps operative workflows out of the endodon
   assert.equal(workflowHasOperativeTargetPanel(sharedIsolationWorkflowId), false);
 });
 
-test("case setup hides endodontic active-canal setup for operative workflows", () => {
+test("full-page case setup shows every selected discipline without merging their target controls", () => {
   const radiologyEvent = {
     id: "evt_rendered_radiology_reviewed",
     timestamp: "2026-06-20T20:00:00.000Z",
@@ -491,7 +594,7 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
       sourceLabel: "current visit",
     },
   };
-  const caseData = baseCase({
+  const caseData = addPrimaryWorkflow(baseCase({
     tooth: "36",
     globalEvents: [
       {
@@ -499,13 +602,13 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
         capabilitiesSatisfied: [buildRadiographsReviewedCapability(radiologyEvent)],
       },
     ],
-  });
+  }), operativeDirectRestorationWorkflowId, "preop", { now: "2026-06-20T20:01:00.000Z" });
   const noop = () => {};
-  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+  const markup = renderToStaticMarkup(React.createElement(CaseSetupPage, {
     caseData,
     activeCanal: caseData.canals[0],
     activeWorkflowId: operativeDirectRestorationWorkflowId,
-    currentNodeId: "operative-readiness",
+    currentNodeId: "preop",
     onClose: noop,
     onUpdateCase: noop,
     onUpdateDiagnosis: noop,
@@ -519,16 +622,20 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
       shade: "A2",
     },
     onApplySuggestedCaseStatus: noop,
-    onRecordAnesthesiaEvent: noop,
-    onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
     onOpenOperativeWorkflowSetup: noop,
+    onPrimaryWorkflowSelectionChange: noop,
+    onPrimaryWorkflowProcedureChange: noop,
+    onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
 
   assert.equal(markup.includes("Case identity"), true);
+  assert.equal(markup.includes("Disciplines and treatment workflows"), true);
+  assert.equal(markup.includes("2 selected"), true);
+  assert.equal(markup.includes("Return to workspace"), true);
   assert.equal(markup.includes("Shared readiness"), true);
   assert.equal(markup.includes("Operative setup"), true);
   assert.equal(markup.includes("Operative setup summary"), true);
@@ -543,16 +650,16 @@ test("case setup hides endodontic active-canal setup for operative workflows", (
   assert.equal(markup.includes("Review radiology"), true);
   assert.equal(markup.includes("Latest shared radiology event"), true);
   assert.equal(markup.includes("Radiograph review recorded"), true);
-  assert.equal(markup.includes("Endodontic setup"), false);
-  assert.equal(markup.includes("Endodontic workflow setup"), false);
-  assert.equal(markup.includes("Estimated WL for"), false);
-  assert.equal(markup.includes("Active canal status"), false);
+  assert.equal(markup.includes("Endodontic setup"), true);
+  assert.equal(markup.includes("Endodontic workflow setup"), true);
+  assert.equal(markup.includes("Estimated WL for"), true);
+  assert.equal(markup.includes("MB:"), true);
 });
 
-test("case setup hides workflow target setup for shared module contexts", () => {
+test("case setup keeps selected workflow sections visible from shared-module context", () => {
   const caseData = baseCase();
   const noop = () => {};
-  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+  const markup = renderToStaticMarkup(React.createElement(CaseSetupPage, {
     caseData,
     activeCanal: caseData.canals[0],
     activeWorkflowId: sharedAnesthesiaWorkflowId,
@@ -563,26 +670,27 @@ test("case setup hides workflow target setup for shared module contexts", () => 
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
-    onRecordAnesthesiaEvent: noop,
-    onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
+    onPrimaryWorkflowSelectionChange: noop,
+    onPrimaryWorkflowProcedureChange: noop,
+    onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
 
   assert.equal(markup.includes("Case identity"), true);
   assert.equal(markup.includes("Shared readiness"), true);
-  assert.equal(markup.includes("Endodontic setup"), false);
-  assert.equal(markup.includes("Endodontic workflow setup"), false);
+  assert.equal(markup.includes("Endodontic setup"), true);
+  assert.equal(markup.includes("Endodontic workflow setup"), true);
   assert.equal(markup.includes("Operative setup"), false);
-  assert.equal(markup.includes("Estimated WL for"), false);
+  assert.equal(markup.includes("Estimated WL for"), true);
 });
 
 test("case setup keeps shared modules as summaries instead of inline event forms", () => {
   const caseData = baseCase();
   const noop = () => {};
-  const markup = renderToStaticMarkup(React.createElement(CaseManagementModal, {
+  const markup = renderToStaticMarkup(React.createElement(CaseSetupPage, {
     caseData,
     activeCanal: caseData.canals[0],
     activeWorkflowId: sharedAnesthesiaWorkflowId,
@@ -593,13 +701,12 @@ test("case setup keeps shared modules as summaries instead of inline event forms
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
-    onRecordAnesthesiaEvent: noop,
-    onRecordIsolationEvent: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
-    onUserAnesthesiaCatalogItemsChange: noop,
-    onUserIsolationCatalogItemsChange: noop,
+    onPrimaryWorkflowSelectionChange: noop,
+    onPrimaryWorkflowProcedureChange: noop,
+    onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
 
@@ -2445,6 +2552,14 @@ test("operative setup hydrates from the latest setup event", () => {
 
   assert.deepEqual(getOperativeSetupFromEvent(latestEvent), expectedSetup);
   assert.deepEqual(getLatestOperativeWorkflowSetup(baseCase({ tooth: "36", globalEvents: [olderEvent, unrelatedEvent, latestEvent] })), expectedSetup);
+  assert.deepEqual(
+    getLatestOperativeWorkflowSetup(
+      baseCase({ tooth: "36", globalEvents: [olderEvent, unrelatedEvent, latestEvent] }),
+      "run_operative_legacy",
+      "instance_operative_legacy"
+    ),
+    expectedSetup
+  );
   assert.deepEqual(upsertOperativeScopeRecordedEvent([unrelatedEvent, olderEvent], latestEvent).map((event) => event.id), ["evt_unrelated", "evt_operative_scope_latest"]);
 });
 

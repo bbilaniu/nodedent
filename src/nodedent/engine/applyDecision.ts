@@ -11,6 +11,9 @@ export type ApplyDecisionInput = {
   activeCanalName: string;
   eventId?: string;
   timestamp?: string;
+  workflowId?: string;
+  workflowRunId?: string;
+  workflowInstanceId?: string;
 };
 
 export type ApplyDecisionOutput = {
@@ -87,8 +90,13 @@ export function applyDecision(input: ApplyDecisionInput): ApplyDecisionOutput {
         activeCanal,
         id: input.eventId || `evt_${caseData.globalEvents.length + 1}`,
         timestamp: input.timestamp || "",
+        workflowId: input.workflowId,
+        workflowRunId: input.workflowRunId,
       })
     : undefined;
+  if (generatedEvent && input.workflowInstanceId) {
+    generatedEvent.details = { ...generatedEvent.details, workflowInstanceId: input.workflowInstanceId };
+  }
 
   const appliesToAllCanals = generatedEvent && node.id === "close-access" && generatedEvent.canal === "All";
 

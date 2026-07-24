@@ -60,6 +60,31 @@ The map should:
 
 Storing instances directly on the current case object is acceptable only as an explicit transitional boundary. Before introducing multi-appointment or multi-visit persistence, decide whether instances belong to a dedicated appointment/encounter model.
 
+## Confirmed Case Setup Direction
+
+Decision confirmed on 2026-07-24:
+
+- Case Setup & Status becomes a full-page clinical workspace rather than a modal.
+- A neutral case may select no primary workflow.
+- Endodontic RCT and operative direct restoration can both be selected for the same case.
+- Each selected workflow keeps its own durable instance identity, workflow-run identity, target scope, status, and source-event identities.
+- Workflow-specific controls remain separate: canals stay endodontic and surfaces stay operative.
+- Extraction, hygiene, and other future disciplines remain unavailable until their clinical runners are separately specified and implemented.
+- Filling-note quality changes remain deferred to [Clinical note generator QA](codex-verification-outputs.md).
+
+## Compatibility Sunset
+
+Compatibility is intentionally bounded rather than permanent. The current implementation may read the legacy scalar `procedureType`, untagged endodontic events, and operative events created before workflow-instance identity in order to recover supported protected cases and explicit JSON exports.
+
+These fallbacks must not become a second durable model. They may be removed in a future major release after:
+
+- the supported migration/export window is documented;
+- retained clinical cases can be re-saved or explicitly exported in the instance-aware format;
+- release notes identify the compatibility removal; and
+- current instance-aware fixtures no longer require the fallback.
+
+New compatibility branches require an explicit migration reason. Do not preserve obsolete shapes indefinitely when doing so keeps duplicate state, routing, or note logic alive.
+
 ## Validation
 
 - Migration from cases without instances.

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
+import type { CanalContinuationTarget, CaseSetupFocusTarget, ClinicalEvent, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
-import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
+import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
+import { CaseSetupPage } from "./components/CaseSetupPage";
 import { CaseEntryGate } from "./components/CaseEntryGate";
 import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
 import { ClinicalVaultGate, type ClinicalVaultAccess } from "./components/ClinicalVaultGate";
@@ -39,7 +40,7 @@ import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
-import { isNoTreatmentSelected, noTreatmentSelectedProcedure } from "./workflow/procedures";
+import { noTreatmentSelectedProcedure } from "./workflow/procedures";
 import {
   buildOperativeSetupEventDetails,
   buildOperativeRestorationPlacedEvent,
@@ -81,6 +82,15 @@ import {
   sharedRadiologyWorkflowVersion,
 } from "./workflow/radiology";
 import { getCaseCapabilitySummary } from "./workflow/selectors";
+import {
+  addPrimaryWorkflow,
+  canRemovePrimaryWorkflow,
+  getWorkflowInstance,
+  normalizeCaseWorkflowInstances,
+  normalizeWorkflowInstances,
+  removePrimaryWorkflow,
+  updateWorkflowProcedureLabel,
+} from "./workflow/workflowInstances";
 
 type HistoryEntry = {
   caseData: EndoCase;
@@ -264,8 +274,22 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const activeCanalStatus = getCanalStatus(activeCanal);
   const hasActivePrimaryWorkflow = Boolean(activePrimaryWorkflowId);
   const isEndodonticWorkflowActive = activePrimaryWorkflowId === endodonticRootWorkflowId;
-  const operativeSetup = useMemo(() => getLatestOperativeWorkflowSetup(caseData), [caseData.globalEvents]);
-  const latestOperativeRestorationEvent = useMemo(() => getOperativeRestorationEvents(caseData).at(-1), [caseData.globalEvents]);
+  const workflowInstances = useMemo(
+    () => normalizeWorkflowInstances(caseData, currentNodeId),
+    [caseData, currentNodeId]
+  );
+  const activeWorkflowInstance = workflowInstances.find((instance) => instance.id === caseData.activeWorkflowInstanceId);
+  const activeOperativeWorkflowInstance = activeWorkflowInstance?.workflowId === operativeDirectRestorationWorkflowId
+    ? activeWorkflowInstance
+    : workflowInstances.find((instance) => instance.workflowId === operativeDirectRestorationWorkflowId);
+  const operativeSetup = useMemo(
+    () => getLatestOperativeWorkflowSetup(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id),
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
+  );
+  const latestOperativeRestorationEvent = useMemo(
+    () => getOperativeRestorationEvents(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id).at(-1),
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
+  );
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
   const activeReadinessSummary = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId ? operativeReadinessSummary : caseCapabilitySummary;
@@ -314,7 +338,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }, [session]);
 
   const queueCaseSave = useCallback((snapshot: EndoCase, nodeId: string) => {
-    const queuedSnapshot = structuredClone(snapshot);
+    const queuedSnapshot = normalizeCaseWorkflowInstances(structuredClone(snapshot), nodeId);
     const job = saveQueue.current.then(async () => {
       setStorageStatus("saving");
       setStorageMessage("Encrypting and saving…");
@@ -341,7 +365,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
         if (cancelled) return;
         if (activeSnapshot) {
           revisionByEncounter.current.set(activeSnapshot.encounterId, activeSnapshot.revision);
-          setCaseData(activeSnapshot.caseData);
+          setCaseData(normalizeCaseWorkflowInstances(activeSnapshot.caseData, activeSnapshot.currentNodeId, activeSnapshot.savedAt));
           setCurrentNodeId(activeSnapshot.currentNodeId);
           setStorageMessage(`Saved ${new Date(activeSnapshot.savedAt).toLocaleTimeString()}`);
         } else {
@@ -478,6 +502,17 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   function updateDiagnosis(field: string, value: string) {
     setCaseData((prev) => ({ ...prev, diagnosis: { ...(prev.diagnosis || {}), [field]: value } }));
     setValidationMessage(null);
+  }
+
+  function identifyEndodonticEvent(event: ClinicalEvent) {
+    const instance = workflowInstances.find((item) => item.workflowId === endodonticRootWorkflowId);
+    if (!instance) return event;
+    return {
+      ...event,
+      workflowId: endodonticRootWorkflowId,
+      workflowRunId: instance.workflowRunId,
+      details: { ...event.details, workflowInstanceId: instance.id },
+    };
   }
 
   function applySuggestedCaseStatus() {
@@ -654,28 +689,64 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
   function activatePrimaryWorkflow(workflowId: string) {
     if (workflowId !== endodonticRootWorkflowId && workflowId !== operativeDirectRestorationWorkflowId) return;
+    const selectedInstance = getWorkflowInstance(caseData, workflowId, currentNodeId);
+    const workflowRunId = selectedInstance?.workflowRunId || makeWorkflowRunId(
+      workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"
+    );
+    const nextCaseData = addPrimaryWorkflow(caseData, workflowId, currentNodeId, {
+      workflowRunId,
+      makeActive: true,
+    });
+    const nextInstance = getWorkflowInstance(nextCaseData, workflowId, currentNodeId);
+    setCaseData({
+      ...nextCaseData,
+      activeWorkflowInstanceId: nextInstance?.id || nextCaseData.activeWorkflowInstanceId,
+    });
     setActivePrimaryWorkflowId(workflowId);
     setCasePanelWorkflowId(workflowId);
-    setRootWorkflowRunId(makeWorkflowRunId(workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"));
-    setCaseData((prev) => {
-      if (!isNoTreatmentSelected(prev.procedureType)) return prev;
-      return {
-        ...prev,
-        procedureType: workflowId === operativeDirectRestorationWorkflowId ? "Direct restoration" : "RCT",
-      };
-    });
+    setRootWorkflowRunId(workflowRunId);
     setIsWorkflowLauncherOpen(false);
   }
 
-  function openOperativeWorkflowSetupFromCasePanel() {
+  function setPrimaryWorkflowSelected(workflowId: string, selected: boolean) {
+    setCaseData((prev) => selected
+      ? addPrimaryWorkflow(prev, workflowId, currentNodeId)
+      : removePrimaryWorkflow(prev, workflowId, currentNodeId));
+    if (!selected && activePrimaryWorkflowId === workflowId) {
+      const instance = getWorkflowInstance(caseData, workflowId, currentNodeId);
+      if (instance && canRemovePrimaryWorkflow(instance)) {
+        setActivePrimaryWorkflowId(null);
+        setCasePanelWorkflowId("");
+      }
+    }
+  }
+
+  function setPrimaryWorkflowProcedure(workflowId: string, procedureLabel: string) {
+    setCaseData((prev) => updateWorkflowProcedureLabel(prev, workflowId, procedureLabel, currentNodeId));
+  }
+
+  function openPrimaryWorkflowFromCasePanel(workflowId: string) {
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
-    activatePrimaryWorkflow(operativeDirectRestorationWorkflowId);
+    activatePrimaryWorkflow(workflowId);
+  }
+
+  function openOperativeWorkflowSetupFromCasePanel() {
+    openPrimaryWorkflowFromCasePanel(operativeDirectRestorationWorkflowId);
   }
 
   function updateOperativeSetup(updates: Partial<OperativeWorkflowSetupState>) {
     setCaseData((prev) => {
-      const nextSetup = { ...getLatestOperativeWorkflowSetup(prev), ...updates };
+      const selectedCase = addPrimaryWorkflow(prev, operativeDirectRestorationWorkflowId, currentNodeId, {
+        workflowRunId: rootWorkflowRunId,
+        makeActive: true,
+      });
+      const instance = getWorkflowInstance(selectedCase, operativeDirectRestorationWorkflowId, currentNodeId);
+      const workflowRunId = instance?.workflowRunId || rootWorkflowRunId;
+      const nextSetup = {
+        ...getLatestOperativeWorkflowSetup(selectedCase, workflowRunId, instance?.id),
+        ...updates,
+      };
       const scope = createOperativeSetupScope(nextSetup, prev.tooth);
       const details = buildOperativeSetupEventDetails(nextSetup, prev.tooth);
       const event = makeRuntimeEvent({
@@ -686,14 +757,16 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
         label: "Operative setup recorded",
         workflowId: operativeDirectRestorationWorkflowId,
         workflowVersion: operativeDirectRestorationWorkflowVersion,
+        workflowRunId,
         scope,
       });
-      event.details = { ...event.details, ...details };
+      event.details = { ...event.details, ...details, workflowInstanceId: instance?.id };
 
-      return {
-        ...prev,
-        globalEvents: upsertOperativeScopeRecordedEvent(prev.globalEvents, event),
-      };
+      return normalizeCaseWorkflowInstances({
+        ...selectedCase,
+        activeWorkflowInstanceId: instance?.id || selectedCase.activeWorkflowInstanceId,
+        globalEvents: upsertOperativeScopeRecordedEvent(selectedCase.globalEvents, event),
+      }, currentNodeId, event.timestamp);
     });
     setValidationMessage(null);
   }
@@ -711,13 +784,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
         notes: record.notes,
       },
       fallbackTooth: caseData.tooth,
-      workflowRunId: rootWorkflowRunId,
+      workflowRunId: activeOperativeWorkflowInstance?.workflowRunId || rootWorkflowRunId,
+      workflowInstanceId: activeOperativeWorkflowInstance?.id,
     });
 
-    setCaseData((prev) => ({
+    setCaseData((prev) => normalizeCaseWorkflowInstances({
       ...prev,
       globalEvents: [...prev.globalEvents, event],
-    }));
+    }, currentNodeId, event.timestamp));
     setCopied(false);
     setValidationMessage(null);
   }
@@ -760,14 +834,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
   function continueFromPriorVisit() {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const event = makeRuntimeEvent({
+    const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "case.continuedFromPriorVisit",
       tooth: caseData.tooth,
       canal: "All",
       nodeId: currentNode.id,
       label: "Continue from prior visit",
       activeCanal,
-    });
+    }));
 
     setCaseData((prev) => ({
       ...prev,
@@ -797,14 +871,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     }
 
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const event = makeRuntimeEvent({
+    const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "workflow.resumedFromPriorVisit",
       tooth: caseData.tooth,
       canal: activeCanal.name,
       nodeId: currentNode.id,
       label: `Resume ${activeCanal.name} from prior visit`,
       activeCanal,
-    });
+    }));
     event.details = {
       ...event.details,
       nextNodeId,
@@ -839,7 +913,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       const saved = await session.loadCase(caseId);
       if (!saved) throw new Error("Protected case not found.");
       revisionByEncounter.current.set(saved.encounterId, saved.revision);
-      setCaseData(saved.caseData);
+      setCaseData(normalizeCaseWorkflowInstances(saved.caseData, saved.currentNodeId, saved.savedAt));
       setCurrentNodeId(saved.currentNodeId);
       setHistory([]);
       setValidationMessage(null);
@@ -1011,7 +1085,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   function addManualCanalEvent(type: string, label: string, nextNodeId: string | null = null, difficultyFlag: DifficultyFlag | null = null) {
     if (!activeCanal) return;
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const event = makeRuntimeEvent({ type, tooth: caseData.tooth, canal: activeCanal.name, nodeId: currentNode.id, label, activeCanal });
+    const event = identifyEndodonticEvent(makeRuntimeEvent({ type, tooth: caseData.tooth, canal: activeCanal.name, nodeId: currentNode.id, label, activeCanal }));
     setCaseData((prev) => ({
       ...prev,
       difficulty: difficultyFlag || prev.difficulty,
@@ -1086,14 +1160,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
 
-    const event = makeRuntimeEvent({
+    const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "workflow.switchedCanal",
       tooth: caseData.tooth,
       canal: target.canalName,
       nodeId: currentNode.id,
       label: target.label,
       activeCanal: targetCanal,
-    });
+    }));
     event.details = {
       ...event.details,
       previousActiveCanal: caseData.currentCanal,
@@ -1136,6 +1210,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
   function applyDecision(option: DecisionOption) {
     const { eventId, timestamp } = createRuntimeEventArgs();
+    const endodonticInstance = workflowInstances.find((instance) => instance.workflowId === endodonticRootWorkflowId);
     const result = applyDecisionEngine({
       currentNodeId: currentNode.id,
       selectedOptionId: option.id || option.label,
@@ -1144,6 +1219,9 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       activeCanalName: activeCanal?.name || caseData.currentCanal,
       eventId,
       timestamp,
+      workflowId: endodonticRootWorkflowId,
+      workflowRunId: endodonticInstance?.workflowRunId || rootWorkflowRunId,
+      workflowInstanceId: endodonticInstance?.id,
     });
 
     if (result.errors.length) {
@@ -1152,29 +1230,30 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     }
 
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+    const updatedCaseData = normalizeCaseWorkflowInstances(result.updatedCaseData, result.nextNodeId, timestamp);
 
     if (option.noteEvent?.type === "workflow.nextCanalBeforeClosure") {
-      const nextCanal = findNextIncompleteCanal(result.updatedCaseData);
+      const nextCanal = findNextIncompleteCanal(updatedCaseData);
       if (!nextCanal) {
-        setCaseData(result.updatedCaseData);
+        setCaseData(updatedCaseData);
         setCurrentNodeId("canal-obturation-complete");
         setValidationMessage({ optionLabel: option.label, missing: ["No other incomplete canal found. Use 'All canals obturated; proceed to chamber cleanup' if ready."] });
         return;
       }
-      setCaseData({ ...result.updatedCaseData, currentCanal: nextCanal.name });
-      setCurrentNodeId(getCanalCheckpointNodeId(result.updatedCaseData, nextCanal.name));
+      setCaseData({ ...updatedCaseData, currentCanal: nextCanal.name });
+      setCurrentNodeId(getCanalCheckpointNodeId(updatedCaseData, nextCanal.name));
       setCopied(false);
       setValidationMessage(null);
       return;
     }
 
     if (option.noteEvent?.type === "workflow.nextCanalSelected") {
-      startAnotherCanal(result.updatedCaseData);
+      startAnotherCanal(updatedCaseData);
       setCopied(false);
       return;
     }
 
-    setCaseData(result.updatedCaseData);
+    setCaseData(updatedCaseData);
     setCurrentNodeId(result.nextNodeId);
     setCopied(false);
     setValidationMessage(null);
@@ -1523,11 +1602,11 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
         ) : null}
 
         {isCasePanelOpen ? (
-          <CaseManagementModal
+          <CaseSetupPage
             caseData={caseData}
             activeCanal={activeCanal}
             activeWorkflowId={casePanelWorkflowId}
-            currentNodeId={casePanelWorkflowId === operativeDirectRestorationWorkflowId ? "operative-readiness" : currentNodeId}
+            currentNodeId={currentNodeId}
             operativeSetup={operativeSetup}
             onClose={() => {
               setIsCasePanelOpen(false);
@@ -1539,17 +1618,13 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
-            onRecordAnesthesiaEvent={recordAnesthesiaEvent}
-            onRecordIsolationEvent={recordIsolationEvent}
-            onRecordRadiologyEvent={recordRadiologyEvent}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             onOpenRadiologyWorkflow={openRadiologyWorkflow}
             onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
-            userAnesthesiaCatalogItems={userAnesthesiaCatalogItems}
-            onUserAnesthesiaCatalogItemsChange={updateUserAnesthesiaCatalogItems}
-            userIsolationCatalogItems={userIsolationCatalogItems}
-            onUserIsolationCatalogItemsChange={updateUserIsolationCatalogItems}
+            onPrimaryWorkflowSelectionChange={setPrimaryWorkflowSelected}
+            onPrimaryWorkflowProcedureChange={setPrimaryWorkflowProcedure}
+            onOpenPrimaryWorkflow={openPrimaryWorkflowFromCasePanel}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}
           />

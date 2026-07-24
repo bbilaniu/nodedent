@@ -5,6 +5,7 @@ const disciplineByProcedure: Record<string, string> = {
   Retreatment: "ENDO",
   "Emergency pulpectomy": "ENDO",
   "Direct restoration": "OPERATIVE",
+  "Multidisciplinary treatment": "MULTI",
 };
 
 export function sanitizeFilenameSegment(value: string, fallback: string) {
