@@ -4,7 +4,7 @@ import { radiologyModalities, radiologyRegionKinds } from "../workflow/radiology
 import { TextInput } from "./FormControls";
 import { cx, panelActionButton } from "./uiStyles";
 
-type RadiologyReviewFormState = {
+export type RadiologyReviewFormState = {
   modalities: RadiologyModality[];
   scopeKind: RadiologyRegionKind;
   tooth: string;
@@ -71,6 +71,13 @@ function buildRadiologyEventDetails(form: RadiologyReviewFormState, fallbackToot
   };
 }
 
+export function hasRadiologyReviewScope(form: RadiologyReviewFormState, fallbackTooth: string) {
+  if (form.scopeKind === "tooth") return Boolean(form.tooth.trim() || fallbackTooth.trim());
+  if (form.scopeKind === "teeth") return splitTeethInput(form.teeth).length > 0;
+  if (form.scopeKind === "procedure") return Boolean(form.procedureId.trim());
+  return Boolean(form.regionLabel.trim());
+}
+
 export function RadiologyEventForm({
   tooth,
   onRecordEvent,
@@ -79,7 +86,8 @@ export function RadiologyEventForm({
   onRecordEvent?: (details: RadiologyEventDetails) => void;
 }) {
   const [form, setForm] = useState<RadiologyReviewFormState>(() => createDefaultRadiologyReviewForm(tooth));
-  const canRecordReview = Boolean(onRecordEvent && form.modalities.length);
+  const hasReviewScope = hasRadiologyReviewScope(form, tooth);
+  const canRecordReview = Boolean(onRecordEvent && form.modalities.length && hasReviewScope);
 
   function updateForm(updates: Partial<RadiologyReviewFormState>) {
     setForm((prev) => ({ ...prev, ...updates }));
@@ -137,6 +145,7 @@ export function RadiologyEventForm({
             ))}
           </div>
         </div>
+        {!hasReviewScope ? <p role="status" className="text-xs leading-5 text-amber-900">Enter the tooth, teeth, procedure ID, or region label for the selected review scope.</p> : null}
         {form.modalities.includes("other") ? (
           <TextInput label="Other modality label" value={form.otherModalityLabel} onChange={(value) => updateForm({ otherModalityLabel: value })} placeholder="e.g., pano" />
         ) : null}

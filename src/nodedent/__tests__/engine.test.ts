@@ -13,9 +13,11 @@ import { CaseManagementModal } from "../components/CaseManagementModal";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
+import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
 import { SharedWorkflowRunnerModal } from "../components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
+import { sharedCapabilityStatusLabel } from "../components/sharedModuleUi";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
@@ -49,12 +51,13 @@ import {
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
 import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
-import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
+import { canSubmitIsolationForm, defaultIsolationFormState } from "../workflow/isolationForm";
 import {
   blankOperativeWorkflowSetup,
   buildFinalRestorationPlacedCapability,
@@ -679,6 +682,81 @@ test("shared readiness uses review labels when shared module status already exis
   assert.equal(markup.includes("Review isolation"), true);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
   assert.equal(markup.includes("Open isolation workflow"), false);
+});
+
+test("shared readiness forms require an explicit target scope", () => {
+  const anesthesiaWithoutScope = { ...defaultAnesthesiaFormState(""), response: "adequate" as const };
+  assert.equal(canSubmitAnesthesiaForm("assessment", anesthesiaWithoutScope), false);
+  assert.equal(canSubmitAnesthesiaForm("assessment", { ...anesthesiaWithoutScope, targetTeeth: "35" }), true);
+  assert.equal(canSubmitAnesthesiaForm("assessment", { ...anesthesiaWithoutScope, regionLabel: "Q3" }), true);
+
+  const isolationWithoutScope = defaultIsolationFormState("");
+  assert.equal(canSubmitIsolationForm(isolationWithoutScope), false);
+  assert.equal(canSubmitIsolationForm({ ...isolationWithoutScope, exposedTeeth: "35" }), true);
+  assert.equal(canSubmitIsolationForm({ ...isolationWithoutScope, regionLabel: "Q3" }), true);
+
+  const radiologyWithoutScope: RadiologyReviewFormState = {
+    modalities: ["pa"],
+    scopeKind: "tooth",
+    tooth: "",
+    teeth: "",
+    regionLabel: "",
+    procedureId: "",
+    otherModalityLabel: "",
+    imageDate: "",
+    sourceLabel: "",
+    limitations: "",
+    notes: "",
+  };
+  assert.equal(hasRadiologyReviewScope(radiologyWithoutScope, ""), false);
+  assert.equal(hasRadiologyReviewScope(radiologyWithoutScope, "35"), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "teeth", teeth: "35 36" }, ""), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "quadrant", regionLabel: "Q3" }, ""), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "procedure", procedureId: "direct-restoration" }, ""), true);
+});
+
+test("shared readiness reports unscoped records for review after a tooth is entered", () => {
+  const anesthesiaEvent = {
+    id: "evt_unscoped_anesthesia",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    scope: { kind: "custom" as const, label: "Anesthesia scope not specified" },
+    details: { response: "adequate" as const },
+  };
+  const isolationEvent = {
+    id: "evt_unscoped_isolation",
+    timestamp: "2026-01-01T10:01:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflowId,
+    scope: { kind: "custom" as const, label: "Isolation scope not specified" },
+    details: { method: "rubberDam" as const },
+  };
+  const radiologyEvent = {
+    id: "evt_unscoped_radiology",
+    timestamp: "2026-01-01T10:02:00.000Z",
+    type: radiologyEventTypes.reviewed,
+    workflowId: sharedRadiologyWorkflowId,
+    scope: { kind: "custom" as const, label: "Radiology review scope not specified" },
+    details: { modalities: ["pa"] as const },
+  };
+  const caseData = baseCase({
+    tooth: "35",
+    globalEvents: [
+      { ...anesthesiaEvent, capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(anesthesiaEvent)] },
+      { ...isolationEvent, capabilitiesSatisfied: [buildIsolationEstablishedCapability(isolationEvent)] },
+      { ...radiologyEvent, capabilitiesSatisfied: [buildRadiographsReviewedCapability(radiologyEvent)] },
+    ],
+  });
+  const summary = getCaseCapabilitySummary(caseData);
+
+  [summary.anesthesia, summary.isolation, summary.radiographs].forEach((status) => {
+    assert.equal(status.satisfied, false);
+    assert.equal(status.recordedOutsideScope, true);
+    assert.equal(sharedCapabilityStatusLabel(status), "Review");
+    assert.match(status.summary, /recorded for another or unspecified scope/i);
+  });
+  assert.equal(getCapabilityStatus({ ...caseData, tooth: "" }, "anesthesia.adequate").satisfied, false);
 });
 
 test("workflow launcher exposes operative runner entry", () => {
