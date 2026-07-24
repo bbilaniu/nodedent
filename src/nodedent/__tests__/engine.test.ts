@@ -9,12 +9,16 @@ import { applicationVersion } from "../applicationVersion";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
+import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseManagementModal } from "../components/CaseManagementModal";
+import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
+import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
 import { SharedWorkflowRunnerModal } from "../components/SharedWorkflowRunnerModal";
 import { WorkflowLauncher } from "../components/WorkflowLauncher";
+import { sharedCapabilityStatusLabel } from "../components/sharedModuleUi";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
@@ -31,6 +35,7 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
@@ -48,12 +53,13 @@ import {
   sharedAnesthesiaWorkflowId,
 } from "../workflow/anesthesia";
 import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
-import { buildAnesthesiaEventFromForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
+import { canSubmitIsolationForm, defaultIsolationFormState } from "../workflow/isolationForm";
 import {
   blankOperativeWorkflowSetup,
   buildFinalRestorationPlacedCapability,
@@ -123,6 +129,85 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
   };
 }
 
+test("case entry ignores untouched vault placeholders and recognizes recorded clinical context", () => {
+  const blankCase: EndoCase = {
+    ...initialCase,
+    encounterId: "22222222-2222-4222-8222-222222222222",
+    createdAt: "2026-07-24T12:00:00.000Z",
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+  };
+
+  assert.equal(isMeaningfulCase(blankCase, "preop"), false);
+  assert.equal(isMeaningfulCase({ ...blankCase, patientNumber: "123456" }, "preop"), true);
+  assert.equal(isMeaningfulCase({ ...blankCase, preOp: { ...blankCase.preOp, radiographsReviewed: true } }, "preop"), true);
+  assert.equal(isMeaningfulCase(blankCase, "access"), true);
+
+  assert.equal(isMeaningfulSavedCaseSummary({
+    id: blankCase.encounterId,
+    patientNumber: "No chart #",
+    tooth: "Tooth ___",
+    procedureType: noTreatmentSelectedProcedure,
+    currentNodeId: "preop",
+    canalCount: 1,
+    eventCount: 0,
+    autosavedAt: blankCase.createdAt || "",
+    revision: 1,
+    expired: false,
+  }), false);
+});
+
+test("case entry actions only offer review when another meaningful case exists", () => {
+  const noop = () => {};
+  const blankMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: initialCase,
+    hasMeaningfulActiveCase: false,
+    otherCaseCount: 0,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(blankMarkup.includes("Start new case"), true);
+  assert.equal(blankMarkup.includes("Continue current case"), false);
+  assert.equal(blankMarkup.includes("Review "), false);
+
+  const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: initialCase,
+    hasMeaningfulActiveCase: false,
+    otherCaseCount: 1,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(blankWithOtherCasesMarkup.includes("Continue current case"), false);
+  assert.equal(blankWithOtherCasesMarkup.includes("Start new case"), true);
+  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved case"), true);
+
+  const resumableMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: baseCase(),
+    hasMeaningfulActiveCase: true,
+    otherCaseCount: 2,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(resumableMarkup.includes("Continue current case"), true);
+  assert.equal(resumableMarkup.includes("Start new case"), true);
+  assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+});
+
 test("global footer exposes the package application version and privacy policy", () => {
   const markup = renderToStaticMarkup(React.createElement(AppFooter));
 
@@ -141,6 +226,12 @@ test("privacy policy states the local clinical and telemetry boundaries", () => 
   assert.match(markup, /does not transmit chart numbers, clinical facts, notes, vault contents/i);
   assert.match(markup, /future deployment may enable reviewed operational telemetry that contains no patient data/i);
   assert.match(markup, /ADR 0008 remains proposed/i);
+});
+
+test("encrypted backup restore reports missing input instead of silently disabling for a missing passphrase", () => {
+  assert.match(getEncryptedBackupRestoreInputError(false, ""), /choose an encrypted NodeDent backup file/i);
+  assert.match(getEncryptedBackupRestoreInputError(true, ""), /original passphrase/i);
+  assert.equal(getEncryptedBackupRestoreInputError(true, "clinic test passphrase 2026"), "");
 });
 
 function radiologyReviewedEvent(tooth = "30") {
@@ -672,6 +763,81 @@ test("shared readiness uses review labels when shared module status already exis
   assert.equal(markup.includes("Review isolation"), true);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
   assert.equal(markup.includes("Open isolation workflow"), false);
+});
+
+test("shared readiness forms require an explicit target scope", () => {
+  const anesthesiaWithoutScope = { ...defaultAnesthesiaFormState(""), response: "adequate" as const };
+  assert.equal(canSubmitAnesthesiaForm("assessment", anesthesiaWithoutScope), false);
+  assert.equal(canSubmitAnesthesiaForm("assessment", { ...anesthesiaWithoutScope, targetTeeth: "35" }), true);
+  assert.equal(canSubmitAnesthesiaForm("assessment", { ...anesthesiaWithoutScope, regionLabel: "Q3" }), true);
+
+  const isolationWithoutScope = defaultIsolationFormState("");
+  assert.equal(canSubmitIsolationForm(isolationWithoutScope), false);
+  assert.equal(canSubmitIsolationForm({ ...isolationWithoutScope, exposedTeeth: "35" }), true);
+  assert.equal(canSubmitIsolationForm({ ...isolationWithoutScope, regionLabel: "Q3" }), true);
+
+  const radiologyWithoutScope: RadiologyReviewFormState = {
+    modalities: ["pa"],
+    scopeKind: "tooth",
+    tooth: "",
+    teeth: "",
+    regionLabel: "",
+    procedureId: "",
+    otherModalityLabel: "",
+    imageDate: "",
+    sourceLabel: "",
+    limitations: "",
+    notes: "",
+  };
+  assert.equal(hasRadiologyReviewScope(radiologyWithoutScope, ""), false);
+  assert.equal(hasRadiologyReviewScope(radiologyWithoutScope, "35"), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "teeth", teeth: "35 36" }, ""), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "quadrant", regionLabel: "Q3" }, ""), true);
+  assert.equal(hasRadiologyReviewScope({ ...radiologyWithoutScope, scopeKind: "procedure", procedureId: "direct-restoration" }, ""), true);
+});
+
+test("shared readiness reports unscoped records for review after a tooth is entered", () => {
+  const anesthesiaEvent = {
+    id: "evt_unscoped_anesthesia",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    scope: { kind: "custom" as const, label: "Anesthesia scope not specified" },
+    details: { response: "adequate" as const },
+  };
+  const isolationEvent = {
+    id: "evt_unscoped_isolation",
+    timestamp: "2026-01-01T10:01:00.000Z",
+    type: isolationEventTypes.rubberDamPlaced,
+    workflowId: sharedIsolationWorkflowId,
+    scope: { kind: "custom" as const, label: "Isolation scope not specified" },
+    details: { method: "rubberDam" as const },
+  };
+  const radiologyEvent = {
+    id: "evt_unscoped_radiology",
+    timestamp: "2026-01-01T10:02:00.000Z",
+    type: radiologyEventTypes.reviewed,
+    workflowId: sharedRadiologyWorkflowId,
+    scope: { kind: "custom" as const, label: "Radiology review scope not specified" },
+    details: { modalities: ["pa"] as const },
+  };
+  const caseData = baseCase({
+    tooth: "35",
+    globalEvents: [
+      { ...anesthesiaEvent, capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(anesthesiaEvent)] },
+      { ...isolationEvent, capabilitiesSatisfied: [buildIsolationEstablishedCapability(isolationEvent)] },
+      { ...radiologyEvent, capabilitiesSatisfied: [buildRadiographsReviewedCapability(radiologyEvent)] },
+    ],
+  });
+  const summary = getCaseCapabilitySummary(caseData);
+
+  [summary.anesthesia, summary.isolation, summary.radiographs].forEach((status) => {
+    assert.equal(status.satisfied, false);
+    assert.equal(status.recordedOutsideScope, true);
+    assert.equal(sharedCapabilityStatusLabel(status), "Review");
+    assert.match(status.summary, /recorded for another or unspecified scope/i);
+  });
+  assert.equal(getCapabilityStatus({ ...caseData, tooth: "" }, "anesthesia.adequate").satisfied, false);
 });
 
 test("workflow launcher exposes operative runner entry", () => {

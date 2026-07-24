@@ -8,7 +8,9 @@ import {
   alternativeIsolationMethodOptions,
   buildIsolationEventFromForm,
   buildIsolationFormState,
+  canSubmitIsolationForm,
   defaultIsolationFormState,
+  hasIsolationTargetScope,
   isolationActionLabels,
   isolationActionOptions,
   isolationEventTypeFromLabel,
@@ -44,6 +46,8 @@ export function IsolationEventForm({
   const showMethodField = showsIsolationMethodField(form.action);
   const methodOptions = form.action === isolationEventTypes.replaced ? replacementIsolationMethodOptions : alternativeIsolationMethodOptions;
   const actionIsReassessment = isIsolationReassessmentAction(form.action);
+  const hasTargetScope = hasIsolationTargetScope(form);
+  const canSubmit = canSubmitIsolationForm(form);
   const showMethodLabelField = !actionIsReassessment;
   const showClampFields = showsIsolationClampFields(form);
   const isolationMethodLabelSuggestions = getIsolationCatalogOptions("methodLabels", userCatalogItems);
@@ -95,6 +99,7 @@ export function IsolationEventForm({
   }
 
   function submitEvent() {
+    if (!canSubmit) return;
     const event = buildIsolationEventFromForm(form);
     onRecordEvent(event.eventType, event.details);
     resetForm();
@@ -182,11 +187,13 @@ export function IsolationEventForm({
           suggestions={actionIsReassessment ? isolationReasonSuggestions : isolationNoteSuggestions}
         />
       </div>
+      {!hasTargetScope ? <p role="status" className="mt-2 text-xs leading-5 text-amber-900">Enter at least one exposed tooth or a region label before recording isolation.</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={submitEvent}
-          className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+          disabled={!canSubmit}
+          className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
         >
           {isolationSubmitLabels[form.action]}
         </button>

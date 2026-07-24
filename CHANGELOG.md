@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.3
+
+### Patch Changes
+
+- a57e9db: Add a post-unlock case entry screen that distinguishes untouched vault placeholders from meaningful active cases and only offers saved-case review when another meaningful case exists.
+
+## 2.0.2
+
+### Patch Changes
+
+- 16bf200: Require an explicit target scope when recording shared anesthesia, isolation, and radiology readiness, and show existing out-of-scope records as needing review instead of incorrectly reporting that nothing was recorded.
+
+## 2.0.1
+
+### Patch Changes
+
+- 2cc1870: Give encrypted backup restore its own passphrase field and show actionable validation errors instead of silently disabling the restore action when its required input is missing.
+
 ## 2.0.0
 
 ### Major Changes

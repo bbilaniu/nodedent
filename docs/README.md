@@ -26,6 +26,8 @@ This folder separates clinical source material, active product specs, architectu
 
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 - [Local clinical deployment guide](guides/local-clinical-deployment.md)
+- [Clinical device, browser, and synthetic-test checklist](guides/clinical-device-browser-and-synthetic-test-checklist.md)
+- [Clinical operator training and collection-notice package](guides/clinical-operator-training-and-collection-notice.md)
 - [Versioning and releases](versioning.md)
 
 ## Security
@@ -43,6 +45,8 @@ This folder separates clinical source material, active product specs, architectu
 ## Deployment Readiness Reviews
 
 - [Local clinical deployment readiness — 2026-07-22](reviews/2026-07-22-local-clinical-deployment-readiness.md)
+- [NodeDent v2.0.0 clinical go-live readiness — 2026-07-24](reviews/2026-07-24-v2.0.0-clinical-go-live-readiness.md)
+- [NodeDent v2.0.0 independent dependency and threat review packet — 2026-07-24](reviews/2026-07-24-v2.0.0-independent-review-packet.md)
 
 ## Architectural Decisions
 
@@ -55,6 +59,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0007: Define the Supported Clinical-Data Deployment Mode](adr/0007-define-clinical-data-deployment-mode.md)
 - [ADR 0008: Adopt a Constrained Local Clinical Mode](adr/0008-adopt-constrained-local-clinical-mode.md)
 - [ADR 0009: Defer Structured EMR Interoperability](adr/0009-defer-structured-emr-interoperability.md)
+- [ADR 0010: Configure Clinical Vault Lock Policy Within Guardrails](adr/0010-configure-clinical-vault-lock-policy.md)
 
 ## Archived Implemented Specs
 
