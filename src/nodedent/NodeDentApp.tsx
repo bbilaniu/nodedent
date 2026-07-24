@@ -651,7 +651,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setValidationMessage(null);
   }
 
-  function startNewCase() {
+  function startNewCase({ openCaseSetup = false }: { openCaseSetup?: boolean } = {}) {
     const fresh = createFreshCase();
     revisionByEncounter.current.set(fresh.encounterId, 0);
     setCaseData(fresh);
@@ -660,7 +660,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setValidationMessage(null);
     setCopied(false);
     setIsNewCaseConfirmOpen(false);
-    setIsCasePanelOpen(false);
+    setIsCasePanelOpen(openCaseSetup);
     setCasePanelFocusTarget(null);
     setCasePanelWorkflowId("");
     setActivePrimaryWorkflowId(null);
@@ -1687,7 +1687,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             <section className="w-full max-w-md rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
               <h2 className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
-              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case clears the active workspace and returns the workflow to pre-op.</p>
+              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case creates a neutral blank case and opens the full-page Case Setup.</p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -1698,10 +1698,10 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                 </button>
                 <button
                   type="button"
-                  onClick={startNewCase}
+                  onClick={() => startNewCase({ openCaseSetup: true })}
                   className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep"
                 >
-                  Start new case
+                  Start and open Case Setup
                 </button>
               </div>
             </section>
