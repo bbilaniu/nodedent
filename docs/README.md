@@ -59,6 +59,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0007: Define the Supported Clinical-Data Deployment Mode](adr/0007-define-clinical-data-deployment-mode.md)
 - [ADR 0008: Adopt a Constrained Local Clinical Mode](adr/0008-adopt-constrained-local-clinical-mode.md)
 - [ADR 0009: Defer Structured EMR Interoperability](adr/0009-defer-structured-emr-interoperability.md)
+- [ADR 0010: Configure Clinical Vault Lock Policy Within Guardrails](adr/0010-configure-clinical-vault-lock-policy.md)
 
 ## Archived Implemented Specs
 
