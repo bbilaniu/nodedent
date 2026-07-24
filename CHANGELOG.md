@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+### Patch Changes
+
+- 16bf200: Require an explicit target scope when recording shared anesthesia, isolation, and radiology readiness, and show existing out-of-scope records as needing review instead of incorrectly reporting that nothing was recorded.
+
 ## 2.0.1
 
 ### Patch Changes
