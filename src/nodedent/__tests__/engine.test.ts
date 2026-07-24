@@ -10,6 +10,7 @@ import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseManagementModal } from "../components/CaseManagementModal";
+import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { getSharedReadinessActions, SharedReadinessCard } from "../components/SharedReadinessCard";
@@ -141,6 +142,12 @@ test("privacy policy states the local clinical and telemetry boundaries", () => 
   assert.match(markup, /does not transmit chart numbers, clinical facts, notes, vault contents/i);
   assert.match(markup, /future deployment may enable reviewed operational telemetry that contains no patient data/i);
   assert.match(markup, /ADR 0008 remains proposed/i);
+});
+
+test("encrypted backup restore reports missing input instead of silently disabling for a missing passphrase", () => {
+  assert.match(getEncryptedBackupRestoreInputError(false, ""), /choose an encrypted NodeDent backup file/i);
+  assert.match(getEncryptedBackupRestoreInputError(true, ""), /original passphrase/i);
+  assert.equal(getEncryptedBackupRestoreInputError(true, "clinic test passphrase 2026"), "");
 });
 
 function radiologyReviewedEvent(tooth = "30") {
