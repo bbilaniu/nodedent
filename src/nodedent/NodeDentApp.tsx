@@ -3,6 +3,7 @@ import type { CanalContinuationTarget, CaseSetupFocusTarget, DecisionOption, Dif
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
 import { CaseManagementModal, PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
+import { CaseEntryGate } from "./components/CaseEntryGate";
 import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
 import { ClinicalVaultGate, type ClinicalVaultAccess } from "./components/ClinicalVaultGate";
 import { AppFooter, PRIVACY_POLICY_HASH } from "./components/AppFooter";
@@ -32,6 +33,7 @@ import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "./state/caseEntry";
 import { CLINICAL_VAULT_IDLE_TIMEOUT_MS, ClinicalVaultError, type ClinicalVaultSession, type SavedCaseSummary } from "./state/clinicalVault";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
@@ -234,6 +236,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
   const [isVaultReady, setIsVaultReady] = useState(false);
+  const [isCaseEntryOpen, setIsCaseEntryOpen] = useState(true);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
   const [storageMessage, setStorageMessage] = useState("Opening protected storage…");
   const revisionByEncounter = useRef(new Map<string, number>());
@@ -246,6 +249,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const storageStatusRef = useRef(storageStatus);
 
   const currentNode = protocolNodes[currentNodeId] || protocolNodes.preop;
+  const hasMeaningfulActiveCase = useMemo(
+    () => isMeaningfulCase(caseData, currentNodeId),
+    [caseData, currentNodeId]
+  );
+  const otherMeaningfulCases = useMemo(
+    () => savedCases.filter((summary) => summary.id !== caseData.encounterId && isMeaningfulSavedCaseSummary(summary)),
+    [caseData.encounterId, savedCases]
+  );
   const activeCanal = useMemo(
     () => caseData.canals.find((canal) => canal.name === caseData.currentCanal) || caseData.canals[0],
     [caseData.canals, caseData.currentCanal]
@@ -625,6 +636,15 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setIsPriorVisitOpen(false);
   }
 
+  function startCaseFromEntry() {
+    if (hasMeaningfulActiveCase) startNewCase();
+    setIsCaseEntryOpen(false);
+    setIsWorkflowLauncherOpen(false);
+    setCasePanelFocusTarget(null);
+    setCasePanelWorkflowId("");
+    setIsCasePanelOpen(true);
+  }
+
   function openCasePanel(focusTarget?: CaseSetupFocusTarget, workflowId = activePrimaryWorkflowId || "") {
     setIsWorkflowLauncherOpen(false);
     setCasePanelFocusTarget(focusTarget || null);
@@ -825,6 +845,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       setValidationMessage(null);
       setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
+      setIsCaseEntryOpen(false);
     } catch (error) {
       setStorageStatus("failed");
       setStorageMessage(error instanceof Error ? error.message : "Could not load protected case.");
@@ -926,6 +947,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       setShowImportBox(false);
       setIsWorkflowLauncherOpen(false);
       setIsSavedCasesOpen(false);
+      setIsCaseEntryOpen(false);
       setImportText("");
       setValidationMessage(null);
     } catch (error) {
@@ -1218,6 +1240,39 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
           </section>
         </div>
       </main>
+    );
+  }
+
+  if (isCaseEntryOpen) {
+    return (
+      <>
+        <CaseEntryGate
+          activeCase={caseData}
+          hasMeaningfulActiveCase={hasMeaningfulActiveCase}
+          otherCaseCount={otherMeaningfulCases.length}
+          persistentStorage={persistentStorage}
+          onContinueCurrentCase={() => setIsCaseEntryOpen(false)}
+          onStartNewCase={startCaseFromEntry}
+          onReviewSavedCases={openSavedCases}
+          onLockVault={() => void lockVault()}
+        />
+        {isSavedCasesOpen ? (
+          <SavedCasesModal
+            savedCases={otherMeaningfulCases}
+            importText={importText}
+            showImportBox={showImportBox}
+            onClose={() => setIsSavedCasesOpen(false)}
+            onToggleImportBox={() => setShowImportBox((value) => !value)}
+            onImportTextChange={setImportText}
+            onImportCaseJson={importCaseJson}
+            onClearSavedCurrentCase={clearSavedCurrentCase}
+            onResetAllSavedCases={resetAllSavedCases}
+            onLoadSavedCase={loadSavedCase}
+            onDeleteSavedCase={deleteSavedCase}
+            onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
+          />
+        ) : null}
+      </>
     );
   }
 

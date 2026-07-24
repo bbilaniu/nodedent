@@ -9,6 +9,7 @@ import { applicationVersion } from "../applicationVersion";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
+import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseManagementModal } from "../components/CaseManagementModal";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
@@ -34,6 +35,7 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
@@ -126,6 +128,85 @@ function baseCase(overrides: Partial<EndoCase> = {}): EndoCase {
     ...overrides,
   };
 }
+
+test("case entry ignores untouched vault placeholders and recognizes recorded clinical context", () => {
+  const blankCase: EndoCase = {
+    ...initialCase,
+    encounterId: "22222222-2222-4222-8222-222222222222",
+    createdAt: "2026-07-24T12:00:00.000Z",
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+  };
+
+  assert.equal(isMeaningfulCase(blankCase, "preop"), false);
+  assert.equal(isMeaningfulCase({ ...blankCase, patientNumber: "123456" }, "preop"), true);
+  assert.equal(isMeaningfulCase({ ...blankCase, preOp: { ...blankCase.preOp, radiographsReviewed: true } }, "preop"), true);
+  assert.equal(isMeaningfulCase(blankCase, "access"), true);
+
+  assert.equal(isMeaningfulSavedCaseSummary({
+    id: blankCase.encounterId,
+    patientNumber: "No chart #",
+    tooth: "Tooth ___",
+    procedureType: noTreatmentSelectedProcedure,
+    currentNodeId: "preop",
+    canalCount: 1,
+    eventCount: 0,
+    autosavedAt: blankCase.createdAt || "",
+    revision: 1,
+    expired: false,
+  }), false);
+});
+
+test("case entry actions only offer review when another meaningful case exists", () => {
+  const noop = () => {};
+  const blankMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: initialCase,
+    hasMeaningfulActiveCase: false,
+    otherCaseCount: 0,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(blankMarkup.includes("Start new case"), true);
+  assert.equal(blankMarkup.includes("Continue current case"), false);
+  assert.equal(blankMarkup.includes("Review "), false);
+
+  const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: initialCase,
+    hasMeaningfulActiveCase: false,
+    otherCaseCount: 1,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(blankWithOtherCasesMarkup.includes("Continue current case"), false);
+  assert.equal(blankWithOtherCasesMarkup.includes("Start new case"), true);
+  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved case"), true);
+
+  const resumableMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
+    activeCase: baseCase(),
+    hasMeaningfulActiveCase: true,
+    otherCaseCount: 2,
+    persistentStorage: true,
+    onContinueCurrentCase: noop,
+    onStartNewCase: noop,
+    onReviewSavedCases: noop,
+    onLockVault: noop,
+  }));
+
+  assert.equal(resumableMarkup.includes("Continue current case"), true);
+  assert.equal(resumableMarkup.includes("Start new case"), true);
+  assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+});
 
 test("global footer exposes the package application version and privacy policy", () => {
   const markup = renderToStaticMarkup(React.createElement(AppFooter));
