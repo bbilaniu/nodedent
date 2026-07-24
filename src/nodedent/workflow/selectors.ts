@@ -16,6 +16,7 @@ export type CapabilityStatus = {
   scope?: WorkflowScope;
   summary: string;
   reason?: string;
+  recordedOutsideScope?: boolean;
 };
 
 export type CaseCapabilitySummary = {
@@ -85,7 +86,14 @@ function canUseToothScopeForSurfaceQuery(name?: KnownCapabilityName) {
     name === "isolation.established";
 }
 
+const unspecifiedScopeLabels = new Set([
+  "Anesthesia scope not specified",
+  "Isolation scope not specified",
+  "Radiology review scope not specified",
+]);
+
 function scopeMatches(candidate?: WorkflowScope, query?: WorkflowScope, name?: KnownCapabilityName) {
+  if (candidate?.label && unspecifiedScopeLabels.has(candidate.label)) return false;
   if (!query || !candidate) return true;
   if (query.kind === "patient") return candidate.kind === "patient";
   if (candidate.kind === "patient") return true;
@@ -163,8 +171,9 @@ function diagnosisStatus(caseData: EndoCase, queryScope?: WorkflowScope): Capabi
     needsReassessment: false,
     source: satisfied ? "caseField" : "none",
     scope: satisfied ? caseScope : queryScope || caseScope,
-    summary: satisfied ? "Diagnosis recorded" : "Diagnosis not recorded",
+    summary: satisfied ? "Diagnosis recorded" : hasDiagnosis ? "Diagnosis recorded for another tooth" : "Diagnosis not recorded",
     reason: hasDiagnosis && !scopeMatched ? "Recorded diagnosis is for a different tooth." : hasDiagnosis ? undefined : "No pulpal or apical diagnosis is recorded.",
+    recordedOutsideScope: hasDiagnosis && !scopeMatched,
   };
 }
 
@@ -211,7 +220,9 @@ function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope, now = 
       ? hasCurrentRadiographs
         ? "Radiographs reviewed"
         : "Prior radiographs documented"
-      : "Radiographs not recorded",
+      : radiologyEvents.length
+        ? "Radiographs recorded for another or unspecified scope"
+        : "Radiographs not recorded",
     reason: satisfied
       ? hasCurrentRadiographs
         ? undefined
@@ -221,6 +232,8 @@ function radiographStatus(caseData: EndoCase, queryScope?: WorkflowScope, now = 
         : hasRadiographs && !scopeMatched
           ? "Recorded radiograph review is for a different tooth."
           : "No pre-op, prior, or shared radiology review is recorded.",
+    sourceEvent: radiologyEvents.at(-1),
+    recordedOutsideScope: radiologyEvents.length > 0,
   };
 }
 
@@ -278,6 +291,28 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
   }
   if (explicitStatus) return explicitStatus;
   if (fallbackStatus) return fallbackStatus;
+
+  const recordedOutsideScope = events
+    .filter((event) => name === "anesthesia.adequate"
+      ? Boolean(getAnesthesiaAdequateCapabilityOutput(event))
+      : name === "isolation.established"
+        ? isolationEstablishedEvents.has(event.type) || Boolean(eventSatisfiesCapability(event, name))
+        : Boolean(eventSatisfiesCapability(event, name)))
+    .at(-1);
+  if (recordedOutsideScope) {
+    const label = name === "anesthesia.adequate" ? "Anesthesia" : name === "isolation.established" ? "Isolation" : name;
+    return {
+      name,
+      satisfied: false,
+      needsReassessment: false,
+      source: "none",
+      sourceEvent: recordedOutsideScope,
+      scope: queryScope,
+      summary: `${label} recorded for another or unspecified scope`,
+      reason: "A recorded event does not explicitly overlap the current workflow target.",
+      recordedOutsideScope: true,
+    };
+  }
 
   const rule = capabilityScopeRules[name];
   return {

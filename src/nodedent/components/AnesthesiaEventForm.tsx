@@ -17,6 +17,7 @@ import {
   defaultAnesthesiaFormState,
   getAnesthesiaRouteActionLabel,
   getAnesthesiaRouteSelectionLabel,
+  hasAnesthesiaTargetScope,
   isAnesthesiaAssessmentReassessment,
 } from "../workflow/anesthesiaForm";
 import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMode } from "../workflow/anesthesiaForm";
@@ -45,6 +46,7 @@ export function AnesthesiaEventForm({
   const previousToothRef = useRef(tooth);
   const modeIsAssessment = mode === "assessment";
   const assessmentNeedsReassessment = isAnesthesiaAssessmentReassessment(mode, form);
+  const hasTargetScope = hasAnesthesiaTargetScope(form);
   const canSubmit = canSubmitAnesthesiaForm(mode, form);
   const showReassessAfter = mode === "assessment" && form.response === "adequate";
   const routeIsInjection = mode === "administration" && form.route === "injection";
@@ -219,6 +221,7 @@ export function AnesthesiaEventForm({
           />
         ) : null}
       </div>
+      {!hasTargetScope ? <p role="status" className="mt-2 text-xs leading-5 text-amber-900">Enter at least one target tooth or a region label before recording anesthesia.</p> : null}
       {mode === "administration" && onSaveCatalogItems ? <p className="mt-2 text-xs leading-5 text-amber-900">Reusable shortcuts are patient-independent preferences stored outside the vault. Do not save chart numbers, patient facts, or identifiers in a shortcut.</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button

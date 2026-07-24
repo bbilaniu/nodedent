@@ -1,4 +1,5 @@
 import type { EndoCase } from "../types";
+import { isMeaningfulCase } from "./caseEntry";
 import {
   CLINICAL_VAULT_FORMAT_VERSION,
   createClinicalVaultKdf,
@@ -48,6 +49,7 @@ export type SavedCaseSummary = {
   currentNodeId: string;
   canalCount: number;
   eventCount: number;
+  meaningful?: boolean;
   autosavedAt: string;
   revision: number;
   expired: boolean;
@@ -196,6 +198,7 @@ function buildSummary(caseData: EndoCase, currentNodeId: string, savedAt: string
     currentNodeId,
     canalCount: caseData.canals?.length || 0,
     eventCount: caseData.globalEvents?.length || 0,
+    meaningful: isMeaningfulCase(caseData, currentNodeId),
     autosavedAt: savedAt,
     revision,
   };
@@ -270,6 +273,7 @@ export class ClinicalVaultSession {
         assertClinicalCaseSnapshot(payload, record);
         return {
           ...payload.summary,
+          meaningful: isMeaningfulCase(payload.caseData, payload.currentNodeId),
           expired: isExpired(payload.summary.autosavedAt, this.retentionDays),
         };
       }));

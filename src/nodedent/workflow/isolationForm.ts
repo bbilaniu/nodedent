@@ -107,6 +107,14 @@ export function showsIsolationClampFields(form: IsolationFormState) {
     (form.action === isolationEventTypes.replaced && form.method === "rubberDam");
 }
 
+export function hasIsolationTargetScope(form: Pick<IsolationFormState, "exposedTeeth" | "regionLabel">) {
+  return Boolean(form.exposedTeeth.trim() || form.regionLabel.trim());
+}
+
+export function canSubmitIsolationForm(form: Pick<IsolationFormState, "exposedTeeth" | "regionLabel">) {
+  return hasIsolationTargetScope(form);
+}
+
 export function buildIsolationEventFromForm(form: IsolationFormState): { eventType: IsolationEventType; details: IsolationEventDetails } {
   const teeth = form.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
   const actionIsReassessment = isIsolationReassessmentAction(form.action);

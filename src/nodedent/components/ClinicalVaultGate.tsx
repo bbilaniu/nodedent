@@ -35,6 +35,12 @@ function errorMessage(error: unknown) {
   return "The clinical vault operation failed.";
 }
 
+export function getEncryptedBackupRestoreInputError(hasFile: boolean, passphrase: string) {
+  if (!hasFile) return "Choose an encrypted NodeDent backup file.";
+  if (!passphrase) return "Enter the original passphrase for this encrypted backup.";
+  return "";
+}
+
 export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVaultAccess) => void }) {
   const store = useMemo(() => {
     try {
@@ -50,6 +56,8 @@ export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVau
   const [busy, setBusy] = useState(false);
   const [legacyKeys, setLegacyKeys] = useState<string[]>([]);
   const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restorePassphrase, setRestorePassphrase] = useState("");
+  const [restoreError, setRestoreError] = useState("");
 
   useEffect(() => {
     setLegacyKeys(listLegacyClinicalStorageKeys());
@@ -105,17 +113,24 @@ export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVau
   }
 
   async function restoreBackup() {
-    if (!store || !restoreFile) return;
+    if (!store) return;
+    const inputError = getEncryptedBackupRestoreInputError(Boolean(restoreFile), restorePassphrase);
+    if (inputError) {
+      setRestoreError(inputError);
+      return;
+    }
+    if (!restoreFile) return;
     setBusy(true);
     setError("");
+    setRestoreError("");
     try {
       if (restoreFile.size > 50 * 1024 * 1024) throw new Error("Encrypted vault backups are limited to 50 MB.");
       const backup = JSON.parse(await restoreFile.text()) as ClinicalVaultBackup;
       const replaceExisting = Boolean(hasVault);
       if (replaceExisting && !window.confirm("Replace the existing protected vault with this encrypted backup? Current protected cases will be removed.")) return;
-      await finishAccess(await store.restoreEncryptedBackup(backup, passphrase, replaceExisting));
+      await finishAccess(await store.restoreEncryptedBackup(backup, restorePassphrase, replaceExisting));
     } catch (cause) {
-      setError(errorMessage(cause));
+      setRestoreError(errorMessage(cause));
     } finally {
       setBusy(false);
     }
@@ -145,6 +160,8 @@ export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVau
       setPassphrase("");
       setConfirmation("");
       setRestoreFile(null);
+      setRestorePassphrase("");
+      setRestoreError("");
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -213,9 +230,36 @@ export function ClinicalVaultGate({ onAccess }: { onAccess: (access: ClinicalVau
 
           <div className="mt-6 rounded-2xl border border-brand-blue-light bg-brand-blue-light/10 p-4">
             <h2 className="text-sm font-bold">Restore encrypted backup</h2>
-            <p className="mt-1 text-xs leading-5 text-brand-slate">Select a `.nodedent` encrypted vault backup and enter its passphrase above. Restoring never reads prototype `localStorage` records.</p>
-            <input type="file" accept=".nodedent,application/json" onChange={(event) => setRestoreFile(event.target.files?.[0] || null)} className="mt-3 block w-full text-sm" />
-            <button type="button" disabled={busy || !restoreFile || !passphrase} onClick={restoreBackup} className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold disabled:opacity-50">Restore encrypted backup</button>
+            <p id="restore-backup-help" className="mt-1 text-xs leading-5 text-brand-slate">Select a `.nodedent` encrypted vault backup and enter the backup's original passphrase below. Restoring never reads prototype `localStorage` records.</p>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-sm font-semibold">Encrypted backup file</span>
+              <input
+                type="file"
+                accept=".nodedent,application/json"
+                aria-describedby="restore-backup-help"
+                onChange={(event) => {
+                  setRestoreFile(event.target.files?.[0] || null);
+                  setRestoreError("");
+                }}
+                className="block w-full text-sm"
+              />
+            </label>
+            <label className="mt-3 block">
+              <span className="mb-1 block text-sm font-semibold">Backup passphrase</span>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={restorePassphrase}
+                aria-describedby={restoreError ? "restore-backup-error" : "restore-backup-help"}
+                onChange={(event) => {
+                  setRestorePassphrase(event.target.value);
+                  setRestoreError("");
+                }}
+                className="w-full rounded-xl border border-brand-blue-light bg-white px-3 py-2 outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+              />
+            </label>
+            {restoreError ? <div id="restore-backup-error" role="alert" className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">{restoreError}</div> : null}
+            <button type="button" disabled={busy || !store || hasVault === null} onClick={restoreBackup} className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Working…" : "Restore encrypted backup"}</button>
           </div>
 
           {legacyKeys.length ? (

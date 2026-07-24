@@ -120,8 +120,13 @@ export function isAnesthesiaAssessmentReassessment(mode: AnesthesiaMode, form: A
   return mode === "assessment" && form.response === "notAdequate";
 }
 
+export function hasAnesthesiaTargetScope(form: Pick<AnesthesiaFormState, "targetTeeth" | "regionLabel">) {
+  return Boolean(form.targetTeeth.trim() || form.regionLabel.trim());
+}
+
 export function canSubmitAnesthesiaForm(mode: AnesthesiaMode, form: AnesthesiaFormState) {
-  return mode !== "assessment" || form.response === "adequate" || form.response === "notAdequate";
+  return hasAnesthesiaTargetScope(form) &&
+    (mode !== "assessment" || form.response === "adequate" || form.response === "notAdequate");
 }
 
 export function buildAnesthesiaEventFromForm(
