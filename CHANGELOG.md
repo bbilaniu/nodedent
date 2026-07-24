@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.1
+
+### Patch Changes
+
+- cb81017: Open the full-page Case Setup after confirming a new case from the clinical workspace or workflow launcher.
+
 ## 2.1.0
 
 ### Minor Changes
