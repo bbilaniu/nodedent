@@ -21,6 +21,11 @@ import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import { sharedCapabilityStatusLabel } from "../components/sharedModuleUi";
 import { applyDecision } from "../engine/applyDecision";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
+import {
+  deriveOverallWorkflowProgress,
+  overallWorkflowProgressLabels,
+  workflowLifecycleLabels,
+} from "../engine/deriveWorkflowProgress";
 import { getCanalsBlockingClosure, getMissingRequirements } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
@@ -249,6 +254,95 @@ test("workflow selection supports a neutral case and multiple disciplines withou
     normalizeWorkflowInstances(repeatedSelection, "preop").map((instance) => instance.id),
     normalizeWorkflowInstances(multidisciplinary, "preop").map((instance) => instance.id)
   );
+});
+
+test("workflow progress aggregation keeps mixed workflow lifecycles in progress", () => {
+  assert.equal(deriveOverallWorkflowProgress([]), "noWorkflowSelected");
+  assert.equal(deriveOverallWorkflowProgress([{ status: "notStarted" }]), "notStarted");
+  assert.equal(deriveOverallWorkflowProgress([{ status: "inProgress" }, { status: "complete" }]), "inProgress");
+  assert.equal(deriveOverallWorkflowProgress([{ status: "complete" }, { status: "notStarted" }]), "inProgress");
+  assert.equal(deriveOverallWorkflowProgress([{ status: "complete" }, { status: "complete" }]), "complete");
+  assert.equal(overallWorkflowProgressLabels.inProgress, "In progress");
+  assert.equal(workflowLifecycleLabels.notStarted, "Not started");
+});
+
+test("a default tooth seeds a workflow target without retargeting the existing instance", () => {
+  const neutralCase: EndoCase = {
+    ...initialCase,
+    encounterId: "44444444-4444-4444-8444-444444444444",
+    createdAt: "2026-07-24T13:04:00.000Z",
+    tooth: "36",
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+    workflowInstances: [],
+  };
+  const selected = addPrimaryWorkflow(neutralCase, endodonticRootWorkflowId, "preop", {
+    now: "2026-07-24T13:05:00.000Z",
+  });
+  const instance = normalizeWorkflowInstances(selected, "preop")[0];
+
+  assert.equal(instance.target.tooth, "36");
+
+  const changedDefault = normalizeCaseWorkflowInstances({ ...selected, tooth: "37" }, "preop", "2026-07-24T13:06:00.000Z");
+  assert.equal(changedDefault.tooth, "37");
+  assert.equal(changedDefault.workflowInstances?.[0]?.target.tooth, "36");
+});
+
+test("operative lifecycle and target updates use instance-specific event identity", () => {
+  const selected = addPrimaryWorkflow(baseCase({ procedureType: noTreatmentSelectedProcedure }), operativeDirectRestorationWorkflowId, "preop", {
+    now: "2026-07-24T13:07:00.000Z",
+  });
+  const first = normalizeWorkflowInstances(selected, "preop")
+    .find((instance) => instance.workflowId === operativeDirectRestorationWorkflowId);
+  assert.ok(first);
+  const second = {
+    ...first,
+    id: "instance_operative_second",
+    workflowRunId: "run_operative_second",
+    target: { kind: "tooth" as const, tooth: "37", label: "Tooth 37" },
+    createdAt: "2026-07-24T13:08:00.000Z",
+    updatedAt: "2026-07-24T13:08:00.000Z",
+    sourceEventIds: [],
+  };
+  const firstSetup = {
+    id: "evt_operative_first_setup",
+    timestamp: "2026-07-24T13:09:00.000Z",
+    type: operativeScopeRecordedEventType,
+    workflowId: operativeDirectRestorationWorkflowId,
+    workflowRunId: first.workflowRunId,
+    scope: createOperativeSurfaceScope({ tooth: "36", surfaces: "MO" }),
+    details: { tooth: "36", surfaces: ["M", "O"], workflowInstanceId: first.id },
+  };
+  const secondCompletion = buildOperativeRestorationPlacedEvent({
+    id: "evt_operative_second_complete",
+    timestamp: "2026-07-24T13:10:00.000Z",
+    record: {
+      ...blankOperativeWorkflowSetup,
+      tooth: "37",
+      surfaces: "DO",
+      outcome: "Recorded",
+      notes: "",
+    },
+    workflowRunId: second.workflowRunId,
+    workflowInstanceId: second.id,
+  });
+  const normalized = normalizeWorkflowInstances({
+    ...selected,
+    workflowInstances: [first, second],
+    globalEvents: [firstSetup, secondCompletion],
+  }, "preop");
+  const normalizedFirst = normalized.find((instance) => instance.id === first.id);
+  const normalizedSecond = normalized.find((instance) => instance.id === second.id);
+
+  assert.equal(normalizedFirst?.status, "inProgress");
+  assert.equal(normalizedFirst?.target.tooth, "36");
+  assert.deepEqual(normalizedFirst?.sourceEventIds, [firstSetup.id]);
+  assert.equal(normalizedSecond?.status, "complete");
+  assert.equal(normalizedSecond?.target.tooth, "37");
+  assert.deepEqual(normalizedSecond?.sourceEventIds, [secondCompletion.id]);
 });
 
 test("workflow normalization reconciles partial legacy state and retains workflows with clinical activity", () => {
@@ -633,6 +727,9 @@ test("full-page case setup shows every selected discipline without merging their
   }));
 
   assert.equal(markup.includes("Case identity"), true);
+  assert.equal(markup.includes("Default tooth"), true);
+  assert.equal(markup.includes("Overall progress"), true);
+  assert.equal(markup.includes("Derived from the selected workflow lifecycles."), true);
   assert.equal(markup.includes("Disciplines and treatment workflows"), true);
   assert.equal(markup.includes("2 selected"), true);
   assert.equal(markup.includes("Return to workspace"), true);

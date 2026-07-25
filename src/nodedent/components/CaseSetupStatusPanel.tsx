@@ -1,6 +1,11 @@
 import React, { useEffect, useRef } from "react";
 import type { CanalRecord, CaseSetupFocusTarget, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
+import {
+  deriveOverallWorkflowProgress,
+  overallWorkflowProgressLabels,
+  workflowLifecycleLabels,
+} from "../engine/deriveWorkflowProgress";
 import { isBlank } from "../engine/measurements";
 import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaEventType } from "../workflow/anesthesia";
@@ -79,7 +84,7 @@ function CaseIdentitySection({
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient chart #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number only" />
         <p className="-mt-2 text-xs leading-5 text-amber-900">Use the clinic chart number only. Do not enter a name, exact birth date, contact detail, health number, or insurance identifier.</p>
-        <TextInput label="Tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
+        <TextInput label="Default tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
         <p className="text-xs leading-5 text-brand-slate">This tooth is the default area for new workflow selections. Each workflow retains its own target context.</p>
       </div>
     </section>
@@ -134,7 +139,7 @@ function WorkflowSelectionSection({
                   <p className="mt-1 text-xs leading-5 text-brand-slate">{definition.summary}</p>
                 </div>
                 <span className={cx(statusBadge.base, selected ? statusBadge.ready : statusBadge.neutral)}>
-                  {instance?.status === "inProgress" ? "In progress" : instance?.status === "complete" ? "Complete" : selected ? "Selected" : "Not selected"}
+                  {instance ? workflowLifecycleLabels[instance.status] : "Not selected"}
                 </span>
               </div>
 
@@ -186,17 +191,27 @@ function WorkflowSelectionSection({
 
 function CaseVisitStatusSection({
   caseData,
+  currentNodeId,
   onUpdateCase,
   onApplySuggestedCaseStatus,
 }: {
   caseData: EndoCase;
+  currentNodeId: string;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
   onApplySuggestedCaseStatus: () => void;
 }) {
+  const instances = normalizeWorkflowInstances(caseData, currentNodeId);
+  const overallProgress = deriveOverallWorkflowProgress(instances);
+
   return (
     <section className={panelSurface.muted}>
       <h3 className={sectionText.titleSmall}>Case visit status</h3>
       <div className="mt-3 grid gap-3">
+        <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+          <p className="text-xs font-medium text-brand-slate">Overall progress</p>
+          <p className="mt-1 text-sm font-semibold text-brand-navy">{overallWorkflowProgressLabels[overallProgress]}</p>
+          <p className="mt-1 text-xs leading-5 text-brand-slate">Derived from the selected workflow lifecycles.</p>
+        </div>
         <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
         <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-slate">Use suggested status</button>
         <label className="block">
@@ -463,7 +478,12 @@ export function CaseSetupStatusPanel({
     <div className="grid gap-6">
       <CaseSetupGroup title="Case identity" description="Patient, default treatment area, visit status, and next-visit planning.">
         <CaseIdentitySection caseData={caseData} onUpdateCase={onUpdateCase} />
-        <CaseVisitStatusSection caseData={caseData} onUpdateCase={onUpdateCase} onApplySuggestedCaseStatus={onApplySuggestedCaseStatus} />
+        <CaseVisitStatusSection
+          caseData={caseData}
+          currentNodeId={currentNodeId}
+          onUpdateCase={onUpdateCase}
+          onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
+        />
       </CaseSetupGroup>
 
       <CaseSetupGroup title="Treatment plan" description="Select one or more implemented disciplines without forcing the case into a single procedure.">
