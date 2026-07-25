@@ -210,6 +210,8 @@ An appointment note should:
 - retain workflow-instance and workflow-run identifiers in structured exports; and
 - include shared-module events once at the appointment level while preserving their scope and linkage to relevant workflows.
 
+Until immutable appointment-note finalization is implemented, generated compact and full note previews are labeled **Draft chart note** in the UI. This label describes the artifact state and is not inserted into copied or downloaded clinical text. Supporting patient, print, event-log, and structured case outputs remain available from the same panel, but they are not relabeled as draft chart notes in their copy and download actions.
+
 A longitudinal summary may show progress across appointments, but it should not replace or silently regenerate the note for an earlier appointment. If the same durable treatment instance continues across visits, future persistence will need an explicit appointment identifier on events or an equivalent immutable event boundary. The current case object should not be assumed to provide that boundary merely because it has an `encounterId`.
 
 For a multidisciplinary appointment, the default should be one canonical appointment note with clearly separated workflow sections rather than independent notes that could omit shared context or contradict each other. Workflow-specific exports may still be useful as secondary artifacts, but they should reference the same appointment and event identities.

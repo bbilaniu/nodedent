@@ -12,6 +12,7 @@ import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
+import { NotePreview } from "../components/NotePreview";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
@@ -1208,13 +1209,72 @@ test("workflow launcher page view starts from workflow selection instead of endo
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
+    draftNotePreview: {
+      noteMode: "compact",
+      displayedNote: "Appointment date: July 24, 2026",
+      copied: false,
+      hasClinicalActivity: true,
+      onNoteModeChange: noop,
+      onCopyDisplayedNote: noop,
+      onDownloadDisplayedText: noop,
+    },
   }));
 
   assert.equal(markup.includes("Workflow quick actions"), false);
   assert.equal(markup.includes("Pre-op setup"), false);
   assert.equal(markup.includes("Active canal"), false);
   assert.equal(markup.includes("Primary workflows"), true);
+  assert.equal(markup.includes("Draft chart note"), true);
+  assert.equal(markup.includes("Appointment date: July 24, 2026"), true);
   assert.equal(markup.match(new RegExp(noTreatmentSelectedProcedure, "g"))?.length, 1);
+});
+
+test("note preview distinguishes draft chart notes from supporting outputs", () => {
+  const noop = () => {};
+  const compactMarkup = renderToStaticMarkup(React.createElement(NotePreview, {
+    noteMode: "compact",
+    displayedNote: "Draft content",
+    copied: false,
+    onNoteModeChange: noop,
+    onCopyDisplayedNote: noop,
+    onDownloadDisplayedText: noop,
+  }));
+
+  assert.equal(compactMarkup.includes("Draft chart note"), true);
+  assert.equal(compactMarkup.includes("not a finalized or signed appointment note"), true);
+  assert.equal(compactMarkup.includes("Copy draft note"), true);
+  assert.equal(compactMarkup.includes("Download draft note .txt"), true);
+  assert.equal(compactMarkup.includes("Live note preview"), false);
+
+  const jsonMarkup = renderToStaticMarkup(React.createElement(NotePreview, {
+    noteMode: "json",
+    displayedNote: "{}",
+    copied: false,
+    onNoteModeChange: noop,
+    onCopyDisplayedNote: noop,
+    onDownloadDisplayedText: noop,
+  }));
+
+  assert.equal(jsonMarkup.includes("Copy current output"), true);
+  assert.equal(jsonMarkup.includes("Download plaintext case JSON"), true);
+});
+
+test("note preview uses an empty state before clinical activity is recorded", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(NotePreview, {
+    noteMode: "compact",
+    displayedNote: "Boilerplate content",
+    copied: false,
+    hasClinicalActivity: false,
+    onNoteModeChange: noop,
+    onCopyDisplayedNote: noop,
+    onDownloadDisplayedText: noop,
+  }));
+
+  assert.equal(markup.includes("No clinical activity recorded yet."), true);
+  assert.equal(markup.includes("<textarea"), false);
+  assert.equal(markup.includes("Boilerplate content"), false);
+  assert.equal(markup.includes("Copy draft note"), false);
 });
 
 test("workflow launcher uses state-aware operative workflow labels", () => {

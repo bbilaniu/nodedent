@@ -21,6 +21,7 @@ import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
+import { NotePreview } from "./NotePreview";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
@@ -55,6 +56,7 @@ export function WorkflowLauncher({
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
+  draftNotePreview,
 }: {
   caseData: EndoCase;
   capabilitySummary?: CaseCapabilitySummary;
@@ -72,6 +74,7 @@ export function WorkflowLauncher({
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
   onOpenRadiologyWorkflow: () => void;
+  draftNotePreview?: React.ComponentProps<typeof NotePreview>;
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
@@ -276,6 +279,12 @@ export function WorkflowLauncher({
             </div>
           </section>
         </div>
+
+        {draftNotePreview ? (
+          <div className="mt-4">
+            <NotePreview {...draftNotePreview} />
+          </div>
+        ) : null}
       </section>
   );
 

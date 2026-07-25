@@ -1336,6 +1336,20 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     }
   }
 
+  const draftNotePreviewProps = {
+    noteMode,
+    displayedNote,
+    copied,
+    copyError,
+    hasClinicalActivity: hasMeaningfulActiveCase,
+    onNoteModeChange: (mode: string) => {
+      setNoteMode(mode);
+      setCopyError("");
+    },
+    onCopyDisplayedNote: copyDisplayedNote,
+    onDownloadDisplayedText: downloadDisplayedText,
+  };
+
   if (!isVaultReady) {
     return (
       <main className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
@@ -1504,6 +1518,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
               onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
               onOpenIsolationWorkflow={() => openIsolationWorkflow()}
               onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
+              draftNotePreview={draftNotePreviewProps}
             />
           </main>
         ) : (
@@ -1604,16 +1619,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
           <aside className="order-4 min-w-0 space-y-4 lg:col-span-2 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 xl:col-span-3 xl:col-start-1 xl:row-start-2 2xl:col-span-1 2xl:col-start-4 2xl:row-start-1 2xl:block 2xl:space-y-4">
             <NotePreview
-              noteMode={noteMode}
-              displayedNote={displayedNote}
-              copied={copied}
-              copyError={copyError}
-              onNoteModeChange={(mode) => {
-                setNoteMode(mode);
-                setCopyError("");
-              }}
-              onCopyDisplayedNote={copyDisplayedNote}
-              onDownloadDisplayedText={downloadDisplayedText}
+              {...draftNotePreviewProps}
             />
             <EventLog events={caseData.globalEvents} />
           </aside>
@@ -1638,6 +1644,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
             onOpenIsolationWorkflow={() => openIsolationWorkflow()}
             onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
+            draftNotePreview={draftNotePreviewProps}
           />
         ) : null}
 
