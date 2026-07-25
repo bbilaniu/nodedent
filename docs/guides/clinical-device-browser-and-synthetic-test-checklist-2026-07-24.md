@@ -103,10 +103,10 @@ requires a finding and approved disposition; it cannot be silently omitted.
 | SYN-18 | Clear current case | Confirmation scope and result are correct | PASS | Pending |
 | SYN-19 | Delete entire vault | Typed confirmation, backup decision, and recovery procedure work as documented | PASS | Pending |
 | SYN-20 | Legacy-data path | No silent migration occurs; raw backup and deletion scopes are correct | PASS | Pending |
-| SYN-21 | Save failure/conflict | UI does not claim the draft is durable; approved recovery procedure is usable | Pending | Pending |
-| SYN-22 | EMR handoff rehearsal | Synthetic note is matched, transferred, reviewed, and confirmed in a training/test destination | Pending | Pending |
-| SYN-23 | Network inspection | No unexpected application connections, telemetry, analytics, or reports are observed | Pending | Pending |
-| SYN-24 | Backup loss/unavailability | Staff can follow the downtime and recovery procedure without inventing data | Pending | Pending |
+| SYN-21 | Save failure/conflict | UI does not claim the draft is durable; approved recovery procedure is usable | PASS | Pending |
+| SYN-22 | EMR handoff rehearsal | Synthetic note is matched, transferred, reviewed, and confirmed in a training/test destination | PASS | can be improved, NB: ClearDent is limited to 30K characters per note |
+| SYN-23 | Network inspection | No unexpected application connections, telemetry, analytics, or reports are observed | PASS | Pending |
+| SYN-24 | Backup loss/unavailability | Staff can follow the downtime and recovery procedure without inventing data | PASS | critical values are written on paper |
 
 ## Accessibility And Chairside Use
 

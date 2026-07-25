@@ -1,6 +1,7 @@
 import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { normalizeCaseWorkflowInstances } from "../workflow/workflowInstances";
 
 export const LEGACY_STORAGE_KEY = "endo-chairside-guide-current-case";
 export const LEGACY_CASE_INDEX_KEY = "endo-chairside-guide-case-index";
@@ -12,6 +13,7 @@ export const caseStatusOptions = [
   "Retreatment planned",
   "Emergency pulpectomy planned",
   "Direct restoration planned",
+  "Multidisciplinary treatment planned",
   "RCT initiated",
   "RCT completed",
   "Medicated and temporized",
@@ -75,6 +77,8 @@ export const initialCase: EndoCase = {
   canals: [blankCanal("Main")],
   globalEvents: [],
   closure: null,
+  workflowInstances: [],
+  activeWorkflowInstanceId: "",
 };
 
 export function createFreshCase(now = new Date().toISOString()): EndoCase {
@@ -88,6 +92,8 @@ export function createFreshCase(now = new Date().toISOString()): EndoCase {
     preOp: { ...initialCase.preOp },
     canals: [blankCanal("Main")],
     globalEvents: [],
+    workflowInstances: [],
+    activeWorkflowInstanceId: "",
   };
 }
 
@@ -141,7 +147,7 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
       })
     : initialCase.canals;
 
-  return {
+  const normalizedCase = {
     ...initialCase,
     ...data,
     encounterId: typeof data.encounterId === "string" && data.encounterId.trim() ? data.encounterId : createEncounterId(),
@@ -153,4 +159,10 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
     globalEvents,
     autosavedAt,
   } as EndoCase;
+
+  return normalizeCaseWorkflowInstances(
+    normalizedCase,
+    typeof data.currentNodeId === "string" ? data.currentNodeId : "preop",
+    autosavedAt
+  );
 }

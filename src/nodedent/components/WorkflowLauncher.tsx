@@ -18,6 +18,7 @@ import {
   operativeDirectRestorationWorkflowId,
 } from "../workflow/operative";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
 
@@ -78,13 +79,16 @@ export function WorkflowLauncher({
   const anesthesiaStatus = sharedCapabilityStatusLabel(capabilitySummary.anesthesia);
   const isolationStatus = sharedCapabilityStatusLabel(capabilitySummary.isolation);
   const radiologyStatus = sharedCapabilityStatusLabel(capabilitySummary.radiographs);
+  const workflowInstances = normalizeWorkflowInstances(caseData, caseData.currentNodeId || "preop");
+  const endodonticSelected = workflowInstances.some((instance) => instance.workflowId === endodonticRootWorkflowId);
+  const operativeSelected = workflowInstances.some((instance) => instance.workflowId === operativeDirectRestorationWorkflowId);
   const endodonticStarted = currentNodePhase !== "Pre-op" || (currentNodeTitle !== "Pre-op setup" && currentNodeTitle !== "Pre-op");
-  const endodonticStatusLabel = endodonticStarted ? "In progress" : "Not started";
-  const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : "Start workflow";
+  const endodonticStatusLabel = endodonticStarted ? "In progress" : endodonticSelected ? "Planned" : "Not started";
+  const endodonticLaunchLabel = endodonticStarted ? "Continue workflow" : endodonticSelected ? "Start planned workflow" : "Start workflow";
   const operativeCompleted = getOperativeRestorationEvents(caseData).length > 0;
   const operativeStarted = hasOperativeSetupProgress(caseData);
-  const operativeStatusLabel = operativeCompleted ? "Complete" : operativeStarted ? "In progress" : "Not started";
-  const operativeLaunchLabel = operativeCompleted ? "Review workflow" : operativeStarted ? "Resume workflow" : "Start workflow";
+  const operativeStatusLabel = operativeCompleted ? "Complete" : operativeStarted ? "In progress" : operativeSelected ? "Planned" : "Not started";
+  const operativeLaunchLabel = operativeCompleted ? "Review workflow" : operativeStarted ? "Resume workflow" : operativeSelected ? "Start planned workflow" : "Start workflow";
   const procedureLabel = caseData.procedureType || noTreatmentSelectedProcedure;
   const caseStatusLabel = getCaseStatus(caseData);
   const activeCaseFacts = [
@@ -92,7 +96,8 @@ export function WorkflowLauncher({
     `Tooth ${caseData.tooth || "not set"}`,
     procedureLabel,
     caseStatusLabel,
-  ].filter((fact, index, facts) => index === facts.indexOf(fact));
+    workflowInstances.length ? `${workflowInstances.length} primary workflow${workflowInstances.length === 1 ? "" : "s"}` : null,
+  ].filter(Boolean).filter((fact, index, facts) => index === facts.indexOf(fact));
 
   const content = (
       <section className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}>
@@ -208,7 +213,7 @@ export function WorkflowLauncher({
                         <p className="mt-1 text-xs leading-5 text-brand-slate">{entry.summary}</p>
                         <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{compactScopeList(entry.supportedScopes)}</p>
                       </div>
-                      <span className={cx(statusBadge.base, isEndo ? sharedStatusLabelClass(statusLabel) : sharedAvailabilityClass(entry.availability))}>
+                      <span className={cx(statusBadge.base, isEndo || isOperative ? sharedStatusLabelClass(statusLabel) : sharedAvailabilityClass(entry.availability))}>
                         {statusLabel}
                       </span>
                     </div>

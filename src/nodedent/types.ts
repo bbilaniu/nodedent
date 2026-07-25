@@ -56,6 +56,23 @@ export type WorkflowScope = {
   details?: Record<string, unknown>;
 };
 
+export type PrimaryWorkflowInstanceStatus = "notStarted" | "inProgress" | "complete";
+
+export type PrimaryWorkflowInstance = {
+  id: string;
+  workflowType: string;
+  workflowId: string;
+  discipline: WorkflowDiscipline;
+  label: string;
+  procedureLabel: string;
+  target: WorkflowScope;
+  status: PrimaryWorkflowInstanceStatus;
+  createdAt: string;
+  updatedAt: string;
+  workflowRunId: string;
+  sourceEventIds: string[];
+};
+
 export type KnownCapabilityName =
   | "diagnosis.recorded"
   | "radiographs.reviewed"
@@ -196,6 +213,8 @@ export type EndoCase = {
   events?: ClinicalEvent[];
   closure: ClosureRecord | null;
   currentNodeId?: string;
+  workflowInstances?: PrimaryWorkflowInstance[];
+  activeWorkflowInstanceId?: string;
 };
 
 export type DecisionGuard =

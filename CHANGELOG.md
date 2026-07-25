@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.1
+
+### Patch Changes
+
+- cb81017: Open the full-page Case Setup after confirming a new case from the clinical workspace or workflow launcher.
+
+## 2.1.0
+
+### Minor Changes
+
+- Redesign Case Setup as a full-page workspace with durable endodontic and operative workflow selections that can coexist in one clinical case.
+
 ## 2.0.3
 
 ### Patch Changes

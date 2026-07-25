@@ -11,11 +11,13 @@ import {
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
   const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const hasOperativeOutput = Boolean(latestOperativeSetupEvent || operativeRestorationEvents.length);
+  const workflowInstances = normalizeWorkflowInstances(caseData, currentNodeId || caseData.currentNodeId || "preop");
 
   return {
     exportKind: "nodedent-case",
@@ -37,6 +39,8 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     preOp: caseData.preOp,
     canals: (caseData.canals || []).map((canal) => ({ ...canal, events: canal.events || [], status: statusLabels[getCanalStatus(canal)] })),
     closure: caseData.closure,
+    workflowInstances,
+    activeWorkflowInstanceId: caseData.activeWorkflowInstanceId,
     operative: hasOperativeOutput
       ? {
           setup: latestOperativeSetupEvent
