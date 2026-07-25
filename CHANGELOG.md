@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.3
+
+### Patch Changes
+
+- c58e638: Label generated compact and full chart notes as drafts and show the shared note preview on NodeDent Home.
+- 4cd46bb: Use durable workflow targets across clinical validation, events, shared modules, notes, exports, and saved-case summaries.
+- e53d66f: Record appointment dates separately from autosave timestamps and include them in compact and full clinical notes.
+
 ## 2.1.2
 
 ### Patch Changes
