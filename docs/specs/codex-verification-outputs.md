@@ -380,6 +380,7 @@ Clarify and fix timestamp semantics.
 
 Possible separate fields:
 
+* `appointmentDate`
 * `createdAt`
 * `updatedAt`
 * `autosavedAt`
@@ -387,6 +388,8 @@ Possible separate fields:
 * `eventTimestamp`
 
 The full note should display the correct timestamp label.
+
+Current implementation records and exports `appointmentDate` separately and displays it in compact and full notes. Autosave remains separately labelled metadata; the broader timestamp consistency review remains open.
 
 ## Generalized requirement
 

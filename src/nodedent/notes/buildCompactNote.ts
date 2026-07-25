@@ -9,6 +9,7 @@ import {
   isOperativeScopeRecordedEvent,
 } from "../workflow/operative";
 import { getPrimaryCaseTargetTooth } from "../workflow/workflowInstances";
+import { getAppointmentDate } from "../engine/appointmentDate";
 import { getPriorVisitLines } from "./priorVisit";
 
 export function buildCompactNote(caseData: EndoCase) {
@@ -19,9 +20,11 @@ export function buildCompactNote(caseData: EndoCase) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
   const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const targetTooth = getPrimaryCaseTargetTooth(caseData);
+  const appointmentDate = getAppointmentDate(caseData);
   const note = [];
   note.push(`${targetTooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}.`);
   if (caseData.patientNumber) note.push(`Patient #: ${caseData.patientNumber}.`);
+  note.push(`Appointment date: ${appointmentDate || "not recorded"}.`);
   note.push(`Visit status: ${getCaseStatus(caseData)}.`);
   const priorVisitLines = getPriorVisitLines(caseData);
   if (priorVisitLines.length) note.push(`Prior visit history: ${priorVisitLines.join(" ")}`);

@@ -42,7 +42,7 @@ import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
 import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
-import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
+import { blankCanal, createFreshCase, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
   anesthesiaAdequacyResponses,
   anesthesiaEventTypes,
@@ -684,6 +684,19 @@ test("new cases leave radiograph review unchecked by default", () => {
   assert.equal(initialCase.priorVisit?.priorRadiographsAvailable, false);
 });
 
+test("appointment date is explicit for new cases and migrated from legacy creation time", () => {
+  const localAppointmentStart = new Date(2026, 6, 24, 9, 30, 0).toISOString();
+  const freshCase = createFreshCase(localAppointmentStart);
+  const legacyImport = normalizeImportedEndoCase({
+    ...baseCase(),
+    appointmentDate: undefined,
+    createdAt: localAppointmentStart,
+  }, "2026-07-25T12:00:00.000Z");
+
+  assert.equal(freshCase.appointmentDate, "2026-07-24");
+  assert.equal(legacyImport.appointmentDate, "2026-07-24");
+});
+
 test("shared radiology reviewed events satisfy radiograph readiness", () => {
   const event = {
     id: "evt_radiology_reviewed",
@@ -825,6 +838,7 @@ test("full-page case setup shows every selected discipline without merging their
   }));
 
   assert.equal(markup.includes("Case identity"), true);
+  assert.equal(markup.includes("Appointment date"), true);
   assert.equal(markup.includes("Default tooth"), true);
   assert.equal(markup.includes("Workflow target tooth"), true);
   assert.equal(markup.includes("Overall progress"), true);
@@ -2539,6 +2553,21 @@ test("compact and full notes include measurements and event fragments", () => {
   assert.match(compactNote, /MB: est WL 20 mm/);
   assert.match(fullNote, /WL PA not taken/);
   assert.match(fullNote, /MB: WL established/);
+});
+
+test("compact and full notes identify the appointment date separately from autosave", () => {
+  const caseData = baseCase({
+    appointmentDate: "2026-07-24",
+    autosavedAt: "2026-07-25T03:15:00.000Z",
+  });
+  const compact = buildCompactNote(caseData);
+  const full = buildFullNote(caseData);
+  const exported = buildJsonExport(caseData, "preop");
+
+  assert.match(compact, /Appointment date: 2026-07-24\./);
+  assert.match(full, /Appointment date: 2026-07-24/);
+  assert.match(full, /Autosaved:/);
+  assert.equal(exported.appointmentDate, "2026-07-24");
 });
 
 test("full note includes canal switch narrative and patient summary remains concise", () => {

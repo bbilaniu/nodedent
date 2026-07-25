@@ -1,5 +1,6 @@
 import type { CanalRecord, EndoCase } from "../types";
 import type { ClinicalEvent } from "../types";
+import { appointmentDateFromTimestamp, isAppointmentDate } from "../engine/appointmentDate";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { normalizeCaseWorkflowInstances } from "../workflow/workflowInstances";
 
@@ -48,6 +49,7 @@ export const blankCanal = (name: string): CanalRecord => ({
 export const initialCase: EndoCase = {
   encounterId: "",
   createdAt: "",
+  appointmentDate: "",
   revision: 0,
   patientNumber: "",
   autosavedAt: "",
@@ -86,6 +88,7 @@ export function createFreshCase(now = new Date().toISOString()): EndoCase {
     ...initialCase,
     encounterId: createEncounterId(),
     createdAt: now,
+    appointmentDate: appointmentDateFromTimestamp(now),
     autosavedAt: now,
     priorVisit: { ...initialCase.priorVisit },
     diagnosis: { ...initialCase.diagnosis },
@@ -133,6 +136,7 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Date().toISOString()): EndoCase {
   const data = asRecord(parsed);
+  const createdAt = typeof data.createdAt === "string" && data.createdAt ? data.createdAt : autosavedAt;
   const globalEvents = Array.isArray(data.events)
     ? data.events as ClinicalEvent[]
     : Array.isArray(data.globalEvents)
@@ -151,7 +155,10 @@ export function normalizeImportedEndoCase(parsed: unknown, autosavedAt = new Dat
     ...initialCase,
     ...data,
     encounterId: typeof data.encounterId === "string" && data.encounterId.trim() ? data.encounterId : createEncounterId(),
-    createdAt: typeof data.createdAt === "string" && data.createdAt ? data.createdAt : autosavedAt,
+    createdAt,
+    appointmentDate: isAppointmentDate(data.appointmentDate)
+      ? data.appointmentDate
+      : appointmentDateFromTimestamp(createdAt),
     revision: typeof data.revision === "number" && Number.isInteger(data.revision) && data.revision >= 0 ? data.revision : 0,
     priorVisit: { ...(initialCase.priorVisit || {}), ...asRecord(data.priorVisit) },
     canals: importedCanals,

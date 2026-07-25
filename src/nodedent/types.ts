@@ -196,6 +196,7 @@ export type PreOpRecord = {
 export type EndoCase = {
   encounterId: string;
   createdAt?: string;
+  appointmentDate?: string;
   revision?: number;
   patientNumber: string;
   autosavedAt?: string;

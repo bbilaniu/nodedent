@@ -82,10 +82,17 @@ function CaseIdentitySection({
 }) {
   return (
     <section className={panelSurface.muted}>
-      <h3 className={sectionText.titleSmall}>Chart and default treatment area</h3>
+      <h3 className={sectionText.titleSmall}>Chart, appointment, and default treatment area</h3>
       <div className="mt-3 grid gap-3">
         <TextInput label="Patient chart #" value={caseData.patientNumber} onChange={(value) => onUpdateCase({ patientNumber: value })} placeholder="chart number only" />
         <p className="-mt-2 text-xs leading-5 text-amber-900">Use the clinic chart number only. Do not enter a name, exact birth date, contact detail, health number, or insurance identifier.</p>
+        <TextInput
+          label="Appointment date"
+          value={caseData.appointmentDate || ""}
+          onChange={(value) => onUpdateCase({ appointmentDate: value })}
+          type="date"
+          invalid={isBlank(caseData.appointmentDate)}
+        />
         <TextInput label="Default tooth" value={caseData.tooth} onChange={(value) => onUpdateCase({ tooth: value })} invalid={isBlank(caseData.tooth)} />
         <p className="text-xs leading-5 text-brand-slate">This tooth is the default area for new workflow selections. Each workflow retains its own target context.</p>
       </div>

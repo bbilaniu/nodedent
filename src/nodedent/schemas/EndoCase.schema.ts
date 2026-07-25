@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CanalRecordSchema } from "./CanalRecord.schema";
 import { ClinicalEventSchema, ClosureRecordSchema, WorkflowScopeKindSchema, WorkflowScopeSchema } from "./ClinicalEvent.schema";
 import { multidisciplinaryProcedure, noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { isAppointmentDate } from "../engine/appointmentDate";
 
 export const ProcedureTypeSchema = z.union([
   z.literal(noTreatmentSelectedProcedure),
@@ -93,6 +94,10 @@ export const ProtocolNodeSchema = z.object({
 export const EndoCaseSchema = z.object({
   encounterId: z.string().trim().min(1),
   createdAt: z.string().optional(),
+  appointmentDate: z.union([
+    z.literal(""),
+    z.string().refine(isAppointmentDate, "Appointment date must be a valid YYYY-MM-DD date"),
+  ]).optional(),
   revision: z.number().int().nonnegative().optional(),
   patientNumber: z.string(),
   autosavedAt: z.string().optional(),

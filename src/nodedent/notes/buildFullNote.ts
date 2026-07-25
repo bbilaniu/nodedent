@@ -7,10 +7,12 @@ import { getPriorVisitLines } from "./priorVisit";
 import { getCapabilityStatus } from "../workflow/selectors";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { getPrimaryCaseTargetTooth } from "../workflow/workflowInstances";
+import { getAppointmentDate } from "../engine/appointmentDate";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
   const targetTooth = getPrimaryCaseTargetTooth(caseData);
+  const appointmentDate = getAppointmentDate(caseData);
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed;
   const bwReviewed = caseData.preOp?.bwReviewed;
   const radiographStatus = getCapabilityStatus(
@@ -25,6 +27,7 @@ export function buildFullNote(caseData: EndoCase) {
   ].filter(Boolean);
   lines.push(`${targetTooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   if (caseData.patientNumber) lines.push(`Patient #: ${caseData.patientNumber}`);
+  lines.push(`Appointment date: ${appointmentDate || "Not recorded"}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   if (caseData.autosavedAt) lines.push(`Autosaved: ${new Date(caseData.autosavedAt).toLocaleString()}`);
   lines.push("");

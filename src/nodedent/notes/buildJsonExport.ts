@@ -12,6 +12,7 @@ import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { getPrimaryCaseTargetTooth, normalizeWorkflowInstances } from "../workflow/workflowInstances";
+import { getAppointmentDate } from "../engine/appointmentDate";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
@@ -24,6 +25,7 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
     schemaVersion: 1,
     encounterId: caseData.encounterId,
     createdAt: caseData.createdAt,
+    appointmentDate: getAppointmentDate(caseData),
     revision: caseData.revision,
     currentNodeId: currentNodeId || caseData.currentNodeId || inferCurrentNodeIdFromEvents(caseData),
     patientNumber: caseData.patientNumber,
