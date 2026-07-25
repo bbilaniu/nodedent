@@ -6,16 +6,21 @@ import { SectionCard, TextInput } from "./FormControls";
 export function OperativeWorkflowSetupPanel({
   caseData,
   setup,
+  targetTooth,
+  targetLocked = false,
   onSetupChange,
   className = "",
 }: {
   caseData: EndoCase;
   setup: OperativeWorkflowSetupState;
+  targetTooth?: string;
+  targetLocked?: boolean;
   onSetupChange: (updates: Partial<OperativeWorkflowSetupState>) => void;
   className?: string;
 }) {
-  const tooth = setup.tooth || caseData.tooth;
-  const scope = createOperativeSetupScope(setup, caseData.tooth);
+  const fallbackTooth = targetTooth ?? caseData.tooth;
+  const tooth = setup.tooth || fallbackTooth;
+  const scope = createOperativeSetupScope(setup, fallbackTooth);
 
   return (
     <SectionCard title="Operative setup" className={className}>
@@ -24,8 +29,21 @@ export function OperativeWorkflowSetupPanel({
           Capture the planned operative tooth and surface scope separately from endodontic canals.
         </p>
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextInput label="Tooth" value={tooth} onChange={(value) => onSetupChange({ tooth: value })} placeholder="e.g., 36" />
-          <TextInput label="Surfaces" value={setup.surfaces} onChange={(value) => onSetupChange({ surfaces: value })} placeholder="e.g., M O" />
+          <TextInput
+            label="Tooth"
+            value={tooth}
+            onChange={(value) => onSetupChange({ tooth: value })}
+            placeholder="e.g., 36"
+            disabled={targetLocked}
+            helperText={targetLocked ? "The target is locked because this workflow has a recorded final restoration." : undefined}
+          />
+          <TextInput
+            label="Surfaces"
+            value={setup.surfaces}
+            onChange={(value) => onSetupChange({ surfaces: value })}
+            placeholder="e.g., M O"
+            disabled={targetLocked}
+          />
           <TextInput label="Restoration intent" value={setup.restorationIntent} onChange={(value) => onSetupChange({ restorationIntent: value })} placeholder="e.g., direct restoration" />
           <TextInput label="Material" value={setup.material} onChange={(value) => onSetupChange({ material: value })} placeholder="optional" />
           <TextInput label="Shade" value={setup.shade} onChange={(value) => onSetupChange({ shade: value })} placeholder="optional" />

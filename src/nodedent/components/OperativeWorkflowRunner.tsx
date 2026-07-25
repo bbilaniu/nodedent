@@ -22,12 +22,16 @@ function stepState(stepIndex: number, activeIndex: number) {
 export function OperativeWorkflowRunner({
   caseData,
   setup,
+  targetTooth,
+  targetLocked = false,
   latestRestorationEvent,
   onSetupChange,
   onRecordRestoration,
 }: {
   caseData: EndoCase;
   setup: OperativeWorkflowSetupState;
+  targetTooth?: string;
+  targetLocked?: boolean;
   latestRestorationEvent?: ClinicalEvent;
   onSetupChange: (updates: Partial<OperativeWorkflowSetupState>) => void;
   onRecordRestoration: (record: { outcome: string; notes: string }) => void;
@@ -35,7 +39,7 @@ export function OperativeWorkflowRunner({
   const [outcome, setOutcome] = useState("");
   const [notes, setNotes] = useState("");
   const [validation, setValidation] = useState("");
-  const setupReady = hasSetupScope(setup, caseData.tooth);
+  const setupReady = hasSetupScope(setup, targetTooth ?? caseData.tooth);
   const completionRecord = getOperativeRestorationRecordFromEvent(latestRestorationEvent);
   const completed = Boolean(latestRestorationEvent);
   const activeStepIndex = completed ? 3 : setupReady ? 2 : 1;
@@ -92,7 +96,13 @@ export function OperativeWorkflowRunner({
           </div>
         </div>
 
-        <OperativeWorkflowSetupPanel caseData={caseData} setup={setup} onSetupChange={onSetupChange} />
+        <OperativeWorkflowSetupPanel
+          caseData={caseData}
+          setup={setup}
+          targetTooth={targetTooth}
+          targetLocked={targetLocked}
+          onSetupChange={onSetupChange}
+        />
 
         <div className={panelSurface.cardPadded}>
           <h3 className={sectionText.titleSmall}>Restoration record</h3>

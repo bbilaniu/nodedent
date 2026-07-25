@@ -14,6 +14,8 @@ export function ActiveWorkflowTargetPanel({
   operativeProps: {
     caseData: EndodonticTargetPanelProps["caseData"];
     setup: OperativeWorkflowSetupState;
+    targetTooth?: string;
+    targetLocked?: boolean;
     onSetupChange: (updates: Partial<OperativeWorkflowSetupState>) => void;
   };
 }) {

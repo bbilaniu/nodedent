@@ -5,7 +5,9 @@ import { getMissingRequirements } from "../engine/validateDecision";
 import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { endodonticRootWorkflowId } from "../workflow/registry";
 import { getCapabilityStatus } from "../workflow/selectors";
+import { getWorkflowTargetTooth } from "../workflow/workflowInstances";
 import { cx, panelActionButton } from "./uiStyles";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
@@ -64,11 +66,12 @@ export function DecisionCard({
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
+  const targetTooth = getWorkflowTargetTooth(caseData, endodonticRootWorkflowId, currentNode.id);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const radiographStatus = getCapabilityStatus(
     caseData,
     "radiographs.reviewed",
-    caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined
+    targetTooth ? { kind: "tooth", tooth: targetTooth } : undefined
   );
 
   return (
@@ -81,7 +84,7 @@ export function DecisionCard({
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-slate">Phase : {currentNode.phase}</p>
         <h2 className="mt-1 text-2xl font-bold text-brand-navy">{currentNode.title}</h2>
         <p className="mt-1 text-sm leading-6 text-brand-slate">
-          {caseData.procedureType || noTreatmentSelectedProcedure} · Tooth {caseData.tooth || "not set"} · Active canal {activeCanal?.name || "not set"}
+          {caseData.procedureType || noTreatmentSelectedProcedure} · Tooth {targetTooth || "not set"} · Active canal {activeCanal?.name || "not set"}
         </p>
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
@@ -103,7 +106,7 @@ export function DecisionCard({
               <div>
                 <h4 className="text-sm font-bold text-brand-navy">Case setup summary</h4>
                 <p className="mt-1 text-sm leading-6 text-brand-slate">
-                  Tooth <strong>{caseData.tooth || "not set"}</strong> · {caseData.procedureType || "Procedure not set"} · Active canal <strong>{activeCanal?.name || "not set"}</strong>
+                  Tooth <strong>{targetTooth || "not set"}</strong> · {caseData.procedureType || "Procedure not set"} · Active canal <strong>{activeCanal?.name || "not set"}</strong>
                 </p>
                 <p className="mt-1 text-xs leading-5 text-brand-slate">
                   Chamber depth: {formatMm(caseData.preOp?.estimatedChamberDepth)} · Estimated WL: {formatMm(activeCanal?.estimatedWorkingLength)} · Radiographs: {radiographStatus.summary}

@@ -1,5 +1,7 @@
 import type { ClinicalEvent, DecisionOption, EndoCase } from "../types";
 import { protocolNodes } from "../protocol/nodes";
+import { endodonticRootWorkflowId } from "../workflow/registry";
+import { getWorkflowTargetTooth } from "../workflow/workflowInstances";
 import { makeEvent } from "./events";
 import { validateDecision } from "./validateDecision";
 
@@ -80,10 +82,15 @@ export function applyDecision(input: ApplyDecisionInput): ApplyDecisionOutput {
     };
   }
 
+  const targetTooth = getWorkflowTargetTooth(
+    caseData,
+    input.workflowId || endodonticRootWorkflowId,
+    input.currentNodeId
+  );
   const generatedEvent = option.noteEvent
     ? makeEvent({
         type: option.noteEvent.type,
-        tooth: caseData.tooth,
+        tooth: targetTooth,
         canal: activeCanal?.name,
         nodeId: node.id,
         label: input.selectedOptionLabel || option.label,

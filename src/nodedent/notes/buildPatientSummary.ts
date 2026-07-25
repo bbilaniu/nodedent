@@ -1,7 +1,8 @@
 import type { EndoCase } from "../types";
+import { getPrimaryCaseTargetTooth } from "../workflow/workflowInstances";
 
 export function buildPatientSummary(caseData: EndoCase) {
-  const tooth = caseData.tooth || "the tooth";
+  const tooth = getPrimaryCaseTargetTooth(caseData) || "the tooth";
   if ((caseData.globalEvents || []).some((event) => event.type === "medication.calciumHydroxidePlaced")) {
     return `Root canal treatment was started on tooth ${tooth}. The canals were cleaned as appropriate today, medication was placed, and a temporary filling was placed. Further treatment or referral may be needed.`;
   }

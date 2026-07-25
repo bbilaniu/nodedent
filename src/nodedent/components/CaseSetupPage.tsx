@@ -28,6 +28,7 @@ export function CaseSetupPage({
   onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
+  onPrimaryWorkflowTargetToothChange,
   onOpenPrimaryWorkflow,
   onDownloadCaseJson,
   initialFocusSection,
@@ -49,6 +50,7 @@ export function CaseSetupPage({
   onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
+  onPrimaryWorkflowTargetToothChange: (instanceId: string, tooth: string) => void;
   onOpenPrimaryWorkflow: (workflowId: string) => void;
   onDownloadCaseJson: () => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
@@ -128,6 +130,7 @@ export function CaseSetupPage({
             onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
             onPrimaryWorkflowSelectionChange={onPrimaryWorkflowSelectionChange}
             onPrimaryWorkflowProcedureChange={onPrimaryWorkflowProcedureChange}
+            onPrimaryWorkflowTargetToothChange={onPrimaryWorkflowTargetToothChange}
             onOpenPrimaryWorkflow={onOpenPrimaryWorkflow}
             initialFocusSection={initialFocusSection}
           />

@@ -11,7 +11,7 @@ import {
 import { eventFragment } from "./fragments";
 import { buildCompactNote } from "./buildCompactNote";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
-import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
+import { getPrimaryCaseTargetTooth, normalizeWorkflowInstances } from "../workflow/workflowInstances";
 
 export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null = null) {
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
@@ -66,10 +66,11 @@ export function buildJsonExport(caseData: EndoCase, currentNodeId: string | null
 
 export function buildPrintableSummary(caseData: EndoCase) {
   const lines: string[] = [];
+  const targetTooth = getPrimaryCaseTargetTooth(caseData);
   lines.push("ENDODONTIC CHAIRSIDE SUMMARY");
   lines.push("============================");
   lines.push(`Patient #: ${caseData.patientNumber || "________________"}`);
-  lines.push(`Tooth: ${caseData.tooth || "____"}`);
+  lines.push(`Tooth: ${targetTooth || "____"}`);
   lines.push(`Procedure: ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   lines.push(`Date/autosave: ${caseData.autosavedAt ? new Date(caseData.autosavedAt).toLocaleString() : new Date().toLocaleString()}`);
@@ -88,10 +89,11 @@ export function buildPrintableSummary(caseData: EndoCase) {
 
 export function buildEventLogExport(caseData: EndoCase) {
   const lines: string[] = [];
+  const targetTooth = getPrimaryCaseTargetTooth(caseData);
   lines.push("ENDODONTIC EVENT LOG");
   lines.push("====================");
   lines.push(`Patient #: ${caseData.patientNumber || ""}`);
-  lines.push(`Tooth: ${caseData.tooth || ""}`);
+  lines.push(`Tooth: ${targetTooth || ""}`);
   lines.push(`Procedure: ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   lines.push("");

@@ -27,7 +27,7 @@ export function RadiologyWorkflowRunner({
   const [recordedLabel, setRecordedLabel] = useState("");
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
   const completion = workflow.completionNodeIds.includes(currentNode.id);
-  const targetTooth = launch.targetTooth || caseData.tooth;
+  const targetTooth = launch.targetTooth ?? caseData.tooth;
 
   function recordEvent(details: RadiologyEventDetails) {
     const option = currentNode.options.find((item) => item.noteEvent?.type === radiologyEventTypes.reviewed) || currentNode.options[0];

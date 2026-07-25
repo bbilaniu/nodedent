@@ -86,9 +86,11 @@ import {
   addPrimaryWorkflow,
   canRemovePrimaryWorkflow,
   getWorkflowInstance,
+  getWorkflowTargetTooth,
   normalizeCaseWorkflowInstances,
   normalizeWorkflowInstances,
   removePrimaryWorkflow,
+  updateWorkflowInstanceTarget,
   updateWorkflowProcedureLabel,
 } from "./workflow/workflowInstances";
 
@@ -279,9 +281,19 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     [caseData, currentNodeId]
   );
   const activeWorkflowInstance = workflowInstances.find((instance) => instance.id === caseData.activeWorkflowInstanceId);
+  const endodonticWorkflowInstance = activeWorkflowInstance?.workflowId === endodonticRootWorkflowId
+    ? activeWorkflowInstance
+    : workflowInstances.find((instance) => instance.workflowId === endodonticRootWorkflowId);
   const activeOperativeWorkflowInstance = activeWorkflowInstance?.workflowId === operativeDirectRestorationWorkflowId
     ? activeWorkflowInstance
     : workflowInstances.find((instance) => instance.workflowId === operativeDirectRestorationWorkflowId);
+  const endodonticTargetTooth = getWorkflowTargetTooth(caseData, endodonticRootWorkflowId, currentNodeId);
+  const operativeTargetTooth = getWorkflowTargetTooth(caseData, operativeDirectRestorationWorkflowId, currentNodeId);
+  const activePrimaryTargetTooth = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId
+    ? operativeTargetTooth
+    : activePrimaryWorkflowId === endodonticRootWorkflowId
+      ? endodonticTargetTooth
+      : caseData.tooth;
   const operativeSetup = useMemo(
     () => getLatestOperativeWorkflowSetup(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id),
     [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
@@ -290,12 +302,20 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     () => getOperativeRestorationEvents(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id).at(-1),
     [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
   );
-  const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
-  const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
+  const caseCapabilitySummary = useMemo(
+    () => getCaseCapabilitySummary(caseData, activePrimaryTargetTooth),
+    [activePrimaryTargetTooth, caseData]
+  );
+  const operativeReadinessSummary = useMemo(
+    () => getOperativeReadinessCapabilitySummary(caseData, operativeSetup, operativeTargetTooth),
+    [caseData, operativeSetup, operativeTargetTooth]
+  );
   const activeReadinessSummary = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId ? operativeReadinessSummary : caseCapabilitySummary;
   const activeSharedModuleTargetTooth = activePrimaryWorkflowId === operativeDirectRestorationWorkflowId || casePanelWorkflowId === operativeDirectRestorationWorkflowId
-    ? createOperativeReadinessScopes(operativeSetup, caseData.tooth).toothScope?.tooth
-    : caseData.tooth;
+    ? createOperativeReadinessScopes(operativeSetup, operativeTargetTooth).toothScope?.tooth
+    : activePrimaryWorkflowId === endodonticRootWorkflowId || casePanelWorkflowId === endodonticRootWorkflowId
+      ? endodonticTargetTooth
+      : caseData.tooth;
   const disabledReadinessActionLabels =
     embeddedWorkflowLaunch?.workflowId === sharedAnesthesiaWorkflowId
       ? ["Anesthesia"]
@@ -505,7 +525,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }
 
   function identifyEndodonticEvent(event: ClinicalEvent) {
-    const instance = workflowInstances.find((item) => item.workflowId === endodonticRootWorkflowId);
+    const instance = endodonticWorkflowInstance;
     if (!instance) return event;
     return {
       ...event,
@@ -525,8 +545,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null } & AnesthesiaEventOptions
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const scope = getAnesthesiaScopeFromDetails(details, caseData.tooth);
-    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || caseData.tooth;
+    const scope = getAnesthesiaScopeFromDetails(details, activeSharedModuleTargetTooth);
+    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || activeSharedModuleTargetTooth;
     const event = makeRuntimeEvent({
       type: eventType,
       tooth: eventTooth,
@@ -560,8 +580,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const scope = getIsolationScopeFromDetails(details, caseData.tooth);
-    const eventTooth = details.exposedTeeth?.[0] || scope.tooth || caseData.tooth;
+    const scope = getIsolationScopeFromDetails(details, activeSharedModuleTargetTooth);
+    const eventTooth = details.exposedTeeth?.[0] || scope.tooth || activeSharedModuleTargetTooth;
     const event = makeRuntimeEvent({
       type: eventType,
       tooth: eventTooth,
@@ -598,8 +618,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     context?: { nodeId?: string; label?: string; workflowRunId?: string; parentWorkflowRunId?: string | null }
   ) {
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const scope = getRadiologyScopeFromDetails(details, caseData.tooth);
-    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || caseData.tooth;
+    const scope = getRadiologyScopeFromDetails(details, activeSharedModuleTargetTooth);
+    const eventTooth = details.tooth || details.teeth?.[0] || scope.tooth || activeSharedModuleTargetTooth;
     const event = makeRuntimeEvent({
       type: radiologyEventTypes.reviewed,
       tooth: eventTooth,
@@ -725,6 +745,15 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setCaseData((prev) => updateWorkflowProcedureLabel(prev, workflowId, procedureLabel, currentNodeId));
   }
 
+  function setPrimaryWorkflowTargetTooth(instanceId: string, tooth: string) {
+    setCaseData((prev) => updateWorkflowInstanceTarget(prev, instanceId, {
+      kind: "tooth",
+      tooth: tooth.trim() || undefined,
+      label: tooth.trim() ? `Tooth ${tooth.trim()}` : "Tooth not set",
+    }, currentNodeId));
+    setValidationMessage(null);
+  }
+
   function openPrimaryWorkflowFromCasePanel(workflowId: string) {
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
@@ -743,15 +772,19 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       });
       const instance = getWorkflowInstance(selectedCase, operativeDirectRestorationWorkflowId, currentNodeId);
       const workflowRunId = instance?.workflowRunId || rootWorkflowRunId;
+      const fallbackTooth = instance?.target.tooth || prev.tooth;
       const nextSetup = {
         ...getLatestOperativeWorkflowSetup(selectedCase, workflowRunId, instance?.id),
         ...updates,
       };
-      const scope = createOperativeSetupScope(nextSetup, prev.tooth);
-      const details = buildOperativeSetupEventDetails(nextSetup, prev.tooth);
+      const targetChangeRequested = Object.hasOwn(updates, "tooth") || Object.hasOwn(updates, "surfaces");
+      const hasCompletion = getOperativeRestorationEvents(selectedCase, workflowRunId, instance?.id).length > 0;
+      if (targetChangeRequested && hasCompletion) return prev;
+      const scope = createOperativeSetupScope(nextSetup, fallbackTooth);
+      const details = buildOperativeSetupEventDetails(nextSetup, fallbackTooth);
       const event = makeRuntimeEvent({
         type: operativeScopeRecordedEventType,
-        tooth: scope.tooth || prev.tooth,
+        tooth: scope.tooth || fallbackTooth,
         canal: "N/A",
         nodeId: "operative-surface-scope",
         label: "Operative setup recorded",
@@ -779,11 +812,11 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
       timestamp,
       record: {
         ...operativeSetup,
-        tooth: operativeSetup.tooth || caseData.tooth,
+        tooth: operativeSetup.tooth || operativeTargetTooth,
         outcome: record.outcome,
         notes: record.notes,
       },
-      fallbackTooth: caseData.tooth,
+      fallbackTooth: operativeTargetTooth,
       workflowRunId: activeOperativeWorkflowInstance?.workflowRunId || rootWorkflowRunId,
       workflowInstanceId: activeOperativeWorkflowInstance?.id,
     });
@@ -836,7 +869,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "case.continuedFromPriorVisit",
-      tooth: caseData.tooth,
+      tooth: endodonticTargetTooth,
       canal: "All",
       nodeId: currentNode.id,
       label: "Continue from prior visit",
@@ -873,7 +906,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
     const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "workflow.resumedFromPriorVisit",
-      tooth: caseData.tooth,
+      tooth: endodonticTargetTooth,
       canal: activeCanal.name,
       nodeId: currentNode.id,
       label: `Resume ${activeCanal.name} from prior visit`,
@@ -1085,7 +1118,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   function addManualCanalEvent(type: string, label: string, nextNodeId: string | null = null, difficultyFlag: DifficultyFlag | null = null) {
     if (!activeCanal) return;
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
-    const event = identifyEndodonticEvent(makeRuntimeEvent({ type, tooth: caseData.tooth, canal: activeCanal.name, nodeId: currentNode.id, label, activeCanal }));
+    const event = identifyEndodonticEvent(makeRuntimeEvent({ type, tooth: endodonticTargetTooth, canal: activeCanal.name, nodeId: currentNode.id, label, activeCanal }));
     setCaseData((prev) => ({
       ...prev,
       difficulty: difficultyFlag || prev.difficulty,
@@ -1162,7 +1195,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
 
     const event = identifyEndodonticEvent(makeRuntimeEvent({
       type: "workflow.switchedCanal",
-      tooth: caseData.tooth,
+      tooth: endodonticTargetTooth,
       canal: target.canalName,
       nodeId: currentNode.id,
       label: target.label,
@@ -1383,7 +1416,9 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Chart: {caseData.patientNumber || "—"}</span>
-              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">Tooth: {caseData.tooth || "—"}</span>
+              <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">
+                {hasActivePrimaryWorkflow ? "Target tooth" : "Default tooth"}: {hasActivePrimaryWorkflow ? activePrimaryTargetTooth || "—" : caseData.tooth || "—"}
+              </span>
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
               <span
                 role="status"
@@ -1501,6 +1536,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                   activeWorkflowId={activePrimaryWorkflowId || endodonticRootWorkflowId}
                   endodonticProps={{
                     caseData,
+                    targetTooth: endodonticTargetTooth,
                     newCanalName,
                     renameCanalName,
                     onNewCanalNameChange: setNewCanalName,
@@ -1519,6 +1555,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                   operativeProps={{
                     caseData,
                     setup: operativeSetup,
+                    targetTooth: operativeTargetTooth,
+                    targetLocked: Boolean(latestOperativeRestorationEvent),
                     onSetupChange: updateOperativeSetup,
                   }}
                 />
@@ -1556,6 +1594,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                 <OperativeWorkflowRunner
                   caseData={caseData}
                   setup={operativeSetup}
+                  targetTooth={operativeTargetTooth}
+                  targetLocked={Boolean(latestOperativeRestorationEvent)}
                   latestRestorationEvent={latestOperativeRestorationEvent}
                   onSetupChange={updateOperativeSetup}
                   onRecordRestoration={recordOperativeRestoration}
@@ -1624,6 +1664,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
             onPrimaryWorkflowSelectionChange={setPrimaryWorkflowSelected}
             onPrimaryWorkflowProcedureChange={setPrimaryWorkflowProcedure}
+            onPrimaryWorkflowTargetToothChange={setPrimaryWorkflowTargetTooth}
             onOpenPrimaryWorkflow={openPrimaryWorkflowFromCasePanel}
             onDownloadCaseJson={downloadCaseJson}
             initialFocusSection={casePanelFocusTarget}

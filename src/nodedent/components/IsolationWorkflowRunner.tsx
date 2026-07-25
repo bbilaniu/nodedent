@@ -158,7 +158,7 @@ export function IsolationWorkflowRunner({
   const [moduleNodeId, setModuleNodeId] = useState(launch.entryNodeId || workflow.entryNodeIds[0]);
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
   const defaultEventType = getDefaultEventType(currentNode);
-  const targetTooth = launch.targetTooth || caseData.tooth;
+  const targetTooth = launch.targetTooth ?? caseData.tooth;
   const [selectedEventType, setSelectedEventType] = useState<IsolationEventType>(defaultEventType);
   const [actionMode, setActionMode] = useState<IsolationActionMode>(() => getActionMode(defaultEventType));
   const [recordedLabel, setRecordedLabel] = useState("");

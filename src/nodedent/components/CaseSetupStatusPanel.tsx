@@ -24,6 +24,8 @@ import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import {
   canRemovePrimaryWorkflow,
+  getWorkflowTargetEditability,
+  getWorkflowTargetTooth,
   normalizeWorkflowInstances,
   selectablePrimaryWorkflows,
 } from "../workflow/workflowInstances";
@@ -96,12 +98,14 @@ function WorkflowSelectionSection({
   currentNodeId,
   onSelectionChange,
   onProcedureChange,
+  onTargetToothChange,
   onOpenWorkflow,
 }: {
   caseData: EndoCase;
   currentNodeId: string;
   onSelectionChange: (workflowId: string, selected: boolean) => void;
   onProcedureChange: (workflowId: string, procedureLabel: string) => void;
+  onTargetToothChange: (instanceId: string, tooth: string) => void;
   onOpenWorkflow: (workflowId: string) => void;
 }) {
   const instances = normalizeWorkflowInstances(caseData, currentNodeId);
@@ -126,6 +130,9 @@ function WorkflowSelectionSection({
           const selected = Boolean(instance);
           const removable = instance ? canRemovePrimaryWorkflow(instance) : false;
           const targetLabel = instance?.target.label || (caseData.tooth ? `Tooth ${caseData.tooth}` : "Target not set");
+          const targetEditability = instance
+            ? getWorkflowTargetEditability(caseData, instance.id, currentNodeId)
+            : { editable: false, reason: "" };
 
           return (
             <article
@@ -144,6 +151,21 @@ function WorkflowSelectionSection({
               </div>
 
               <p className="mt-3 text-xs font-semibold text-brand-slate">Target: {targetLabel}</p>
+
+              {selected && instance && definition.workflowId === endodonticRootWorkflowId ? (
+                <div className="mt-3">
+                  <TextInput
+                    label="Workflow target tooth"
+                    value={instance.target.tooth || ""}
+                    onChange={(value) => onTargetToothChange(instance.id, value)}
+                    disabled={!targetEditability.editable}
+                    invalid={targetEditability.editable && isBlank(instance.target.tooth)}
+                    helperText={targetEditability.editable
+                      ? "Correct this target before recording clinical activity. Changing the default tooth does not change this workflow."
+                      : targetEditability.reason}
+                  />
+                </div>
+              ) : null}
 
               {selected && definition.workflowId === endodonticRootWorkflowId ? (
                 <div className="mt-3">
@@ -350,7 +372,8 @@ function OperativeWorkflowSetupSummary({
   setup: OperativeWorkflowSetupState;
   onOpenOperativeWorkflowSetup?: () => void;
 }) {
-  const scope = createOperativeSetupScope(setup, caseData.tooth);
+  const targetTooth = getWorkflowTargetTooth(caseData, operativeDirectRestorationWorkflowId);
+  const scope = createOperativeSetupScope(setup, targetTooth);
   const rows = [
     { label: "Scope", value: scope.label || "No tooth/surface scope yet" },
     { label: "Restoration intent", value: setup.restorationIntent || "Not recorded" },
@@ -403,6 +426,7 @@ export function CaseSetupStatusPanel({
   onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
+  onPrimaryWorkflowTargetToothChange,
   onOpenPrimaryWorkflow,
   initialFocusSection,
 }: {
@@ -422,6 +446,7 @@ export function CaseSetupStatusPanel({
   onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
+  onPrimaryWorkflowTargetToothChange: (instanceId: string, tooth: string) => void;
   onOpenPrimaryWorkflow: (workflowId: string) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
@@ -445,7 +470,10 @@ export function CaseSetupStatusPanel({
     anesthesia: anesthesiaSectionRef,
     isolation: isolationSectionRef,
   };
-  const capabilitySummary = getCaseCapabilitySummary(caseData);
+  const activeTargetTooth = activeWorkflowId
+    ? getWorkflowTargetTooth(caseData, activeWorkflowId, currentNodeId)
+    : caseData.tooth;
+  const capabilitySummary = getCaseCapabilitySummary(caseData, activeTargetTooth);
   const anesthesiaEvents = (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType));
   const latestAnesthesiaEvent = anesthesiaEvents.at(-1);
   const latestAnesthesiaEventTime = formatEventTimestamp(latestAnesthesiaEvent?.timestamp);
@@ -492,6 +520,7 @@ export function CaseSetupStatusPanel({
           currentNodeId={currentNodeId}
           onSelectionChange={onPrimaryWorkflowSelectionChange}
           onProcedureChange={onPrimaryWorkflowProcedureChange}
+          onTargetToothChange={onPrimaryWorkflowTargetToothChange}
           onOpenWorkflow={onOpenPrimaryWorkflow}
         />
       </CaseSetupGroup>

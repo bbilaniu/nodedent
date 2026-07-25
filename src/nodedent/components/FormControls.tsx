@@ -11,6 +11,7 @@ export function TextInput({
   helperText,
   rightLabel,
   suggestions = [],
+  disabled = false,
 }: {
   label: string;
   value?: string;
@@ -22,6 +23,7 @@ export function TextInput({
   helperText?: React.ReactNode;
   rightLabel?: React.ReactNode;
   suggestions?: string[];
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? "");
   const inputId = useId();
@@ -48,8 +50,9 @@ export function TextInput({
         placeholder={placeholder}
         inputMode={inputMode}
         type={type}
+        disabled={disabled}
         list={hasSuggestions ? suggestionListId : undefined}
-        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
+        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 disabled:cursor-not-allowed disabled:bg-brand-light-slate disabled:text-brand-slate ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       />
       {hasSuggestions ? (
         <datalist id={suggestionListId}>

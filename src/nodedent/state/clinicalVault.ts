@@ -1,4 +1,5 @@
 import type { EndoCase } from "../types";
+import { getPrimaryCaseTargetTooth } from "../workflow/workflowInstances";
 import { isMeaningfulCase } from "./caseEntry";
 import {
   CLINICAL_VAULT_FORMAT_VERSION,
@@ -190,10 +191,11 @@ function assertClinicalCaseSnapshot(value: unknown, record: StoredEncryptedCase)
 }
 
 function buildSummary(caseData: EndoCase, currentNodeId: string, savedAt: string, revision: number): Omit<SavedCaseSummary, "expired"> {
+  const targetTooth = getPrimaryCaseTargetTooth(caseData, currentNodeId);
   return {
     id: caseData.encounterId,
     patientNumber: caseData.patientNumber || "No chart #",
-    tooth: caseData.tooth || "Tooth ___",
+    tooth: targetTooth || "Tooth ___",
     procedureType: caseData.procedureType,
     currentNodeId,
     canalCount: caseData.canals?.length || 0,

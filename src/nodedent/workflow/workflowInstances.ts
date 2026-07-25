@@ -291,6 +291,80 @@ export function getWorkflowInstance(caseData: EndoCase, workflowId: string, curr
   return normalizeWorkflowInstances(caseData, currentNodeId).find((instance) => instance.workflowId === workflowId);
 }
 
+export function getActiveWorkflowInstance(
+  caseData: EndoCase,
+  currentNodeId = caseData.currentNodeId || "preop",
+  workflowId?: string
+) {
+  const instances = normalizeWorkflowInstances(caseData, currentNodeId);
+  const active = instances.find((instance) => instance.id === caseData.activeWorkflowInstanceId);
+  if (active && (!workflowId || active.workflowId === workflowId)) return active;
+  if (workflowId) return instances.find((instance) => instance.workflowId === workflowId);
+  return instances.length === 1 ? instances[0] : undefined;
+}
+
+export function getWorkflowTargetTooth(
+  caseData: EndoCase,
+  workflowId: string,
+  currentNodeId = caseData.currentNodeId || "preop"
+) {
+  const instance = getActiveWorkflowInstance(caseData, currentNodeId, workflowId);
+  if (!instance) return caseData.tooth;
+  return instance.target.tooth?.trim()
+    || instance.target.teeth?.find((tooth) => tooth.trim())?.trim()
+    || "";
+}
+
+export function getPrimaryCaseTargetTooth(
+  caseData: EndoCase,
+  currentNodeId = caseData.currentNodeId || "preop"
+) {
+  const instances = normalizeWorkflowInstances(caseData, currentNodeId);
+  const endodontic = instances.find((instance) => instance.workflowId === endodonticRootWorkflowId);
+  const preferred = endodontic
+    || instances.find((instance) => instance.id === caseData.activeWorkflowInstanceId)
+    || instances[0];
+  if (!preferred) return caseData.tooth;
+  return preferred.target.tooth?.trim()
+    || preferred.target.teeth?.find((tooth) => tooth.trim())?.trim()
+    || "";
+}
+
+export function getWorkflowTargetEditability(
+  caseData: EndoCase,
+  instanceId: string,
+  currentNodeId = caseData.currentNodeId || "preop"
+) {
+  const instance = normalizeWorkflowInstances(caseData, currentNodeId).find((item) => item.id === instanceId);
+  if (!instance) return { editable: false, reason: "Workflow instance not found." };
+  if (instance.status !== "notStarted" || instance.sourceEventIds.length > 0) {
+    return {
+      editable: false,
+      reason: "The target is locked because this workflow has recorded clinical activity.",
+    };
+  }
+  return { editable: true, reason: "" };
+}
+
+export function updateWorkflowInstanceTarget(
+  caseData: EndoCase,
+  instanceId: string,
+  target: WorkflowScope,
+  currentNodeId = caseData.currentNodeId || "preop",
+  now = new Date().toISOString()
+) {
+  if (!getWorkflowTargetEditability(caseData, instanceId, currentNodeId).editable) return caseData;
+  const workflowInstances = normalizeWorkflowInstances(caseData, currentNodeId, now).map((instance) =>
+    instance.id === instanceId
+      ? { ...instance, target: normalizeScope(target, instance.target), updatedAt: now }
+      : instance
+  );
+  return {
+    ...caseData,
+    workflowInstances,
+  };
+}
+
 export function isPrimaryWorkflowSelected(caseData: EndoCase, workflowId: string, currentNodeId = caseData.currentNodeId || "preop") {
   return Boolean(getWorkflowInstance(caseData, workflowId, currentNodeId));
 }

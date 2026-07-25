@@ -7,6 +7,7 @@ import { cx, panelActionButton } from "./uiStyles";
 
 export type EndodonticTargetPanelProps = {
   caseData: EndoCase;
+  targetTooth?: string;
   newCanalName: string;
   renameCanalName: string;
   onNewCanalNameChange: (value: string) => void;
@@ -23,6 +24,7 @@ export type EndodonticTargetPanelProps = {
 
 export function EndodonticTargetPanel({
   caseData,
+  targetTooth,
   newCanalName,
   renameCanalName,
   onNewCanalNameChange,
@@ -71,7 +73,7 @@ export function EndodonticTargetPanel({
   return (
     <SectionCard title="Endodontic progress" className={className}>
       <p className="mb-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
-        Manage canals for the active endodontic workflow. Operative teeth and surfaces will use their own target panel.
+        Workflow target: <strong>Tooth {targetTooth || "not set"}</strong>. Manage canals for this endodontic workflow; operative teeth and surfaces use their own target panel.
       </p>
       <button
         type="button"

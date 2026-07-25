@@ -114,9 +114,12 @@ import { getWorkflowTargetPanelKind, workflowHasEndodonticTargetPanel, workflowH
 import {
   addPrimaryWorkflow,
   canRemovePrimaryWorkflow,
+  getWorkflowTargetEditability,
+  getWorkflowTargetTooth,
   normalizeCaseWorkflowInstances,
   normalizeWorkflowInstances,
   removePrimaryWorkflow,
+  updateWorkflowInstanceTarget,
   updateWorkflowProcedureLabel,
 } from "../workflow/workflowInstances";
 
@@ -289,6 +292,100 @@ test("a default tooth seeds a workflow target without retargeting the existing i
   const changedDefault = normalizeCaseWorkflowInstances({ ...selected, tooth: "37" }, "preop", "2026-07-24T13:06:00.000Z");
   assert.equal(changedDefault.tooth, "37");
   assert.equal(changedDefault.workflowInstances?.[0]?.target.tooth, "36");
+});
+
+test("workflow target corrections are allowed before activity and locked afterward", () => {
+  const neutralCase: EndoCase = {
+    ...initialCase,
+    encounterId: "55555555-5555-4555-8555-555555555555",
+    createdAt: "2026-07-24T13:06:00.000Z",
+    tooth: "36",
+    priorVisit: { ...initialCase.priorVisit },
+    diagnosis: { ...initialCase.diagnosis },
+    preOp: { ...initialCase.preOp },
+    canals: [blankCanal("Main")],
+    globalEvents: [],
+    workflowInstances: [],
+  };
+  const selected = addPrimaryWorkflow(neutralCase, endodonticRootWorkflowId, "preop", {
+    now: "2026-07-24T13:07:00.000Z",
+  });
+  const instance = normalizeWorkflowInstances(selected, "preop")[0];
+  const corrected = updateWorkflowInstanceTarget(selected, instance.id, {
+    kind: "tooth",
+    tooth: "37",
+    label: "Tooth 37",
+  }, "preop", "2026-07-24T13:08:00.000Z");
+
+  assert.equal(getWorkflowTargetEditability(selected, instance.id, "preop").editable, true);
+  assert.equal(getWorkflowTargetTooth(corrected, endodonticRootWorkflowId, "preop"), "37");
+  const cleared = updateWorkflowInstanceTarget(corrected, instance.id, {
+    kind: "tooth",
+    label: "Tooth not set",
+  }, "preop", "2026-07-24T13:08:30.000Z");
+  assert.equal(getWorkflowTargetTooth(cleared, endodonticRootWorkflowId, "preop"), "");
+  assert.ok(getMissingRequirements("preop", protocolNodes.preop.options[0], cleared, cleared.canals[0]).includes("Tooth"));
+
+  const withActivity = normalizeCaseWorkflowInstances({
+    ...corrected,
+    activeWorkflowInstanceId: instance.id,
+    globalEvents: [{
+      id: "evt_target_lock",
+      timestamp: "2026-07-24T13:09:00.000Z",
+      type: "access.chamberReached",
+      workflowId: endodonticRootWorkflowId,
+      workflowRunId: instance.workflowRunId,
+      tooth: "37",
+      canal: "Main",
+      details: { workflowInstanceId: instance.id },
+    }],
+  }, "access-chamber", "2026-07-24T13:09:00.000Z");
+  const attemptedRetarget = updateWorkflowInstanceTarget(withActivity, instance.id, {
+    kind: "tooth",
+    tooth: "38",
+    label: "Tooth 38",
+  }, "access-chamber", "2026-07-24T13:10:00.000Z");
+
+  assert.equal(getWorkflowTargetEditability(withActivity, instance.id, "access-chamber").editable, false);
+  assert.equal(getWorkflowTargetTooth(attemptedRetarget, endodonticRootWorkflowId, "access-chamber"), "37");
+});
+
+test("endodontic decisions and notes use the workflow target instead of the changed default tooth", () => {
+  const selected = addPrimaryWorkflow(baseCase({ tooth: "36" }), endodonticRootWorkflowId, "preop", {
+    now: "2026-07-24T13:11:00.000Z",
+  });
+  const instance = normalizeWorkflowInstances(selected, "preop")
+    .find((item) => item.workflowId === endodonticRootWorkflowId);
+  assert.ok(instance);
+  const mismatchedDefault = {
+    ...selected,
+    tooth: "37",
+    activeWorkflowInstanceId: instance.id,
+    globalEvents: [radiologyReviewedEvent("36")],
+  };
+  assert.deepEqual(
+    getMissingRequirements("preop", protocolNodes.preop.options[0], mismatchedDefault, mismatchedDefault.canals[0]),
+    []
+  );
+  const result = applyDecision({
+    currentNodeId: "access-chamber",
+    selectedOptionLabel: "Chamber reached",
+    caseData: mismatchedDefault,
+    activeCanalName: "MB",
+    eventId: "evt_authoritative_target",
+    timestamp: "2026-07-24T13:12:00.000Z",
+    workflowId: endodonticRootWorkflowId,
+    workflowRunId: instance.workflowRunId,
+    workflowInstanceId: instance.id,
+  });
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.generatedEvent?.tooth, "36");
+  assert.match(buildCompactNote(mismatchedDefault), /^36 RCT\./);
+  assert.match(buildFullNote(mismatchedDefault), /^36 RCT/);
+  assert.match(buildPatientSummary(mismatchedDefault), /tooth 36/);
+  assert.equal(buildJsonExport(mismatchedDefault, "preop").tooth, "37");
+  assert.equal(buildJsonExport(mismatchedDefault, "preop").workflowInstances[0]?.target.tooth, "36");
 });
 
 test("operative lifecycle and target updates use instance-specific event identity", () => {
@@ -722,12 +819,14 @@ test("full-page case setup shows every selected discipline without merging their
     onOpenOperativeWorkflowSetup: noop,
     onPrimaryWorkflowSelectionChange: noop,
     onPrimaryWorkflowProcedureChange: noop,
+    onPrimaryWorkflowTargetToothChange: noop,
     onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
 
   assert.equal(markup.includes("Case identity"), true);
   assert.equal(markup.includes("Default tooth"), true);
+  assert.equal(markup.includes("Workflow target tooth"), true);
   assert.equal(markup.includes("Overall progress"), true);
   assert.equal(markup.includes("Derived from the selected workflow lifecycles."), true);
   assert.equal(markup.includes("Disciplines and treatment workflows"), true);
@@ -772,6 +871,7 @@ test("case setup keeps selected workflow sections visible from shared-module con
     onOpenRadiologyWorkflow: noop,
     onPrimaryWorkflowSelectionChange: noop,
     onPrimaryWorkflowProcedureChange: noop,
+    onPrimaryWorkflowTargetToothChange: noop,
     onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));
@@ -803,6 +903,7 @@ test("case setup keeps shared modules as summaries instead of inline event forms
     onOpenRadiologyWorkflow: noop,
     onPrimaryWorkflowSelectionChange: noop,
     onPrimaryWorkflowProcedureChange: noop,
+    onPrimaryWorkflowTargetToothChange: noop,
     onOpenPrimaryWorkflow: noop,
     onDownloadCaseJson: noop,
   }));

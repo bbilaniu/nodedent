@@ -6,22 +6,24 @@ import { buildCompactNote } from "./buildCompactNote";
 import { getPriorVisitLines } from "./priorVisit";
 import { getCapabilityStatus } from "../workflow/selectors";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
+import { getPrimaryCaseTargetTooth } from "../workflow/workflowInstances";
 
 export function buildFullNote(caseData: EndoCase) {
   const lines: string[] = [];
+  const targetTooth = getPrimaryCaseTargetTooth(caseData);
   const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed;
   const bwReviewed = caseData.preOp?.bwReviewed;
   const radiographStatus = getCapabilityStatus(
     caseData,
     "radiographs.reviewed",
-    caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined
+    targetTooth ? { kind: "tooth", tooth: targetTooth } : undefined
   );
   const compatibilityRadiographFields = [
     paReviewed ? "PA" : null,
     bwReviewed ? "BW" : null,
     caseData.preOp?.cbctReviewed ? "CBCT" : null,
   ].filter(Boolean);
-  lines.push(`${caseData.tooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}`);
+  lines.push(`${targetTooth || "Tooth ___"} ${caseData.procedureType || noTreatmentSelectedProcedure}`);
   if (caseData.patientNumber) lines.push(`Patient #: ${caseData.patientNumber}`);
   lines.push(`Visit status: ${getCaseStatus(caseData)}`);
   if (caseData.autosavedAt) lines.push(`Autosaved: ${new Date(caseData.autosavedAt).toLocaleString()}`);

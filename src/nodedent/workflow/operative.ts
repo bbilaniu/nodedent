@@ -178,9 +178,10 @@ export function createOperativeReadinessScopes(setup: OperativeWorkflowSetupStat
 
 export function getOperativeReadinessCapabilitySummary(
   caseData: EndoCase,
-  setup = getLatestOperativeWorkflowSetup(caseData)
+  setup = getLatestOperativeWorkflowSetup(caseData),
+  fallbackTooth = caseData.tooth
 ): CaseCapabilitySummary {
-  const scopes = createOperativeReadinessScopes(setup, caseData.tooth);
+  const scopes = createOperativeReadinessScopes(setup, fallbackTooth);
 
   return {
     diagnosis: getCapabilityStatus(caseData, "diagnosis.recorded", scopes.toothScope),

@@ -23,6 +23,21 @@ Confirmed on 2026-07-24:
 - existing `caseStatus`, note wording, import, and export behavior remain compatibility concerns during this tranche; and
 - a structured default target and non-tooth appointment default remain deferred until an implemented workflow requires them.
 
+## Implementation State
+
+Implemented on 2026-07-24:
+
+- the appointment scalar is presented as **Default tooth**;
+- a new workflow instance is seeded from the default tooth;
+- endodontic validation, decision events, shared-module launch context, workspace presentation, notes, and human-readable exports resolve the durable workflow target before using the legacy default;
+- an endodontic workflow target can be corrected before clinical activity and is locked after activity is recorded;
+- operative tooth and surface setup remain editable while the setup is being recorded and are locked after a final-restoration event;
+- changing the default tooth does not retarget an existing workflow;
+- structured JSON continues to export the legacy `tooth` field as the appointment default while exporting definitive targets on `workflowInstances`; and
+- cases without a durable compatible workflow instance retain the legacy tooth fallback for supported migration and import behavior.
+
+Repeatable same-type instances, structured appointment defaults, explicit appointment boundaries, visit disposition, and per-appointment note snapshots remain deferred to their owning work.
+
 ## Context
 
 The full-page Case Setup currently includes:

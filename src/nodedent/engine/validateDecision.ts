@@ -3,6 +3,8 @@ import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
 import { protocolNodes } from "../protocol/nodes";
 import { getCapabilityStatus, isKnownCapabilityName } from "../workflow/selectors";
+import { endodonticRootWorkflowId } from "../workflow/registry";
+import { getWorkflowTargetTooth } from "../workflow/workflowInstances";
 import { isBlank, isPositiveMeasurement, isValidFinalShape } from "./measurements";
 
 const closureReadyStatuses = new Set(["complete", "paused", "medicated", "referred"]);
@@ -42,12 +44,13 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
     if (!missing.includes(message)) missing.push(message);
   };
   const node = protocolNodes[nodeId];
-  const defaultCapabilityScope = caseData.tooth ? { kind: activeCanal?.name ? "canal" as const : "tooth" as const, tooth: caseData.tooth, canal: activeCanal?.name } : undefined;
+  const targetTooth = getWorkflowTargetTooth(caseData, endodonticRootWorkflowId, nodeId);
+  const defaultCapabilityScope = targetTooth ? { kind: activeCanal?.name ? "canal" as const : "tooth" as const, tooth: targetTooth, canal: activeCanal?.name } : undefined;
   const getRequirementScope = (requirement: CapabilityRequirement): WorkflowScope | undefined => {
-    if (!caseData.tooth) return undefined;
-    if (requirement.scopeKind === "tooth") return { kind: "tooth", tooth: caseData.tooth };
-    if (requirement.scopeKind === "canal") return { kind: "canal", tooth: caseData.tooth, canal: activeCanal?.name };
-    if (requirement.scopeKind === "procedure") return { kind: "procedure", procedureId: caseData.procedureType, tooth: caseData.tooth };
+    if (!targetTooth) return undefined;
+    if (requirement.scopeKind === "tooth") return { kind: "tooth", tooth: targetTooth };
+    if (requirement.scopeKind === "canal") return { kind: "canal", tooth: targetTooth, canal: activeCanal?.name };
+    if (requirement.scopeKind === "procedure") return { kind: "procedure", procedureId: caseData.procedureType, tooth: targetTooth };
     return defaultCapabilityScope;
   };
 
@@ -63,7 +66,7 @@ export function getMissingRequirements(nodeId: string, option: DecisionOption | 
 
   const label = option?.label || "";
   if (nodeId === "preop") {
-    if (isBlank(caseData.tooth)) addMissing("Tooth");
+    if (isBlank(targetTooth)) addMissing("Tooth");
     if (isBlank(caseData.procedureType)) addMissing("Procedure");
     if (!isPositiveMeasurement(caseData.preOp?.estimatedChamberDepth)) addMissing("Chamber depth in mm");
     if (!isPositiveMeasurement(activeCanal?.estimatedWorkingLength)) addMissing(`Estimated WL for ${activeCanal?.name || "active canal"}`);

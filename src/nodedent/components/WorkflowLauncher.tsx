@@ -93,7 +93,8 @@ export function WorkflowLauncher({
   const caseStatusLabel = getCaseStatus(caseData);
   const activeCaseFacts = [
     `Patient ${caseData.patientNumber || "not set"}`,
-    `Tooth ${caseData.tooth || "not set"}`,
+    `Default tooth ${caseData.tooth || "not set"}`,
+    ...workflowInstances.map((instance) => `${instance.label}: ${instance.target.label || instance.target.tooth || "target not set"}`),
     procedureLabel,
     caseStatusLabel,
     workflowInstances.length ? `${workflowInstances.length} primary workflow${workflowInstances.length === 1 ? "" : "s"}` : null,
