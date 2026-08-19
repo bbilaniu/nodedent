@@ -16,6 +16,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Case target and status model](specs/case-target-and-status-model.md)
 - [GUI consistency and design system](specs/gui-consistency-and-design-system.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
+- [Issue 20 remaining improvements](specs/issue-20-remaining-improvements.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [Local clinical data security, integrity, and recovery](specs/local-data-integrity-and-recovery.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
