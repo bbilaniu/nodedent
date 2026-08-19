@@ -76,6 +76,7 @@ export function DecisionCard({
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, showRequiredInputsSummary].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
+  const isTemporaryClosureHandoff = currentNode.id === "temporary-closure";
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
   const radiographStatus = getCapabilityStatus(
     caseData,
@@ -182,7 +183,14 @@ export function DecisionCard({
       </div>
       {isHandoffNode ? (
         <div className="mt-5 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
-          <h4 className="text-sm font-bold text-brand-navy">Work on another canal</h4>
+          <h4 className="text-sm font-bold text-brand-navy">
+            {isTemporaryClosureHandoff ? "Medicate remaining canals" : "Work on another canal"}
+          </h4>
+          {isTemporaryClosureHandoff ? (
+            <p className="mt-1 text-sm leading-6 text-brand-slate">
+              Select each unresolved canal to place calcium hydroxide before closing the shared access.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-2">
             {continuationTargets.length ? continuationTargets.map((target) => (
               <button
@@ -206,10 +214,12 @@ export function DecisionCard({
                 </span>
               </button>
             )) : (
-              <p className="rounded-xl border border-brand-blue-light/60 bg-white/70 px-3 py-2 text-sm text-brand-navy">No other canals are recorded yet.</p>
+              <p className="rounded-xl border border-brand-blue-light/60 bg-white/70 px-3 py-2 text-sm text-brand-navy">
+                {isTemporaryClosureHandoff ? "All recorded canals have a closure-ready status." : "No other canals are recorded yet."}
+              </p>
             )}
           </div>
-          <div className="mt-3 border-t border-brand-blue-light/60 pt-3">
+          {!isTemporaryClosureHandoff ? <div className="mt-3 border-t border-brand-blue-light/60 pt-3">
             <button
               type="button"
               onClick={onCreateNewCanal}
@@ -217,7 +227,7 @@ export function DecisionCard({
             >
               Add new canal
             </button>
-          </div>
+          </div> : null}
         </div>
       ) : null}
     </section>

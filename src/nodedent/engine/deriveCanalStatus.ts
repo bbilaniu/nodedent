@@ -65,3 +65,9 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (canal.priorVisitStatus === "locatedScouted") return "scouted";
   return "notStarted";
 }
+
+const closureReadyStatuses = new Set<CanalStatus>(["complete", "paused", "medicated", "referred"]);
+
+export function isCanalReadyForClosure(canal?: CanalRecord | null) {
+  return closureReadyStatuses.has(getCanalStatus(canal));
+}

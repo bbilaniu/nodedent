@@ -799,5 +799,6 @@ export const handoffNodeIds = new Set([
   "ready-for-obturation",
   "ready-for-sealer-cone-seating",
   "canal-obturation-complete",
+  "temporary-closure",
   "endodontic-pathway-complete",
 ]);

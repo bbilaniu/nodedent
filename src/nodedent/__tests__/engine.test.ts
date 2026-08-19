@@ -572,6 +572,7 @@ test("handoff nodes are intentional and resolvable", () => {
     "ready-for-obturation",
     "ready-for-sealer-cone-seating",
     "canal-obturation-complete",
+    "temporary-closure",
     "endodontic-pathway-complete",
   ];
 
@@ -2020,6 +2021,42 @@ test("temporary closure proceeds when every existing canal is declared", () => {
 
   assert.equal(result.nextNodeId, "endodontic-pathway-complete");
   assert.equal(result.generatedEvent?.type, "closure.temporary");
+});
+
+test("temporary closure handoff medicates unresolved canals one at a time", () => {
+  const medicationEvent = { id: "evt_med_mb", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
+  let caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [medicationEvent] },
+      blankCanal("DB"),
+      blankCanal("DL"),
+    ],
+    globalEvents: [medicationEvent],
+  });
+
+  let targets = getPhaseAwareCanalTargets(caseData, "temporary-closure", "MB");
+  assert.deepEqual(targets.map((target) => target.canalName), ["DB", "DL"]);
+  assert.deepEqual(targets.map((target) => target.label), ["Place calcium hydroxide in DB", "Place calcium hydroxide in DL"]);
+  assert.equal(targets[0].nextNodeId, "calcium-hydroxide");
+
+  caseData = { ...caseData, currentCanal: "DB" };
+  let result = applyFirstOption(caseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  caseData = result.updatedCaseData;
+
+  targets = getPhaseAwareCanalTargets(caseData, "temporary-closure", "DB");
+  assert.deepEqual(targets.map((target) => target.canalName), ["DL"]);
+
+  caseData = { ...caseData, currentCanal: "DL" };
+  result = applyFirstOption(caseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  caseData = result.updatedCaseData;
+
+  assert.deepEqual(getPhaseAwareCanalTargets(caseData, "temporary-closure", "DL"), []);
+  assert.deepEqual(getCanalsBlockingClosure(caseData), []);
+  result = applyFirstOption(caseData, "temporary-closure");
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
 });
 
 test("completed RCT closure records cleanup rinse final restoration and export status", () => {
