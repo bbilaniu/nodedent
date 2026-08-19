@@ -130,6 +130,8 @@ Residual follow-up:
 
 Reasoning level needed: medium-high. Existing tests cover focused branches; scenario fixtures should catch workflow regressions across realistic complete cases.
 
+Initial implementation now includes issue-derived continuous post-shaping scenarios that follow the engine's returned node IDs, covering the straightforward recapitulation-to-drying path, exact-step pause/export/import/resume behavior, and persistent-wet medication with temporary closure. Broader complete-case fixtures below remain active work.
+
 Scope:
 
 - Add scenario fixtures that exercise realistic full case flows.
@@ -181,6 +183,8 @@ Acceptance criteria:
 ## Phase 4: Chairside Usability Polish
 
 Reasoning level needed: medium. This phase should improve clinical ergonomics without changing protocol semantics.
+
+Initial implementation now places structured, step-specific measurement fields directly beside the active decision while retaining the full measurement panel, gives radiology-dependent steps a direct route into the shared radiology workflow, and requires review of current-visit anesthesia adequacy before completing endodontic pre-op.
 
 Scope:
 

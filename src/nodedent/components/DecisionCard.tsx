@@ -7,6 +7,7 @@ import { protocolNodes } from "../protocol/nodes";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { getCapabilityStatus } from "../workflow/selectors";
 import { cx, panelActionButton } from "./uiStyles";
+import { ContextualEndodonticInputs } from "./ContextualEndodonticInputs";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -47,6 +48,11 @@ export function DecisionCard({
   onContinueCanal,
   onCreateNewCanal,
   onOpenCaseSetupStatus,
+  onUpdatePreOp,
+  onUpdateActiveCanal,
+  onApplyEalDerivedLengths,
+  onOpenAnesthesiaWorkflow,
+  onOpenRadiologyWorkflow,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -60,8 +66,14 @@ export function DecisionCard({
   onContinueCanal: (target: CanalContinuationTarget) => void;
   onCreateNewCanal: () => void;
   onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onUpdatePreOp: (field: string, value: string | boolean) => void;
+  onUpdateActiveCanal: (field: string, value: string) => void;
+  onApplyEalDerivedLengths: () => void;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
+  onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
 }) {
-  const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, currentNode.requiredInputs?.length].filter(Boolean).length;
+  const showRequiredInputsSummary = Boolean(currentNode.requiredInputs?.length && !currentNode.contextualFieldIds?.length);
+  const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, showRequiredInputsSummary].filter(Boolean).length;
   const supportGridClass = supportBlockCount === 1 ? "md:grid-cols-1" : supportBlockCount === 2 ? "md:grid-cols-2" : "md:grid-cols-3";
   const recentNodeFeedback = getRecentNodeFeedback(currentNode, activeCanal);
   const preOpMissing = currentNode.id === "preop" ? getMissingRequirements(currentNode.id, currentNode.options[0], caseData, activeCanal) : [];
@@ -96,6 +108,16 @@ export function DecisionCard({
           {recentNodeFeedback}
         </div>
       ) : null}
+      <ContextualEndodonticInputs
+        currentNode={currentNode}
+        caseData={caseData}
+        activeCanal={activeCanal}
+        onUpdatePreOp={onUpdatePreOp}
+        onUpdateActiveCanal={onUpdateActiveCanal}
+        onApplyEalDerivedLengths={onApplyEalDerivedLengths}
+        onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
+        onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
+      />
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <div className="rounded-xl border border-brand-light-node bg-white p-3">
@@ -130,11 +152,11 @@ export function DecisionCard({
           </div>
         </div>
       ) : null}
-      {(currentNode.instruments?.length || currentNode.materials?.length || currentNode.requiredInputs?.length) && (
+      {(currentNode.instruments?.length || currentNode.materials?.length || showRequiredInputsSummary) && (
         <div className={`mt-4 grid gap-3 ${supportGridClass}`}>
           {currentNode.instruments?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Instruments</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.instruments)}</p></div> : null}
           {currentNode.materials?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Materials</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.materials)}</p></div> : null}
-          {currentNode.requiredInputs?.length ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Record before continuing</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.requiredInputs)}</p></div> : null}
+          {showRequiredInputsSummary ? <div className="rounded-2xl border border-brand-light-node p-3"><h4 className="text-xs font-bold uppercase tracking-wide text-brand-slate">Record before continuing</h4><p className="mt-2 text-sm text-brand-slate">{compactList(currentNode.requiredInputs)}</p></div> : null}
         </div>
       )}
       {validationMessage ? (

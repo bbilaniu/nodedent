@@ -11,6 +11,7 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
+import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
 import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
@@ -357,6 +358,22 @@ function radiologyReviewedEvent(tooth = "30") {
   return {
     ...event,
     capabilitiesSatisfied: [buildRadiographsReviewedCapability(event)],
+  };
+}
+
+function anesthesiaAdequateEvent(tooth = "30") {
+  const event = {
+    id: `evt_anesthesia_adequate_${tooth}`,
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    tooth,
+    scope: { kind: "tooth" as const, tooth },
+    details: { tooth, response: "adequate" as const },
+  };
+  return {
+    ...event,
+    capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(event)],
   };
 }
 
@@ -784,6 +801,64 @@ test("endodontic end-visit dialog shows current position and explicit stop choic
   assert.equal(markup.includes("Pause here and continue later"), true);
   assert.equal(markup.includes("Continue to medication / temporary closure"), true);
   assert.equal(markup.includes("Open referral / stop pathway"), true);
+});
+
+test("contextual endodontic inputs put pre-op fields and radiology action beside the decision", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    preOp: { ...initialCase.preOp, estimatedChamberDepth: "" },
+    canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "" }],
+    currentCanal: "MB",
+  });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes.preop,
+    caseData,
+    activeCanal: caseData.canals[0],
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+  }));
+
+  assert.equal(markup.includes("Record for this step"), true);
+  assert.equal(markup.includes("Chamber depth"), true);
+  assert.equal(markup.includes("Estimated WL"), true);
+  assert.equal(markup.includes("Record radiograph review"), true);
+  assert.equal(markup.includes("Review anesthesia record"), true);
+  assert.equal(markup.includes("Drying status"), false);
+});
+
+test("contextual endodontic inputs expose only the active step's canal fields", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    currentCanal: "DL",
+    canals: [{ ...blankCanal("MB"), dryingStatus: "dry" }, { ...blankCanal("DL"), shapingLength: "19", dryingStatus: "persistent wet" }],
+  });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes["dry-for-obturation"],
+    caseData,
+    activeCanal: caseData.canals[1],
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+  }));
+
+  assert.equal(markup.includes("DL</strong> canal record"), true);
+  assert.equal(markup.includes("Shaping length"), true);
+  assert.equal(markup.includes("Drying status"), true);
+  assert.equal(markup.includes("persistent wet"), true);
+  assert.equal(markup.includes("Chamber depth"), false);
+});
+
+test("protocol nodes declare structured contextual fields for guarded chairside inputs", () => {
+  assert.deepEqual(protocolNodes["advance-10c"].contextualFieldIds, ["estimatedWorkingLength", "fileTerminalLength"]);
+  assert.deepEqual(protocolNodes["establish-eal0"].contextualFieldIds, ["eal0", "patencyLength", "shapingLength", "referencePoint", "wlRadiographStatus"]);
+  assert.deepEqual(protocolNodes["create-final-shape"].contextualFieldIds, ["finalShape"]);
+  assert.deepEqual(protocolNodes["cone-fit-radiograph"].contextualFieldIds, ["coneFitRadiograph"]);
+  assert.deepEqual(protocolNodes["dry-for-obturation"].contextualFieldIds, ["shapingLength", "dryingStatus"]);
 });
 
 test("shared readiness actions open reusable setup and module paths for operative context", () => {
@@ -1350,7 +1425,7 @@ test("every protocol note event has a note fragment", () => {
 });
 
 test("valid transition produces next node and event", () => {
-  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
   const output = applyDecision({
     currentNodeId: "preop",
     selectedOptionLabel: "Pre-op review complete",
@@ -1363,16 +1438,18 @@ test("valid transition produces next node and event", () => {
   assert.deepEqual(output.errors, []);
   assert.equal(output.nextNodeId, "access-chamber");
   assert.equal(output.generatedEvent?.type, "preop.reviewCompleted");
-  assert.equal(output.updatedCaseData.globalEvents.length, 2);
+  assert.equal(output.updatedCaseData.globalEvents.length, 3);
 });
 
-test("pre-op review uses shared radiology capability instead of raw radiograph checkboxes", () => {
+test("pre-op review requires shared radiology and anesthesia capabilities", () => {
   const option = protocolNodes.preop.options[0];
   const missingRadiology = baseCase();
   const reviewedRadiology = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const ready = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
 
   assert.ok(getMissingRequirements("preop", option, missingRadiology, missingRadiology.canals[0]).includes("Radiograph review recorded for the planned tooth"));
-  assert.deepEqual(getMissingRequirements("preop", option, reviewedRadiology, reviewedRadiology.canals[0]), []);
+  assert.ok(getMissingRequirements("preop", option, reviewedRadiology, reviewedRadiology.canals[0]).includes("Review anesthesia record and confirm current-visit adequacy for the planned tooth"));
+  assert.deepEqual(getMissingRequirements("preop", option, ready, ready.canals[0]), []);
 });
 
 test("invalid node ID returns an error", () => {
@@ -1424,7 +1501,7 @@ test("difficulty flag is applied", () => {
 });
 
 test("input case data is not mutated", () => {
-  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
   const before = JSON.stringify(input);
   applyDecision({
     currentNodeId: "preop",

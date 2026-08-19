@@ -1559,6 +1559,11 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                       onContinueCanal={continueCanal}
                       onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
                       onOpenCaseSetupStatus={openCasePanel}
+                      onUpdatePreOp={updatePreOp}
+                      onUpdateActiveCanal={updateActiveCanal}
+                      onApplyEalDerivedLengths={applyEalDerivedLengths}
+                      onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+                      onOpenRadiologyWorkflow={openRadiologyWorkflow}
                     />
                   </section>
 
