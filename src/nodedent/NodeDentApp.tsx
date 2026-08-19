@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { CanalContinuationTarget, CaseSetupFocusTarget, ClinicalEvent, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
+import { EndodonticEndVisitDialog, endVisitActionConfig, type EndVisitActionId } from "./components/EndodonticEndVisitDialog";
 import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { CaseSetupPage } from "./components/CaseSetupPage";
 import { CaseEntryGate } from "./components/CaseEntryGate";
@@ -241,6 +242,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
+  const [isEndVisitOpen, setIsEndVisitOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
@@ -1097,6 +1099,23 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setValidationMessage(null);
   }
 
+  function completeEndVisitAction(actionId: EndVisitActionId, nextVisitPlan: string) {
+    if (!activeCanal) return;
+    const action = endVisitActionConfig[actionId];
+    const actionLabels: Record<EndVisitActionId, string> = {
+      pause: `Pause ${activeCanal.name} at ${currentNode.title}`,
+      medicate: `Continue ${activeCanal.name} to medication and temporary closure`,
+      refer: `Continue ${activeCanal.name} to referral / stop pathway`,
+    };
+
+    addManualCanalEvent(action.eventType, actionLabels[actionId], action.nextNodeId, action.difficultyFlag);
+    if (nextVisitPlan.trim()) {
+      setCaseData((prev) => ({ ...prev, nextVisitPlan: nextVisitPlan.trim() }));
+    }
+    setIsEndVisitOpen(false);
+    if (actionId === "pause") setIsWorkflowLauncherOpen(true);
+  }
+
   function resetActiveCanalManualStatus() {
     if (!activeCanal) return;
     setHistory((prev) => [...prev, { caseData, currentNodeId }]);
@@ -1578,8 +1597,29 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             <EventLog events={caseData.globalEvents} />
           </aside>
             </main>
+
+            {isEndodonticWorkflowActive ? (
+              <button
+                type="button"
+                onClick={() => setIsEndVisitOpen(true)}
+                className="fixed bottom-4 right-4 z-40 rounded-full border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-950 shadow-xl transition hover:-translate-y-0.5 hover:bg-amber-100 focus:outline-none focus:ring-4 focus:ring-amber-200"
+              >
+                Pause / end visit
+              </button>
+            ) : null}
           </>
         )}
+
+        {isEndVisitOpen && isEndodonticWorkflowActive ? (
+          <EndodonticEndVisitDialog
+            activeCanalName={activeCanal?.name || "active canal"}
+            currentNodeTitle={currentNode.title}
+            currentPhase={currentNode.phase}
+            initialNextVisitPlan={caseData.nextVisitPlan}
+            onSelectAction={completeEndVisitAction}
+            onClose={() => setIsEndVisitOpen(false)}
+          />
+        ) : null}
 
         {isWorkflowLauncherOpen ? (
           <WorkflowLauncher

@@ -11,6 +11,7 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
+import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
@@ -755,6 +756,34 @@ test("active workflow target panel renders operative setup without canal control
   assert.equal(markup.includes("36 MO"), true);
   assert.equal(markup.includes("Endodontic progress"), false);
   assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("endodontic end-visit action preserves a plain pause and routes clinical stop pathways", () => {
+  assert.equal(endVisitActionConfig.pause.eventType, "canal.paused");
+  assert.equal(endVisitActionConfig.pause.nextNodeId, null);
+  assert.equal(endVisitActionConfig.pause.requiresPlan, true);
+  assert.equal(endVisitActionConfig.medicate.eventType, "treatment.medicateTemporizeSelected");
+  assert.equal(endVisitActionConfig.medicate.nextNodeId, "calcium-hydroxide");
+  assert.equal(endVisitActionConfig.refer.eventType, "treatment.referralSelected");
+  assert.equal(endVisitActionConfig.refer.nextNodeId, "refer-pathway");
+});
+
+test("endodontic end-visit dialog shows current position and explicit stop choices", () => {
+  const markup = renderToStaticMarkup(React.createElement(EndodonticEndVisitDialog, {
+    activeCanalName: "MB",
+    currentNodeTitle: "Complete final shaping",
+    currentPhase: "Shaping",
+    initialNextVisitPlan: "Continue disinfection",
+    onSelectAction: () => {},
+    onClose: () => {},
+  }));
+
+  assert.equal(markup.includes("MB"), true);
+  assert.equal(markup.includes("Shaping"), true);
+  assert.equal(markup.includes("Complete final shaping"), true);
+  assert.equal(markup.includes("Pause here and continue later"), true);
+  assert.equal(markup.includes("Continue to medication / temporary closure"), true);
+  assert.equal(markup.includes("Open referral / stop pathway"), true);
 });
 
 test("shared readiness actions open reusable setup and module paths for operative context", () => {
