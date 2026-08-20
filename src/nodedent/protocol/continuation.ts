@@ -1,5 +1,5 @@
 import type { CanalContinuationTarget, CanalRecord, EndoCase } from "../types";
-import { getCanalStatus, hasEvent } from "../engine/deriveCanalStatus";
+import { getCanalStatus, hasEvent, isCanalReadyForClosure } from "../engine/deriveCanalStatus";
 import { getCanalCheckpointNodeId } from "../engine/getCurrentNode";
 import { getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal, priorCanalStatusLabels } from "../engine/resume";
 import { handoffNodeIds, protocolNodes } from "./nodes";
@@ -190,7 +190,21 @@ export function getCanalContinuationTargets(caseData: EndoCase, activeCanalName?
     .map((canal) => withCheckpointTarget(caseData, getNextRecommendedNodeForCanal(canal)));
 }
 
+function getTemporaryClosureMedicationTargets(caseData: EndoCase, activeCanalName?: string): CanalContinuationTarget[] {
+  return (caseData?.canals || [])
+    .filter((canal) => canal.name && canal.name !== activeCanalName && !isCanalReadyForClosure(canal))
+    .map((canal) => ({
+      canalName: canal.name,
+      status: getCanalStatus(canal),
+      label: `Place calcium hydroxide in ${canal.name}`,
+      phaseLabel: "medication / temporary closure",
+      nextNodeId: "calcium-hydroxide",
+      reason: `selected ${canal.name} for medication before shared temporary closure`,
+    }));
+}
+
 export function getPhaseAwareCanalTargets(caseData: EndoCase, currentNodeId: string, activeCanalName?: string) {
   if (!isPhaseAwareCanalHandoffNode(currentNodeId)) return [];
+  if (currentNodeId === "temporary-closure") return getTemporaryClosureMedicationTargets(caseData, activeCanalName);
   return getCanalContinuationTargets(caseData, activeCanalName);
 }

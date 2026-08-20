@@ -66,11 +66,13 @@ export function SelectInput({
   value,
   onChange,
   options,
+  invalid = false,
 }: {
   label: string;
   value?: string;
   onChange: (value: string) => void;
   options: string[];
+  invalid?: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? "");
 
@@ -88,7 +90,7 @@ export function SelectInput({
           setDraft(next);
           onChange(next);
         }}
-        className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
       >
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>

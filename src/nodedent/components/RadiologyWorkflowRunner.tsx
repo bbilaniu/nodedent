@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase } from "../types";
 import type { RadiologyEventDetails } from "../workflow/radiology";
-import { formatRadiologyEventFragment, radiologyEventTypes, sharedRadiologyWorkflow } from "../workflow/radiology";
+import { formatRadiologyEventFragment, isRadiologyReviewedEvent, radiologyEventTypes, sharedRadiologyWorkflow } from "../workflow/radiology";
 import { RadiologyEventForm } from "./RadiologyEventForm";
 
 export function RadiologyWorkflowRunner({
@@ -28,6 +28,7 @@ export function RadiologyWorkflowRunner({
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
   const completion = workflow.completionNodeIds.includes(currentNode.id);
   const targetTooth = launch.targetTooth || caseData.tooth;
+  const radiologyEvents = (caseData.globalEvents || []).filter(isRadiologyReviewedEvent);
 
   function recordEvent(details: RadiologyEventDetails) {
     const option = currentNode.options.find((item) => item.noteEvent?.type === radiologyEventTypes.reviewed) || currentNode.options[0];
@@ -53,12 +54,27 @@ export function RadiologyWorkflowRunner({
         ) : null}
       </div>
 
-      {latestRadiologyEvent ? (
-        <div className="mt-4 rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy">
-          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest radiology event</p>
-          <p className="mt-1 font-semibold">{formatRadiologyEventFragment(latestRadiologyEvent)}</p>
-        </div>
-      ) : null}
+      <div className="mt-4 rounded-2xl border border-brand-light-node bg-white p-4">
+        <h4 className="text-sm font-bold text-brand-navy">Radiograph entries</h4>
+        <p className="mt-1 text-xs leading-5 text-brand-slate">Each recorded radiograph review remains a separate event in the case record.</p>
+        {radiologyEvents.length ? (
+          <ol className="mt-3 grid gap-2">
+            {radiologyEvents.map((event, index) => (
+              <li key={event.id} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-brand-slate">Radiograph entry #{index + 1}</span>
+                  <time dateTime={event.timestamp} className="text-xs text-brand-slate">{event.timestamp}</time>
+                </div>
+                <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatRadiologyEventFragment(event)}</p>
+              </li>
+            ))}
+          </ol>
+        ) : latestRadiologyEvent ? (
+          <p className="mt-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold leading-6 text-brand-navy">{formatRadiologyEventFragment(latestRadiologyEvent)}</p>
+        ) : (
+          <p className="mt-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm text-brand-slate">No radiograph reviews recorded yet.</p>
+        )}
+      </div>
 
       {recordedLabel ? (
         <div className="mt-4 rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy">
@@ -70,6 +86,19 @@ export function RadiologyWorkflowRunner({
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <RadiologyEventForm key={moduleNodeId} tooth={targetTooth} onRecordEvent={recordEvent} />
         </div>
+      ) : null}
+
+      {completion ? (
+        <button
+          type="button"
+          onClick={() => {
+            setRecordedLabel("");
+            setModuleNodeId(workflow.entryNodeIds[0]);
+          }}
+          className="mt-4 rounded-xl border border-brand-blue-light bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+        >
+          Add another radiograph entry
+        </button>
       ) : null}
 
       <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">

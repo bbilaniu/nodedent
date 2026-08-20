@@ -5,6 +5,10 @@ import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
 import type { SavedCaseSummary } from "../state/clinicalVault";
 import { SelectInput, TextInput } from "./FormControls";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
+import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
+import type { CatalogItem } from "../workflow/catalogs";
+import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
+import type { ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupImportResult } from "../state/clinicalVault";
 
 export function SavedCasesModal({
   savedCases,
@@ -19,6 +23,11 @@ export function SavedCasesModal({
   onLoadSavedCase,
   onDeleteSavedCase,
   onDownloadEncryptedVaultBackup,
+  onPreviewEncryptedBackupImport,
+  onImportNewCasesFromEncryptedBackup,
+  onLockForRestore,
+  userCatalogItems,
+  onUserCatalogItemsChange,
 }: {
   savedCases: SavedCaseSummary[];
   importText: string;
@@ -32,6 +41,11 @@ export function SavedCasesModal({
   onLoadSavedCase: (caseId: string) => void;
   onDeleteSavedCase: (caseId: string) => void;
   onDownloadEncryptedVaultBackup: () => void;
+  onPreviewEncryptedBackupImport: (backup: ClinicalVaultBackup, passphrase: string) => Promise<EncryptedBackupImportPreview>;
+  onImportNewCasesFromEncryptedBackup: (backup: ClinicalVaultBackup, passphrase: string) => Promise<EncryptedBackupImportResult>;
+  onLockForRestore: () => void;
+  userCatalogItems: CatalogItem[];
+  onUserCatalogItemsChange: (items: CatalogItem[]) => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
@@ -48,10 +62,9 @@ export function SavedCasesModal({
         <ClinicalDataNotice compact />
 
         <div className="mt-4 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-brand-navy">Import / library actions</h3>
+          <h3 className="mb-3 text-sm font-semibold text-brand-navy">Case library actions</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <button onClick={onToggleImportBox} className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Import case JSON</button>
-            <button onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">Download encrypted vault backup</button>
             <div className="flex gap-2">
               <button onClick={onClearSavedCurrentCase} className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100">Clear current</button>
               <button onClick={onResetAllSavedCases} className="flex-1 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">Reset all</button>
@@ -65,6 +78,15 @@ export function SavedCasesModal({
             </div>
           ) : null}
         </div>
+
+        <BackupRecoveryPanel
+          onDownloadEncryptedVaultBackup={onDownloadEncryptedVaultBackup}
+          onPreviewEncryptedBackupImport={onPreviewEncryptedBackupImport}
+          onImportNewCasesFromEncryptedBackup={onImportNewCasesFromEncryptedBackup}
+          onLockForRestore={onLockForRestore}
+        />
+
+        <CatalogAdministrationPanel items={userCatalogItems} onChange={onUserCatalogItemsChange} />
 
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Recent autosaves</p>

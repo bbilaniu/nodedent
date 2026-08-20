@@ -1,4 +1,5 @@
 import type { ProtocolNode } from "../types";
+import { sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
 import { sharedRadiologyWorkflowId } from "../workflow/radiology";
 
 export const protocolNodes: Record<string, ProtocolNode> = {
@@ -9,8 +10,10 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Review pre-op radiographs and record chamber depth plus estimated WL for the active canal.",
     instruments: ["Pre-op PA/BW", "CBCT if available", "Rubber dam armamentarium"],
     requiredInputs: ["Tooth", "Procedure", "Chamber depth", "Estimated WL"],
+    contextualFieldIds: ["estimatedChamberDepth", "estimatedWorkingLength"],
     capabilityRequirements: [
       { name: "radiographs.reviewed", scopeKind: "tooth", message: "Radiograph review recorded for the planned tooth" },
+      { name: "anesthesia.adequate", scopeKind: "tooth", allowReassessment: true, message: "Review anesthesia record and confirm current-visit adequacy for the planned tooth" },
     ],
     moduleCalls: [
       {
@@ -18,6 +21,12 @@ export const protocolNodes: Record<string, ProtocolNode> = {
         title: "Radiology",
         reason: "Records scoped radiograph review for workflows that need image review context.",
         returnedCapabilities: ["radiographs.reviewed"],
+      },
+      {
+        workflowId: sharedAnesthesiaWorkflowId,
+        title: "Anesthesia",
+        reason: "Reviews current-visit anesthesia documentation and confirms adequacy for the planned tooth.",
+        returnedCapabilities: ["anesthesia.adequate"],
       },
     ],
     safetyNotes: ["Workflow/documentation aid only. Clinical judgment and referral thresholds still apply."],
@@ -30,6 +39,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Mark 557 bur to the target vertical depth. Access toward the pulp chamber and rinse as needed.",
     instruments: ["557 bur", "Water rinse"],
     requiredInputs: ["Chamber depth"],
+    contextualFieldIds: ["estimatedChamberDepth"],
     safetyNotes: ["If marked depth is reached and chamber is not found, stop and reassess radiographically."],
     options: [
       { label: "Chamber reached", nextNodeId: "confirm-chamber", noteEvent: { type: "access.chamberReached" } },
@@ -91,6 +101,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Estimate WL from pre-op PA and set the 10C file stopper for the active canal.",
     instruments: ["Pre-op PA", "10C hand file"],
     requiredInputs: ["Estimated WL for active canal"],
+    contextualFieldIds: ["estimatedWorkingLength"],
     options: [{ label: "10C stopper set to estimated WL", nextNodeId: "advance-10c", noteEvent: { type: "scouting.estimatedWLSet" } }],
   },
   "advance-10c": {
@@ -101,6 +112,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["10C hand file"],
     materials: ["File lubricant or aqueous irrigation"],
     requiredInputs: ["Estimated WL", "10C terminal length if short"],
+    contextualFieldIds: ["estimatedWorkingLength", "fileTerminalLength"],
     safetyNotes: ["Do not exceed estimated WL."],
     options: [
       {
@@ -131,6 +143,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "With 10C at terminal position, adjust stopper to a reproducible reference point, remove, and measure available treatment space.",
     instruments: ["10C hand file", "Endo ruler"],
     requiredInputs: ["Available treatment space", "Reference point"],
+    contextualFieldIds: ["availableTreatmentSpace", "referencePoint"],
     options: [
       {
         label: "Available treatment space >16 mm",
@@ -243,6 +256,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Adjust 10C until EAL reads 0. Capture WL radiograph and record EAL 0, patency length, shaping length, and reference point.",
     instruments: ["EAL", "10C hand file", "WL radiograph"],
     requiredInputs: ["EAL 0", "Patency length", "Shaping length", "Reference point"],
+    contextualFieldIds: ["eal0", "patencyLength", "shapingLength", "referencePoint", "wlRadiographStatus"],
     options: [
       {
         label: "EAL 0 recorded and WL radiograph taken",
@@ -266,6 +280,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["10C hand file"],
     materials: ["Diluted NaOCl", "File lubricant or aqueous irrigation"],
     requiredInputs: ["Patency length"],
+    contextualFieldIds: ["patencyLength"],
     options: [
       { label: "10C achieved patency length and is super loose", nextNodeId: "guide-path", noteEvent: { type: "glidePath.patencyAchieved" } },
       { label: "10C stops short of patency length", nextNodeId: "prebend-10c", difficultyFlag: "high", noteEvent: { type: "glidePath.patencyShort" } },
@@ -279,6 +294,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["Guide path file"],
     materials: ["Diluted NaOCl"],
     requiredInputs: ["EAL 0 / guide path length"],
+    contextualFieldIds: ["eal0"],
     options: [
       { label: "Guide path file reached EAL 0", nextNodeId: "gauge-final-shape", noteEvent: { type: "glidePath.created" } },
       { label: "Guide path file did not reach EAL 0", nextNodeId: "patency-10c", difficultyFlag: "caution", noteEvent: { type: "glidePath.fileShort" } },
@@ -291,6 +307,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Set 25 NiTi hand file to shaping length. Advance and assess resistance. If it reaches length with no resistance, sequentially gauge larger NiTi hand files before selecting the final shaping file/system. If it reaches within 0 to 2 mm with resistance, proceed to final shaping.",
     instruments: ["25 NiTi hand file", "Sequentially larger NiTi hand files"],
     requiredInputs: ["Shaping length"],
+    contextualFieldIds: ["shapingLength"],
     options: [
       { label: "25 NiTi reaches shaping length with no resistance", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.gaugeNoResistance" } },
       { label: "25 NiTi reaches within 0 to 2 mm with resistance", nextNodeId: "create-final-shape", difficultyFlag: "caution", noteEvent: { type: "shaping.gaugeResistanceNearLength" } },
@@ -304,6 +321,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Use the next size NiTi hand file at shaping length. Continue increasing one ISO size at a time until the next larger file no longer reaches shaping length or has clear binding/resistance. Record the largest size that predictably reaches shaping length, then choose the final shaping file/system.",
     instruments: ["Sequential NiTi hand files"],
     requiredInputs: ["Shaping length", "Final shaping file when the next larger file binds or stops short"],
+    contextualFieldIds: ["shapingLength", "finalShape"],
     options: [
       { label: "Next larger NiTi reaches shaping length; continue gauging", nextNodeId: "increase-shaping-gauge", noteEvent: { type: "shaping.nextGaugeReachedLength" } },
       { label: "Next larger NiTi binds / does not reach shaping length", nextNodeId: "create-final-shape", noteEvent: { type: "shaping.finalGaugeSelected" } },
@@ -317,6 +335,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Select the final shaping file according to the canal anatomy, glide path, gauging result, and file system being used. Shape to the recorded shaping length. Record the final shaping file/system.",
     instruments: ["Final shaping file/system"],
     requiredInputs: ["Final shaping file"],
+    contextualFieldIds: ["finalShape"],
     options: [
       {
         label: "Final shaping file reached shaping length",
@@ -347,6 +366,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Irrigate with 17% EDTA. Ideal canal exposure to EDTA is 90 to 120 seconds.",
     materials: ["17% EDTA"],
     requiredInputs: ["Shaping length", "Final shaping file"],
+    contextualFieldIds: ["shapingLength", "finalShape"],
     safetyNotes: ["Do not proceed to final disinfection until shaping is complete and canal length data are recorded."],
     options: [
       { label: "17% EDTA placed for 90 to 120 seconds", nextNodeId: "agitate-edta", noteEvent: { type: "smearLayer.edtaPlaced" } },
@@ -361,6 +381,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     instruments: ["30/.04 GP cone"],
     materials: ["17% EDTA"],
     requiredInputs: ["Shaping length"],
+    contextualFieldIds: ["shapingLength"],
     safetyNotes: ["Do not exceed shaping length during agitation."],
     options: [
       { label: "EDTA agitated without exceeding shaping length", nextNodeId: "final-naocl", noteEvent: { type: "smearLayer.edtaAgitated" } },
@@ -394,6 +415,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Set size 30 NiTi hand file to shaping length. Advance to shaping length and apply firm apical pressure.",
     instruments: ["Size 30 NiTi hand file"],
     requiredInputs: ["Shaping length"],
+    contextualFieldIds: ["shapingLength"],
     options: [
       { label: "Size 30 reaches shaping length and does not advance beyond", nextNodeId: "record-obturation-gauge", noteEvent: { type: "obturationGauge.size30Stop" } },
       { label: "Size 30 reaches shaping length and advances beyond", nextNodeId: "gauge-obturation-larger", difficultyFlag: "caution", noteEvent: { type: "obturationGauge.size30AdvancesBeyond" } },
@@ -407,6 +429,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Set size 25 NiTi hand file to shaping length. Advance to shaping length and apply firm apical pressure.",
     instruments: ["Size 25 NiTi hand file"],
     requiredInputs: ["Shaping length"],
+    contextualFieldIds: ["shapingLength"],
     options: [
       { label: "Size 25 reaches shaping length and does not advance beyond", nextNodeId: "record-obturation-gauge", noteEvent: { type: "obturationGauge.size25Stop" } },
       { label: "Size 25 reaches shaping length and advances beyond", nextNodeId: "gauge-obturation-larger", difficultyFlag: "caution", noteEvent: { type: "obturationGauge.size25AdvancesBeyond" } },
@@ -420,6 +443,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Set the next successively larger NiTi hand file to shaping length. Advance and apply firm apical pressure until a size reaches shaping length and does not advance beyond.",
     instruments: ["NiTi hand files"],
     requiredInputs: ["Obturation gauge size when a larger file stops at shaping length"],
+    contextualFieldIds: ["obturationGauge"],
     options: [
       { label: "Larger NiTi size stops at shaping length", nextNodeId: "record-obturation-gauge", noteEvent: { type: "obturationGauge.largerSizeStop" } },
       { label: "Larger NiTi continues to advance beyond", nextNodeId: "gauge-obturation-larger", difficultyFlag: "caution", noteEvent: { type: "obturationGauge.largerSizeAdvancesBeyond" } },
@@ -431,6 +455,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Record obturation gauge",
     chairsideInstruction: "Record the NiTi hand file size that achieved shaping length and did not advance beyond under firm apical pressure.",
     requiredInputs: ["Obturation gauge size"],
+    contextualFieldIds: ["obturationGauge"],
     options: [{ label: "Obturation gauge recorded", nextNodeId: "fit-master-cone", noteEvent: { type: "obturationGauge.recorded" } }],
   },
   "fit-master-cone": {
@@ -440,6 +465,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Choose a tapered GP cone matching the recorded obturation gauge size. Measure to shaping length and place to shaping length.",
     instruments: ["tapered GP cone"],
     requiredInputs: ["Master cone", "Shaping length"],
+    contextualFieldIds: ["masterCone", "shapingLength"],
     options: [
       { label: "Master cone fits to shaping length", nextNodeId: "cone-fit-radiograph", noteEvent: { type: "coneFit.masterConeFits" } },
       { label: "Master cone is short", nextNodeId: "cone-short", difficultyFlag: "caution", noteEvent: { type: "coneFit.masterConeShort" } },
@@ -465,6 +491,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Crimp the engaged cone at the reference point, remove and measure it, subtract shaping length, trim excess, and retry cone fit.",
     instruments: ["Locking cotton forceps", "Endo ruler", "Scissors"],
     requiredInputs: ["Master cone", "Shaping length", "Reference point"],
+    contextualFieldIds: ["masterCone", "shapingLength", "referencePoint"],
     options: [
       { label: "Cone trimmed and now fits shaping length", nextNodeId: "cone-fit-radiograph", noteEvent: { type: "coneFit.trimmedConeFits" } },
       { label: "Trimmed cone still does not fit", nextNodeId: "cone-short", difficultyFlag: "caution", noteEvent: { type: "coneFit.trimmedConeStillNotFit" } },
@@ -478,6 +505,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Confirm master cone fit with a periapical radiograph. Record cone fit status before removing the cone and setting it aside for later use.",
     instruments: ["PA radiograph"],
     requiredInputs: ["Cone fit radiograph status"],
+    contextualFieldIds: ["coneFitRadiograph"],
     options: [
       { label: "Cone fit radiograph acceptable", nextNodeId: "ready-for-sealer-cone-seating", noteEvent: { type: "coneFit.radiographAcceptable" } },
       { label: "Cone fit radiograph short", nextNodeId: "cone-short", difficultyFlag: "caution", noteEvent: { type: "coneFit.radiographShort" } },
@@ -490,6 +518,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     title: "Ready for sealer / cone seating",
     chairsideInstruction: "Cone fit has been confirmed radiographically. The active canal is ready for the existing sealer and cone seating workflow when the clinician chooses to continue.",
     requiredInputs: ["Cone fit radiograph status", "Master cone", "Shaping length"],
+    contextualFieldIds: ["coneFitRadiograph", "masterCone", "shapingLength"],
     options: [
       { label: "Proceed to sealer / cone seating workflow", nextNodeId: "dry-for-obturation", noteEvent: { type: "coneFit.readyForSealerConeSeating" } },
     ],
@@ -501,6 +530,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Dry the canal with measured 25/.04 paper points to shaping length. Larger paper points may be used initially, but final drying should be honed with 25/.04 paper points.",
     instruments: ["25/.04 paper points"],
     requiredInputs: ["Shaping length", "Drying status"],
+    contextualFieldIds: ["shapingLength", "dryingStatus"],
     options: [
       { label: "Paper point dry or slightly damp", nextNodeId: "patency-before-sealer", noteEvent: { type: "drying.readyForSealer" } },
       { label: "Paper point wet", nextNodeId: "dry-for-obturation", difficultyFlag: "caution", noteEvent: { type: "drying.paperPointWet" } },
@@ -514,6 +544,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Measure 10C hand file to patency length and work at patency length until super loose before sealer placement.",
     instruments: ["10C hand file"],
     requiredInputs: ["Patency length"],
+    contextualFieldIds: ["patencyLength"],
     options: [
       { label: "10C super loose at patency length", nextNodeId: "apply-sealer", noteEvent: { type: "sealer.patencyConfirmed" } },
       { label: "10C does not reach patency length", nextNodeId: "prebend-10c", difficultyFlag: "high", noteEvent: { type: "sealer.patencyNotConfirmed" } },
@@ -539,6 +570,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Measure 25/.04 paper point to shaping length and advance through the applied sealer to shaping length.",
     instruments: ["25/.04 paper point"],
     requiredInputs: ["Shaping length"],
+    contextualFieldIds: ["shapingLength"],
     options: [
       { label: "Paper point passed through sealer to shaping length", nextNodeId: "reapply-sealer", noteEvent: { type: "sealer.paperPointDistributed" } },
       { label: "Paper point does not reach shaping length", nextNodeId: "patency-before-sealer", difficultyFlag: "caution", noteEvent: { type: "sealer.paperPointShort" } },
@@ -564,6 +596,7 @@ export const protocolNodes: Record<string, ProtocolNode> = {
     chairsideInstruction: "Advance the pre-fit .04 tapered gutta-percha cone into the canal to shaping length.",
     instruments: ["Pre-fit .04 tapered GP cone"],
     requiredInputs: ["Master cone", "Shaping length"],
+    contextualFieldIds: ["masterCone", "shapingLength"],
     options: [
       { label: "GP cone seats at shaping length", nextNodeId: "evaluate-orifice-gap", noteEvent: { type: "gpSeating.coneSeated" } },
       { label: "GP cone does not seat to shaping length", nextNodeId: "patency-before-sealer", difficultyFlag: "caution", noteEvent: { type: "gpSeating.coneShortAfterSealer" } },
@@ -766,5 +799,6 @@ export const handoffNodeIds = new Set([
   "ready-for-obturation",
   "ready-for-sealer-cone-seating",
   "canal-obturation-complete",
+  "temporary-closure",
   "endodontic-pathway-complete",
 ]);
