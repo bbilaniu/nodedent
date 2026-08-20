@@ -56,6 +56,7 @@ import {
 } from "../workflow/anesthesia";
 import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
 import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import { formatLocalTime24, formatTime24Value, getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
@@ -1378,7 +1379,7 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
   assert.equal(radiologyMarkup.includes("Radiology"), true);
   assert.equal(radiologyMarkup.includes("Record radiograph review"), true);
-  assert.equal(radiologyMarkup.includes("Latest radiology event"), true);
+  assert.equal(radiologyMarkup.includes("Radiograph entries"), true);
   assert.equal(radiologyMarkup.includes("Close shared workflow"), true);
   assert.equal(activeIsolationMarkup.includes("Record placement"), true);
   assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
@@ -1386,6 +1387,91 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(activeIsolationMarkup.includes("Save shortcuts"), true);
   assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
   assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
+});
+
+test("shared anesthesia and radiology runners keep repeatable events visible as separate entries", () => {
+  const noop = () => {};
+  const anesthesiaEvents = [
+    {
+      id: "evt_anesthesia_entry_1",
+      timestamp: "2026-08-20T09:05:00.000Z",
+      type: anesthesiaEventTypes.administered,
+      workflowId: sharedAnesthesiaWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { route: "injection", agentLabel: "First documented agent", administeredAt: "09:05", tooth: "36" },
+    },
+    {
+      id: "evt_anesthesia_entry_2",
+      timestamp: "2026-08-20T09:25:00.000Z",
+      type: anesthesiaEventTypes.topUpGiven,
+      workflowId: sharedAnesthesiaWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { route: "injection", agentLabel: "Second documented agent", administeredAt: "09:25", tooth: "36" },
+    },
+  ];
+  const radiologyEvents = [
+    {
+      id: "evt_radiology_entry_1",
+      timestamp: "2026-08-20T08:30:00.000Z",
+      type: radiologyEventTypes.reviewed,
+      workflowId: sharedRadiologyWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { modalities: ["pa"], tooth: "36" },
+    },
+    {
+      id: "evt_radiology_entry_2",
+      timestamp: "2026-08-20T08:40:00.000Z",
+      type: radiologyEventTypes.reviewed,
+      workflowId: sharedRadiologyWorkflowId,
+      scope: { kind: "custom" as const, teeth: ["36", "37"] },
+      details: { modalities: ["cbct"], teeth: ["36", "37"], regionKind: "teeth" },
+    },
+  ];
+  const caseData = baseCase({ tooth: "36", globalEvents: [...anesthesiaEvents, ...radiologyEvents] });
+
+  const anesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-record",
+      workflowRunId: "run_shared_anesthesia_entries",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_entries",
+    latestAnesthesiaEvent: anesthesiaEvents.at(-1),
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+  const radiologyMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedRadiologyWorkflowId,
+      entryNodeId: "radiology-complete",
+      workflowRunId: "run_shared_radiology_entries",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_entries",
+    latestRadiologyEvent: radiologyEvents.at(-1),
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+
+  assert.equal(anesthesiaMarkup.includes("Administration #1"), true);
+  assert.equal(anesthesiaMarkup.includes("Administration #2"), true);
+  assert.equal(anesthesiaMarkup.includes("First documented agent"), true);
+  assert.equal(anesthesiaMarkup.includes("Second documented agent"), true);
+  assert.equal(anesthesiaMarkup.includes("Set to now"), true);
+  assert.equal(anesthesiaMarkup.includes("Clear time"), true);
+  assert.match(anesthesiaMarkup, /type="time"/);
+  assert.equal(radiologyMarkup.includes("Radiograph entry #1"), true);
+  assert.equal(radiologyMarkup.includes("Radiograph entry #2"), true);
+  assert.equal(radiologyMarkup.includes("modalities: PA"), true);
+  assert.equal(radiologyMarkup.includes("modalities: CBCT"), true);
+  assert.equal(radiologyMarkup.includes("Add another radiograph entry"), true);
 });
 
 test("every protocol note event has a note fragment", () => {
@@ -3203,8 +3289,15 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.equal(seedAnesthesiaCatalogItems.every((item) => item.owner === "seed"), true);
   assert.equal(seedAnesthesiaCatalogItems.every((item) => item.category === "anesthesia"), true);
   assert.equal(seedAnesthesiaCatalogItems.some((item) => item.label === "Infiltration" && item.appliesTo?.route === "injection" && item.appliesTo.field === "techniques"), true);
-  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), []);
-  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), [
+    "Articaine 4% with 1:200K epinephrine",
+    "Lidocaine 2% with 1:100K epinephrine",
+    "Mepivacaine 3% without epinephrine",
+  ]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), [
+    "Benzocaine 20% paste",
+    "ORAQIX® (lidocaine and prilocaine periodontal gel) 2.5%/2.5%",
+  ]);
   assert.deepEqual(getAnesthesiaCatalogOptions("other", "agents"), []);
   assert.equal(getAnesthesiaCatalogOptions("injection", "techniques").includes("Infiltration"), true);
   assert.equal(getAnesthesiaCatalogOptions("topical", "techniques").includes("Infiltration"), false);
@@ -3714,6 +3807,28 @@ test("shared anesthesia phase 6A uses explicit clinician-entered reassessment ti
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
   assert.equal(administrationStatus.satisfied, false);
   assert.equal(administrationStatus.needsReassessment, false);
+});
+
+test("anesthesia administration time uses validated local HH:mm values", () => {
+  const now = new Date(2026, 7, 20, 9, 5);
+  const form = defaultAnesthesiaFormState("36", anesthesiaEventTypes.administered, now);
+
+  assert.equal(formatLocalTime24(now), "09:05");
+  assert.equal(getCurrentTimeString(now), "09:05");
+  assert.equal(form.administeredAt, "09:05");
+  assert.equal(formatTime24Value("9:05"), "09:05");
+  assert.equal(formatTime24Value("24:00"), "");
+  assert.equal(isCompleteTime24("09:05"), true);
+  assert.equal(isCompleteTime24("9:05"), false);
+  assert.equal(canSubmitAnesthesiaForm("administration", form), true);
+  assert.equal(canSubmitAnesthesiaForm("administration", { ...form, administeredAt: "9:05" }), false);
+  assert.equal(canSubmitAnesthesiaForm("administration", { ...form, administeredAt: "" }), true);
+
+  const assessment = buildAnesthesiaEventFromForm("assessment", {
+    ...form,
+    response: "adequate",
+  });
+  assert.equal(assessment?.details.administeredAt, undefined);
 });
 
 test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {

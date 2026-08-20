@@ -7,6 +7,18 @@ created_on: 2026-08-19
 
 This spec records the two improvements from [GitHub issue #20](https://github.com/bbilaniu/nodedent/issues/20) that remain after the chairside pause/end-visit flow, endodontic scenario coverage, and contextual required inputs were implemented.
 
+## Implementation Progress
+
+The first local-anesthesia and repeatable-entry slice now provides:
+
+- validated local `HH:mm` formatting for anesthesia administration;
+- current-time initialization plus `Set to now` and `Clear time` controls;
+- separate, persistently visible anesthesia administration and top-up entries in the shared workflow;
+- separate, persistently visible radiograph review entries with an explicit add-another action; and
+- route-scoped anesthetic product suggestions adapted from the HygieneNote catalogue without copying automatic amount or duration defaults.
+
+Remaining work in this spec includes consolidated catalogue persistence/management and the backup-and-recovery administration workflow.
+
 ## 4. Make Encrypted Backup And Recovery Easier To Understand
 
 ### Problem
@@ -67,12 +79,12 @@ Do not place real clinical records or an unencrypted copy of the live vault outs
 
 Replace free-text anesthesia time entry with a native time input backed by the existing `administeredAt` field. When a new administration form opens, populate it with the clinician device's current local time. Provide adjacent controls:
 
-- `Now` resets the value to the current local time.
-- `Clear` removes the value.
+- `Set to now` resets the value to the current local time.
+- `Clear time` removes the value.
 
 Keep the value editable and do not recalculate it when the event is submitted. Existing imported free-text values should remain readable; migration or normalization should not discard historical documentation.
 
-Add a clinically reviewed seed list for commonly documented anesthetic agents. The list must come from approved project source material or an explicit clinician-approved list; implementation must not infer drug choices, doses, concentrations, or recommendations. Seed entries are documentation suggestions only and must never auto-populate dose or adequacy.
+Use the existing HygieneNote local-anesthetic catalogue as the reviewed source list for commonly documented anesthetic product labels. Adapt entries to NodeDent's supported routes, and do not copy HygieneNote's automatic amount or duration metadata. Implementation must not infer drug choices, doses, concentrations, or recommendations. Seed entries are documentation suggestions only and must never auto-populate dose or adequacy.
 
 Preserve the existing catalog ownership model:
 
@@ -102,4 +114,3 @@ Implement local-anesthesia time controls and catalog wording first because they 
 - Run `npm test` for catalog, form-state, import, encryption, and transactional behavior changes.
 - Run `npm run build` after code or configuration changes.
 - Run `npm run docs:check` after this spec or its lifecycle status changes.
-

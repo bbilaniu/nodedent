@@ -112,6 +112,11 @@ export function buildUserAnesthesiaCatalogItemsFromForm(form: AnesthesiaFormStat
 }
 
 export const seedAnesthesiaCatalogItems: CatalogItem[] = [
+  anesthesiaCatalogItem("agents", "injection", "Articaine 4% with 1:200K epinephrine", 10, { source: "HygieneNote local anesthetic catalogue" }),
+  anesthesiaCatalogItem("agents", "injection", "Lidocaine 2% with 1:100K epinephrine", 20, { source: "HygieneNote local anesthetic catalogue" }),
+  anesthesiaCatalogItem("agents", "injection", "Mepivacaine 3% without epinephrine", 30, { source: "HygieneNote local anesthetic catalogue" }),
+  anesthesiaCatalogItem("agents", "topical", "Benzocaine 20% paste", 10, { source: "HygieneNote local anesthetic catalogue" }),
+  anesthesiaCatalogItem("agents", "topical", "ORAQIX® (lidocaine and prilocaine periodontal gel) 2.5%/2.5%", 20, { source: "HygieneNote local anesthetic catalogue" }),
   anesthesiaCatalogItem("techniques", "injection", "Infiltration", 10),
   anesthesiaCatalogItem("techniques", "injection", "Block", 20),
   anesthesiaCatalogItem("techniques", "injection", "Intraligamentary / PDL", 30, { aliases: ["PDL"] }),
