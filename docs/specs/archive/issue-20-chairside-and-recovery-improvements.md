@@ -1,11 +1,14 @@
 ---
-status: active
+status: implemented
 created_on: 2026-08-19
+completed_on: 2026-08-20
+archived_on: 2026-08-20
+archive_reason: Issue 20 chairside, documentation, catalogue, and initial encrypted-recovery improvements are implemented; advanced revision conflict resolution has its own active spec.
 ---
 
-# Issue 20 Remaining Improvements
+# Issue 20 Chairside And Recovery Improvements
 
-This spec records the two improvements from [GitHub issue #20](https://github.com/bbilaniu/nodedent/issues/20) that remain after the chairside pause/end-visit flow, endodontic scenario coverage, and contextual required inputs were implemented.
+This archived spec records the completed follow-up improvements from [GitHub issue #20](https://github.com/bbilaniu/nodedent/issues/20). Advanced revision conflict handling is tracked separately in [Encrypted backup revision conflict resolution](../encrypted-backup-revision-conflict-resolution.md).
 
 ## Implementation Progress
 
