@@ -8,7 +8,7 @@ import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
 import type { CatalogItem } from "../workflow/catalogs";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
-import type { ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupImportResult } from "../state/clinicalVault";
+import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
 
 export function SavedCasesModal({
   savedCases,
@@ -24,7 +24,10 @@ export function SavedCasesModal({
   onDeleteSavedCase,
   onDownloadEncryptedVaultBackup,
   onPreviewEncryptedBackupImport,
-  onImportNewCasesFromEncryptedBackup,
+  onResolveEncryptedBackupImport,
+  recoveryHistory,
+  activeEncounterId,
+  onRestoreRecoveryHistoryEntry,
   onLockForRestore,
   userCatalogItems,
   onUserCatalogItemsChange,
@@ -42,7 +45,10 @@ export function SavedCasesModal({
   onDeleteSavedCase: (caseId: string) => void;
   onDownloadEncryptedVaultBackup: () => void;
   onPreviewEncryptedBackupImport: (backup: ClinicalVaultBackup, passphrase: string) => Promise<EncryptedBackupImportPreview>;
-  onImportNewCasesFromEncryptedBackup: (backup: ClinicalVaultBackup, passphrase: string) => Promise<EncryptedBackupImportResult>;
+  onResolveEncryptedBackupImport: (backup: ClinicalVaultBackup, passphrase: string, resolutions: BackupConflictResolution[]) => Promise<EncryptedBackupResolutionResult>;
+  recoveryHistory: RecoveryHistorySummary[];
+  activeEncounterId: string;
+  onRestoreRecoveryHistoryEntry: (id: string) => Promise<void>;
   onLockForRestore: () => void;
   userCatalogItems: CatalogItem[];
   onUserCatalogItemsChange: (items: CatalogItem[]) => void;
@@ -82,7 +88,10 @@ export function SavedCasesModal({
         <BackupRecoveryPanel
           onDownloadEncryptedVaultBackup={onDownloadEncryptedVaultBackup}
           onPreviewEncryptedBackupImport={onPreviewEncryptedBackupImport}
-          onImportNewCasesFromEncryptedBackup={onImportNewCasesFromEncryptedBackup}
+          onResolveEncryptedBackupImport={onResolveEncryptedBackupImport}
+          recoveryHistory={recoveryHistory}
+          activeEncounterId={activeEncounterId}
+          onRestoreRecoveryHistoryEntry={onRestoreRecoveryHistoryEntry}
           onLockForRestore={onLockForRestore}
         />
 

@@ -1,13 +1,22 @@
 ---
-status: active
+status: implemented
 created_on: 2026-08-20
+completed_on: 2026-08-20
+archived_on: 2026-08-20
+archive_reason: Content-aware conflict review, protected transactional replacement, recovery history, and backup compatibility are implemented.
 ---
 
 # Encrypted Backup Revision Conflict Resolution
 
+## Implementation Status
+
+Implemented behavior includes canonical clinical-content digests, explicit identical/older/newer/divergent classification, structured difference summaries, safe-default per-encounter decisions, active-encounter replacement blocking, encrypted displaced-version history, transactional replacement and history restoration, stale-preview detection, version 1 backup compatibility, and version 2 backup export/restore with authenticated recovery history.
+
+Recovery history is retained until its primary encounter is deleted or the vault is cleared or replaced. It is included in version 2 encrypted backups. Field-level clinical merging and automatic fast-forward remain out of scope because the vault does not claim snapshot ancestry.
+
 ## Context
 
-NodeDent can import encounters from an authenticated encrypted backup when their immutable encounter IDs do not already exist in the unlocked local vault. When an incoming ID already exists, the import preview reports its revision relationship and leaves the local encounter unchanged. This safe baseline was completed as part of [Issue 20 chairside and recovery improvements](archive/issue-20-chairside-and-recovery-improvements.md).
+NodeDent can import encounters from an authenticated encrypted backup when their immutable encounter IDs do not already exist in the unlocked local vault. When an incoming ID already exists, the import preview reports its revision relationship and leaves the local encounter unchanged. This safe baseline was completed as part of [Issue 20 chairside and recovery improvements](issue-20-chairside-and-recovery-improvements.md).
 
 Revision numbers alone cannot prove that two snapshots have the same content or share a linear history. Separate copies of an encounter may reach the same revision with different edits, and a numerically newer backup snapshot is not necessarily descended from the current local snapshot. Advanced recovery therefore needs content-aware comparison and explicit clinician-controlled resolution rather than a newest-revision-wins rule.
 

@@ -8,7 +8,7 @@ archive_reason: Issue 20 chairside, documentation, catalogue, and initial encryp
 
 # Issue 20 Chairside And Recovery Improvements
 
-This archived spec records the completed follow-up improvements from [GitHub issue #20](https://github.com/bbilaniu/nodedent/issues/20). Advanced revision conflict handling is tracked separately in [Encrypted backup revision conflict resolution](../encrypted-backup-revision-conflict-resolution.md).
+This archived spec records the completed follow-up improvements from [GitHub issue #20](https://github.com/bbilaniu/nodedent/issues/20). Advanced revision conflict handling is tracked separately in [Encrypted backup revision conflict resolution](encrypted-backup-revision-conflict-resolution.md).
 
 ## Implementation Progress
 

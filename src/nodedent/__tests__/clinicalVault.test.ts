@@ -47,6 +47,15 @@ async function rawCaseRecords(factory: IDBFactory, databaseName: string) {
   }
 }
 
+async function rawRecoveryRecords(factory: IDBFactory, databaseName: string) {
+  const database = await requestResult(factory.open(databaseName));
+  try {
+    return await requestResult(database.transaction("recoveryHistory", "readonly").objectStore("recoveryHistory").getAll());
+  } finally {
+    database.close();
+  }
+}
+
 class MemoryStorage implements Storage {
   private readonly values = new Map<string, string>();
 
@@ -136,16 +145,18 @@ test("encrypted backup import previews and adds only new encounter IDs", async (
   await targetSession.saveCase(localShared, "preop", 1);
 
   const preview = await targetSession.previewEncryptedBackupImport(backup, PASSPHRASE);
-  assert.deepEqual(preview, {
-    formatVersion: 1,
-    exportedAt: backup.exportedAt,
-    totalCases: 2,
-    additions: 1,
-    existingEncounterIds: 1,
-    sameRevision: 0,
-    incomingNewer: 0,
-    incomingOlder: 1,
-  });
+  assert.equal(preview.formatVersion, 2);
+  assert.equal(preview.exportedAt, backup.exportedAt);
+  assert.equal(preview.totalCases, 2);
+  assert.equal(preview.additions, 1);
+  assert.equal(preview.existingEncounterIds, 1);
+  assert.equal(preview.sameRevision, 0);
+  assert.equal(preview.incomingNewer, 0);
+  assert.equal(preview.incomingOlder, 1);
+  assert.equal(preview.identicalContent, 0);
+  assert.equal(preview.conflicts.length, 1);
+  assert.equal(preview.conflicts[0].classification, "incomingOlder");
+  assert.match(preview.conflicts[0].differences.join(" "), /Tooth/u);
 
   await assert.rejects(
     targetSession.previewEncryptedBackupImport(backup, "wrong backup passphrase 2026"),
@@ -194,6 +205,264 @@ test("encrypted backup import previews and adds only new encounter IDs", async (
     (error: unknown) => error instanceof ClinicalVaultError && error.code === "INVALID_BACKUP"
   );
   assert.equal((await targetSession.listCases()).length, 2);
+
+  sourceSession.close();
+  targetSession.close();
+});
+
+test("backup conflicts require explicit resolution and archive displaced snapshots", async () => {
+  const sourceStore = new ClinicalVaultStore(new IDBFactory(), "vault-resolution-source-test");
+  const sourceSession = await sourceStore.create(PASSPHRASE);
+  const incomingConflict = { ...clinicalCase(), tooth: "36" };
+  const incomingAddition = {
+    ...clinicalCase(),
+    encounterId: "dddddd12-abcd-4abc-8abc-abcdefabcdef",
+    patientNumber: "24680",
+    tooth: "37",
+  };
+  const incomingDeferred = {
+    ...clinicalCase(),
+    encounterId: "ababab12-abcd-4abc-8abc-abcdefabcdef",
+    patientNumber: "11223",
+    tooth: "45",
+  };
+  await sourceSession.saveCase(incomingConflict, "preop", 0);
+  await sourceSession.saveCase(incomingAddition, "preop", 0);
+  await sourceSession.saveCase(incomingDeferred, "preop", 0);
+  const backup = await sourceSession.exportEncryptedBackup();
+  assert.equal(backup.formatVersion, 2);
+  assert.deepEqual(backup.recoveryHistory, []);
+
+  const targetFactory = new IDBFactory();
+  const targetStore = new ClinicalVaultStore(targetFactory, "vault-resolution-target-test");
+  const targetSession = await targetStore.create("target recovery passphrase 2026");
+  await targetSession.saveCase({ ...incomingConflict, tooth: "38" }, "preop", 0);
+  await targetSession.saveCase({ ...incomingDeferred, tooth: "44" }, "preop", 0);
+  const activeOther = {
+    ...clinicalCase(),
+    encounterId: "eeeeee12-abcd-4abc-8abc-abcdefabcdef",
+    patientNumber: "13579",
+    tooth: "46",
+  };
+  await targetSession.saveCase(activeOther, "preop", 0);
+
+  const preview = await targetSession.previewEncryptedBackupImport(backup, PASSPHRASE);
+  assert.equal(preview.additions, 1);
+  assert.equal(preview.conflicts.length, 2);
+  const conflict = preview.conflicts.find((item) => item.encounterId === incomingConflict.encounterId)!;
+  const deferredConflict = preview.conflicts.find((item) => item.encounterId === incomingDeferred.encounterId)!;
+  assert.equal(conflict.classification, "divergentSameRevision");
+  assert.equal(conflict.activeEncounter, false);
+  assert.equal(conflict.local.tooth, "38");
+  assert.equal(conflict.incoming.tooth, "36");
+
+  await assert.rejects(
+    targetSession.resolveEncryptedBackupImport(backup, PASSPHRASE, []),
+    (error: unknown) => error instanceof ClinicalVaultError && error.code === "CONFLICT"
+  );
+  assert.equal((await targetSession.listCases()).length, 3);
+
+  const result = await targetSession.resolveEncryptedBackupImport(backup, PASSPHRASE, [
+    {
+      encounterId: conflict.encounterId,
+      action: "replaceWithBackup",
+      expectedLocalRevision: conflict.local.revision,
+      localDigest: conflict.localDigest,
+      incomingDigest: conflict.incomingDigest,
+    },
+    {
+      encounterId: deferredConflict.encounterId,
+      action: "defer",
+      expectedLocalRevision: deferredConflict.local.revision,
+      localDigest: deferredConflict.localDigest,
+      incomingDigest: deferredConflict.incomingDigest,
+    },
+  ]);
+  assert.deepEqual(result, {
+    imported: 1,
+    replaced: 1,
+    archived: 1,
+    keptLocal: 0,
+    deferred: 1,
+    identicalSkipped: 0,
+    failed: 0,
+  });
+  assert.equal((await targetSession.loadCase(incomingConflict.encounterId))?.caseData.tooth, "36");
+  assert.equal((await targetSession.loadCase(incomingConflict.encounterId))?.revision, 2);
+  assert.equal((await targetSession.loadCase(incomingAddition.encounterId))?.caseData.patientNumber, "24680");
+  assert.equal((await targetSession.loadCase(incomingDeferred.encounterId))?.caseData.tooth, "44");
+  const history = await targetSession.listRecoveryHistory(incomingConflict.encounterId);
+  assert.equal(history.length, 1);
+  assert.equal(history[0].revision, 1);
+  assert.equal(history[0].tooth, "38");
+  assert.equal((await targetSession.loadRecoveryHistorySnapshot(history[0].id))?.caseData.tooth, "38");
+  const rawHistoryText = JSON.stringify(await rawRecoveryRecords(targetFactory, "vault-resolution-target-test"));
+  assert.equal(rawHistoryText.includes("12345"), false);
+  assert.equal(rawHistoryText.includes("backup-conflict-replacement"), false);
+  assert.match(rawHistoryText, /ciphertext/u);
+
+  const recoveredBackup = await targetSession.exportEncryptedBackup();
+  assert.equal(recoveredBackup.recoveryHistory?.length, 1);
+  const restoredStore = new ClinicalVaultStore(new IDBFactory(), "vault-resolution-restored-test");
+  const restoredSession = await restoredStore.restoreEncryptedBackup(recoveredBackup, "target recovery passphrase 2026");
+  assert.equal((await restoredSession.listRecoveryHistory()).length, 1);
+  assert.equal((await restoredSession.loadCase(incomingConflict.encounterId))?.caseData.tooth, "36");
+
+  const legacyBackup = structuredClone(recoveredBackup) as typeof recoveredBackup;
+  legacyBackup.formatVersion = 1;
+  delete legacyBackup.recoveryHistory;
+  const legacyStore = new ClinicalVaultStore(new IDBFactory(), "vault-resolution-v1-test");
+  const legacySession = await legacyStore.restoreEncryptedBackup(legacyBackup, "target recovery passphrase 2026");
+  assert.equal((await legacySession.listCases()).length, 4);
+  assert.equal((await legacySession.listRecoveryHistory()).length, 0);
+
+  const historyRestored = await targetSession.restoreRecoveryHistoryEntry(history[0].id);
+  assert.equal(historyRestored.caseData.tooth, "38");
+  assert.equal(historyRestored.revision, 3);
+  assert.equal((await targetSession.listRecoveryHistory(incomingConflict.encounterId)).length, 2);
+
+  await targetSession.deleteCase(incomingConflict.encounterId);
+  assert.equal((await targetSession.listRecoveryHistory(incomingConflict.encounterId)).length, 0);
+
+  sourceSession.close();
+  targetSession.close();
+  restoredSession.close();
+  legacySession.close();
+});
+
+test("backup conflict preview recognizes identical content and rejects active or stale replacement", async () => {
+  const sourceStore = new ClinicalVaultStore(new IDBFactory(), "vault-classification-source-test");
+  const sourceSession = await sourceStore.create(PASSPHRASE);
+  const sameContent = clinicalCase();
+  await sourceSession.saveCase(sameContent, "preop", 0);
+  const originalBackup = await sourceSession.exportEncryptedBackup();
+  await sourceSession.saveCase({ ...sameContent, tooth: "37" }, "preop", 1);
+  const newerBackup = await sourceSession.exportEncryptedBackup();
+  await sourceSession.saveCase({ ...sameContent, tooth: "39" }, "preop", 2);
+  const aheadBackup = await sourceSession.exportEncryptedBackup();
+
+  const targetStore = new ClinicalVaultStore(new IDBFactory(), "vault-classification-target-test");
+  const targetSession = await targetStore.create("classification target passphrase 2026");
+  await targetSession.saveCase(sameContent, "preop", 0);
+  await targetSession.saveCase(sameContent, "preop", 1);
+
+  const identicalPreview = await targetSession.previewEncryptedBackupImport(originalBackup, PASSPHRASE);
+  assert.equal(identicalPreview.identicalContent, 1);
+  assert.equal(identicalPreview.conflicts.length, 0);
+  assert.equal(identicalPreview.incomingOlder, 1);
+
+  const activePreview = await targetSession.previewEncryptedBackupImport(newerBackup, PASSPHRASE);
+  assert.equal(activePreview.conflicts[0].classification, "divergentSameRevision");
+  assert.equal(activePreview.conflicts[0].activeEncounter, true);
+  const activeConflict = activePreview.conflicts[0];
+  await assert.rejects(
+    targetSession.resolveEncryptedBackupImport(newerBackup, PASSPHRASE, [{
+      encounterId: activeConflict.encounterId,
+      action: "replaceWithBackup",
+      expectedLocalRevision: activeConflict.local.revision,
+      localDigest: activeConflict.localDigest,
+      incomingDigest: activeConflict.incomingDigest,
+    }]),
+    (error: unknown) => error instanceof ClinicalVaultError && error.code === "CONFLICT"
+  );
+  await targetSession.detachActiveEncounterForRecovery();
+  assert.equal((await targetSession.previewEncryptedBackupImport(newerBackup, PASSPHRASE)).conflicts[0].activeEncounter, false);
+  const aheadPreview = await targetSession.previewEncryptedBackupImport(aheadBackup, PASSPHRASE);
+  assert.equal(aheadPreview.conflicts[0].classification, "incomingNewer");
+
+  const otherCase = {
+    ...clinicalCase(),
+    encounterId: "ffffff12-abcd-4abc-8abc-abcdefabcdef",
+    tooth: "47",
+  };
+  await targetSession.saveCase(otherCase, "preop", 0);
+  const stalePreview = await targetSession.previewEncryptedBackupImport(newerBackup, PASSPHRASE);
+  const staleConflict = stalePreview.conflicts[0];
+  await targetSession.saveCase({ ...sameContent, tooth: "48" }, "preop", 2);
+  await targetSession.saveCase(otherCase, "preop", 1);
+  await assert.rejects(
+    targetSession.resolveEncryptedBackupImport(newerBackup, PASSPHRASE, [{
+      encounterId: staleConflict.encounterId,
+      action: "replaceWithBackup",
+      expectedLocalRevision: staleConflict.local.revision,
+      localDigest: staleConflict.localDigest,
+      incomingDigest: staleConflict.incomingDigest,
+    }]),
+    (error: unknown) => error instanceof ClinicalVaultError && error.code === "CONFLICT"
+  );
+  assert.equal((await targetSession.loadCase(sameContent.encounterId))?.caseData.tooth, "48");
+  assert.equal((await targetSession.listRecoveryHistory()).length, 0);
+
+  sourceSession.close();
+  targetSession.close();
+});
+
+test("version 1 vault databases upgrade with an empty recovery-history store", async () => {
+  const factory = new IDBFactory();
+  const databaseName = "vault-database-migration-test";
+  await new Promise<void>((resolve, reject) => {
+    const request = factory.open(databaseName, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore("metadata", { keyPath: "id" });
+      request.result.createObjectStore("cases", { keyPath: "id" });
+    };
+    request.onsuccess = () => {
+      request.result.close();
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+
+  const store = new ClinicalVaultStore(factory, databaseName);
+  const session = await store.create(PASSPHRASE);
+  await session.saveCase(clinicalCase(), "preop", 0);
+  assert.equal((await session.listCases()).length, 1);
+  assert.deepEqual(await session.listRecoveryHistory(), []);
+  session.close();
+});
+
+test("backup conflict resolution aborts every selected change when one transactional write fails", async () => {
+  const first = clinicalCase();
+  const second = {
+    ...clinicalCase(),
+    encounterId: "12121212-abcd-4abc-8abc-abcdefabcdef",
+    tooth: "37",
+  };
+  const sourceStore = new ClinicalVaultStore(new IDBFactory(), "vault-atomic-source-test");
+  const sourceSession = await sourceStore.create(PASSPHRASE);
+  await sourceSession.saveCase(first, "preop", 0);
+  await sourceSession.saveCase(second, "preop", 0);
+  const backup = await sourceSession.exportEncryptedBackup();
+
+  const targetStore = new ClinicalVaultStore(
+    new IDBFactory(),
+    "vault-atomic-target-test",
+    () => "duplicate-recovery-id"
+  );
+  const targetSession = await targetStore.create("atomic target passphrase 2026");
+  await targetSession.saveCase({ ...first, tooth: "46" }, "preop", 0);
+  await targetSession.saveCase({ ...second, tooth: "47" }, "preop", 0);
+  await targetSession.saveCase({
+    ...clinicalCase(),
+    encounterId: "34343434-abcd-4abc-8abc-abcdefabcdef",
+    tooth: "48",
+  }, "preop", 0);
+  const preview = await targetSession.previewEncryptedBackupImport(backup, PASSPHRASE);
+  assert.equal(preview.conflicts.length, 2);
+
+  await assert.rejects(
+    targetSession.resolveEncryptedBackupImport(backup, PASSPHRASE, preview.conflicts.map((conflict) => ({
+      encounterId: conflict.encounterId,
+      action: "replaceWithBackup" as const,
+      expectedLocalRevision: conflict.local.revision,
+      localDigest: conflict.localDigest,
+      incomingDigest: conflict.incomingDigest,
+    }))),
+    (error: unknown) => error instanceof ClinicalVaultError && error.code === "STORAGE_FAILURE"
+  );
+  assert.equal((await targetSession.loadCase(first.encounterId))?.caseData.tooth, "46");
+  assert.equal((await targetSession.loadCase(second.encounterId))?.caseData.tooth, "47");
+  assert.deepEqual(await targetSession.listRecoveryHistory(), []);
 
   sourceSession.close();
   targetSession.close();
