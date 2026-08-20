@@ -12,6 +12,16 @@ export type AnesthesiaCatalogField =
   | "vasoconstrictorDoses"
   | "routeLabels";
 
+export const anesthesiaCatalogFields = [
+  "agents",
+  "techniques",
+  "applicationTypes",
+  "doseUnits",
+  "vasoconstrictors",
+  "vasoconstrictorDoses",
+  "routeLabels",
+] as const satisfies readonly AnesthesiaCatalogField[];
+
 export const anesthesiaCatalogOwnership = {
   owner: "seed",
   clinicalUse: "documentationSuggestionsOnly",

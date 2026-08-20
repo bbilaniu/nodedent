@@ -34,10 +34,17 @@ import { buildClinicalExportFilename, buildVaultBackupFilename } from "./notes/e
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
-import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { loadUserCatalogItems, saveUserCatalogItems } from "./state/catalogPersistence";
 import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "./state/caseEntry";
-import { CLINICAL_VAULT_IDLE_TIMEOUT_MS, ClinicalVaultError, type ClinicalVaultSession, type SavedCaseSummary } from "./state/clinicalVault";
-import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
+import {
+  CLINICAL_VAULT_IDLE_TIMEOUT_MS,
+  ClinicalVaultError,
+  type ClinicalVaultBackup,
+  type ClinicalVaultSession,
+  type EncryptedBackupImportPreview,
+  type EncryptedBackupImportResult,
+  type SavedCaseSummary,
+} from "./state/clinicalVault";
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
@@ -220,8 +227,9 @@ export default function NodeDentApp() {
 function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; onLocked: () => void }) {
   const { session, persistentStorage } = access;
   const [caseData, setCaseData] = useState<EndoCase>(createFreshCase);
-  const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
-  const [userIsolationCatalogItems, setUserIsolationCatalogItems] = useState(() => loadUserIsolationCatalogItems());
+  const [userCatalogItems, setUserCatalogItems] = useState(() => loadUserCatalogItems());
+  const userAnesthesiaCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "anesthesia"), [userCatalogItems]);
+  const userIsolationCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "isolation"), [userCatalogItems]);
   const [currentNodeId, setCurrentNodeId] = useState("preop");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [newCanalName, setNewCanalName] = useState("");
@@ -487,13 +495,24 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }
 
   function updateUserAnesthesiaCatalogItems(items: typeof userAnesthesiaCatalogItems) {
-    setUserAnesthesiaCatalogItems(items);
-    saveUserAnesthesiaCatalogItems(items);
+    setUserCatalogItems((current) => {
+      const nextItems = [...current.filter((item) => item.category !== "anesthesia"), ...items];
+      saveUserCatalogItems(nextItems);
+      return nextItems;
+    });
   }
 
   function updateUserIsolationCatalogItems(items: typeof userIsolationCatalogItems) {
-    setUserIsolationCatalogItems(items);
-    saveUserIsolationCatalogItems(items);
+    setUserCatalogItems((current) => {
+      const nextItems = [...current.filter((item) => item.category !== "isolation"), ...items];
+      saveUserCatalogItems(nextItems);
+      return nextItems;
+    });
+  }
+
+  function updateAllUserCatalogItems(items: typeof userCatalogItems) {
+    setUserCatalogItems(items);
+    saveUserCatalogItems(items);
   }
 
   function updatePreOp(field: string, value: string | boolean) {
@@ -993,6 +1012,18 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     }
   }
 
+  async function previewEncryptedBackupImport(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportPreview> {
+    await saveQueue.current;
+    return session.previewEncryptedBackupImport(backup, passphrase);
+  }
+
+  async function importNewCasesFromEncryptedBackup(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportResult> {
+    await saveQueue.current;
+    const result = await session.importNewCasesFromEncryptedBackup(backup, passphrase);
+    await refreshSavedCases();
+    return result;
+  }
+
   function downloadDisplayedText() {
     if (noteMode === "json") {
       downloadCaseJson();
@@ -1368,6 +1399,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
+            onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
+            onImportNewCasesFromEncryptedBackup={importNewCasesFromEncryptedBackup}
+            onLockForRestore={() => {
+              setIsSavedCasesOpen(false);
+              void lockVault();
+            }}
+            userCatalogItems={userCatalogItems}
+            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
       </>
@@ -1713,6 +1752,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
+            onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
+            onImportNewCasesFromEncryptedBackup={importNewCasesFromEncryptedBackup}
+            onLockForRestore={() => {
+              setIsSavedCasesOpen(false);
+              void lockVault();
+            }}
+            userCatalogItems={userCatalogItems}
+            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
 

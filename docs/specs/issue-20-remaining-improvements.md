@@ -9,15 +9,20 @@ This spec records the two improvements from [GitHub issue #20](https://github.co
 
 ## Implementation Progress
 
-The first local-anesthesia and repeatable-entry slice now provides:
+The implementation now provides:
 
 - validated local `HH:mm` formatting for anesthesia administration;
 - current-time initialization plus `Set to now` and `Clear time` controls;
 - separate, persistently visible anesthesia administration and top-up entries in the shared workflow;
 - separate, persistently visible radiograph review entries with an explicit add-another action; and
-- route-scoped anesthetic product suggestions adapted from the HygieneNote catalogue without copying automatic amount or duration defaults.
+- route-scoped anesthetic product suggestions adapted from the HygieneNote catalogue without copying automatic amount or duration defaults;
+- one versioned, patient-independent preference store for anesthesia and isolation catalogue entries, including migration from the earlier separate browser-storage keys;
+- catalogue preference download and validated import preview, with imports limited to new item IDs so existing preferences are never overwritten;
+- full local timestamps in encrypted-backup filenames;
+- one saved-case `Backup and recovery` surface for encrypted export, non-destructive import, and navigation to destructive restore; and
+- authenticated, schema-validated import previews followed by an atomic new-encounter-only merge.
 
-Remaining work in this spec includes consolidated catalogue persistence/management and the backup-and-recovery administration workflow.
+Revision replacement and conflict resolution remain intentionally deferred. Incoming encounters whose immutable IDs already exist locally are reported by revision relationship and skipped, never overwritten. Radiograph modalities remain application-owned values rather than user catalogue entries.
 
 ## 4. Make Encrypted Backup And Recovery Easier To Understand
 

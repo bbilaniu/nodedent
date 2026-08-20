@@ -37,6 +37,16 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import {
+  buildUserCatalogExport,
+  buildUserCatalogExportFilename,
+  loadUserCatalogItems,
+  mergeNewUserCatalogItems,
+  parseUserCatalogExport,
+  previewUserCatalogImport,
+  saveUserCatalogItems,
+  USER_CATALOG_STORAGE_KEY,
+} from "../state/catalogPersistence";
 import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
@@ -3675,6 +3685,58 @@ test("user anesthesia catalog persistence loads, validates, and merges local use
   assert.equal(administrationRecord?.details.doseUnit, undefined);
   assert.equal(administrationRecord?.options?.expiresAt, undefined);
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
+});
+
+test("unified catalogue persistence migrates legacy module preferences and imports additions without overwrite", () => {
+  const storage = memoryStorage();
+  const anesthesiaItem = createUserAnesthesiaCatalogItem({
+    route: "injection",
+    field: "agents",
+    label: "Clinic anesthetic",
+  });
+  const isolationItem = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "Clinic clamp",
+  });
+  saveUserAnesthesiaCatalogItems([anesthesiaItem], storage);
+  saveUserIsolationCatalogItems([isolationItem], storage);
+
+  const migrated = loadUserCatalogItems(storage);
+  assert.deepEqual(migrated.map((item) => item.category).sort(), ["anesthesia", "isolation"]);
+  assert.ok(storage.getItem(USER_CATALOG_STORAGE_KEY));
+
+  const conflictingAnesthesiaItem = { ...anesthesiaItem, label: "Imported conflicting label" };
+  const importedIsolationItem = createUserIsolationCatalogItem({
+    field: "methodLabels",
+    label: "Imported isolation method",
+  });
+  const exported = buildUserCatalogExport(
+    [conflictingAnesthesiaItem, isolationItem, importedIsolationItem],
+    new Date("2026-08-20T12:34:56.000Z")
+  );
+  const parsed = parseUserCatalogExport(JSON.stringify(exported));
+  const preview = previewUserCatalogImport(migrated, parsed.state.items);
+
+  assert.equal(buildUserCatalogExportFilename(new Date(2026, 7, 20, 12, 34, 56)), "nodedent_catalogues_2026_08_20_12_34_56.json");
+  assert.deepEqual(preview, {
+    additions: 1,
+    equivalentItems: 1,
+    idConflicts: 1,
+    itemsByCategory: { anesthesia: 1, isolation: 2 },
+  });
+
+  const merged = mergeNewUserCatalogItems(migrated, parsed.state.items);
+  assert.equal(merged.length, 3);
+  assert.equal(merged.find((item) => item.id === anesthesiaItem.id)?.label, "Clinic anesthetic");
+  assert.equal(merged.some((item) => item.label === "Imported isolation method"), true);
+  saveUserCatalogItems(merged, storage);
+  assert.equal(loadUserCatalogItems(storage).length, 3);
+
+  assert.throws(() => parseUserCatalogExport("not json"), /not valid JSON/);
+  assert.throws(
+    () => parseUserCatalogExport(JSON.stringify({ ...exported, state: { ...exported.state, items: [...exported.state.items, exported.state.items[0]] } })),
+    /duplicate item identifiers/
+  );
 });
 
 test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {

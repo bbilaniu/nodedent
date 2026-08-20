@@ -1,4 +1,5 @@
 import type { EndoCase } from "../types";
+import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { isMeaningfulCase } from "./caseEntry";
 import {
   CLINICAL_VAULT_FORMAT_VERSION,
@@ -89,6 +90,23 @@ export type ClinicalVaultBackup = {
   cases: StoredEncryptedCase[];
 };
 
+export type EncryptedBackupImportPreview = {
+  formatVersion: typeof CLINICAL_VAULT_FORMAT_VERSION;
+  exportedAt: string;
+  totalCases: number;
+  additions: number;
+  existingEncounterIds: number;
+  sameRevision: number;
+  incomingNewer: number;
+  incomingOlder: number;
+};
+
+export type EncryptedBackupImportResult = EncryptedBackupImportPreview & {
+  imported: number;
+  skipped: number;
+  failed: number;
+};
+
 function caseAad(encounterId: string, revision: number) {
   return `nodedent-clinical-case:${encounterId}:revision:${revision}`;
 }
@@ -171,6 +189,7 @@ function assertClinicalCaseSnapshot(value: unknown, record: StoredEncryptedCase)
     typeof payload.savedAt !== "string" ||
     !Number.isFinite(new Date(payload.savedAt).getTime()) ||
     !caseData ||
+    !EndoCaseSchema.safeParse(caseData).success ||
     caseData.encounterId !== record.id ||
     typeof caseData.patientNumber !== "string" ||
     typeof caseData.tooth !== "string" ||
@@ -187,6 +206,77 @@ function assertClinicalCaseSnapshot(value: unknown, record: StoredEncryptedCase)
   ) {
     throw new ClinicalVaultError("CORRUPT_RECORD", "A protected case payload is malformed or inconsistent.");
   }
+}
+
+async function decryptAndValidateClinicalVaultBackup(backup: ClinicalVaultBackup, passphrase: string) {
+  validateClinicalVaultPassphrase(passphrase);
+  if (
+    backup?.exportKind !== "nodedent-encrypted-vault-backup" ||
+    backup.formatVersion !== CLINICAL_VAULT_FORMAT_VERSION ||
+    !backup.metadata ||
+    !Array.isArray(backup.cases) ||
+    backup.cases.length > MAX_BACKUP_CASES ||
+    typeof backup.exportedAt !== "string" ||
+    !Number.isFinite(new Date(backup.exportedAt).getTime())
+  ) {
+    throw new ClinicalVaultError("INVALID_BACKUP", "This is not a supported NodeDent encrypted vault backup.");
+  }
+  assertVaultMetadata(backup.metadata);
+  backup.cases.forEach(assertEncryptedCase);
+
+  const key = await deriveClinicalVaultKey(passphrase, backup.metadata.kdf);
+  try {
+    const verifier = await decryptClinicalVaultValue<string>(key, backup.metadata.verifier, VERIFIER_AAD);
+    if (verifier !== VERIFIER_VALUE) throw new Error("Vault verifier did not match.");
+  } catch (error) {
+    throw new ClinicalVaultError("INVALID_PASSPHRASE", "The backup passphrase is incorrect or the backup is damaged.", { cause: error });
+  }
+
+  try {
+    const encounterIds = new Set<string>();
+    const snapshots: ClinicalCaseSnapshot[] = [];
+    for (const record of backup.cases) {
+      if (encounterIds.has(record.id)) throw new Error("Duplicate encounter identifier.");
+      encounterIds.add(record.id);
+      const payload = await decryptClinicalVaultValue<ClinicalCaseSnapshot>(key, record.envelope, caseAad(record.id, record.revision));
+      assertClinicalCaseSnapshot(payload, record);
+      snapshots.push(payload);
+    }
+    if (backup.metadata.activeEncounterId && !encounterIds.has(backup.metadata.activeEncounterId)) {
+      throw new Error("Active encounter does not exist in the backup.");
+    }
+    return { key, snapshots };
+  } catch (error) {
+    throw new ClinicalVaultError("INVALID_BACKUP", "An encrypted case in this backup is damaged or inconsistent.", { cause: error });
+  }
+}
+
+function buildEncryptedBackupImportPreview(
+  exportedAt: string,
+  snapshots: ClinicalCaseSnapshot[],
+  localRevisions: Map<string, number>
+): EncryptedBackupImportPreview {
+  const preview: EncryptedBackupImportPreview = {
+    formatVersion: CLINICAL_VAULT_FORMAT_VERSION,
+    exportedAt,
+    totalCases: snapshots.length,
+    additions: 0,
+    existingEncounterIds: 0,
+    sameRevision: 0,
+    incomingNewer: 0,
+    incomingOlder: 0,
+  };
+  snapshots.forEach((snapshot) => {
+    const localRevision = localRevisions.get(snapshot.encounterId);
+    if (localRevision === undefined) preview.additions += 1;
+    else {
+      preview.existingEncounterIds += 1;
+      if (snapshot.revision === localRevision) preview.sameRevision += 1;
+      else if (snapshot.revision > localRevision) preview.incomingNewer += 1;
+      else preview.incomingOlder += 1;
+    }
+  });
+  return preview;
 }
 
 function buildSummary(caseData: EndoCase, currentNodeId: string, savedAt: string, revision: number): Omit<SavedCaseSummary, "expired"> {
@@ -389,6 +479,53 @@ export class ClinicalVaultSession {
     }
   }
 
+  private async getStoredCaseRevisions() {
+    const transaction = this.database.transaction(CASE_STORE, "readonly");
+    const records = await requestResult(transaction.objectStore(CASE_STORE).getAll()) as StoredEncryptedCase[];
+    await transactionComplete(transaction);
+    records.forEach(assertEncryptedCase);
+    return new Map(records.map((record) => [record.id, record.revision]));
+  }
+
+  async previewEncryptedBackupImport(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportPreview> {
+    const { snapshots } = await decryptAndValidateClinicalVaultBackup(backup, passphrase);
+    const localRevisions = await this.getStoredCaseRevisions();
+    return buildEncryptedBackupImportPreview(backup.exportedAt, snapshots, localRevisions);
+  }
+
+  async importNewCasesFromEncryptedBackup(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportResult> {
+    const { snapshots } = await decryptAndValidateClinicalVaultBackup(backup, passphrase);
+    const localRevisions = await this.getStoredCaseRevisions();
+    const preview = buildEncryptedBackupImportPreview(backup.exportedAt, snapshots, localRevisions);
+    const additions = snapshots.filter((snapshot) => !localRevisions.has(snapshot.encounterId));
+    if (!additions.length) return { ...preview, imported: 0, skipped: preview.existingEncounterIds, failed: 0 };
+
+    const key = this.requireKey();
+    const encryptedRecords: StoredEncryptedCase[] = [];
+    for (const snapshot of additions) {
+      encryptedRecords.push({
+        id: snapshot.encounterId,
+        revision: snapshot.revision,
+        envelope: await encryptClinicalVaultValue(key, snapshot, caseAad(snapshot.encounterId, snapshot.revision)),
+      });
+    }
+
+    try {
+      const transaction = this.database.transaction(CASE_STORE, "readwrite");
+      const store = transaction.objectStore(CASE_STORE);
+      encryptedRecords.forEach((record) => store.add(record));
+      await transactionComplete(transaction);
+      return {
+        ...preview,
+        imported: encryptedRecords.length,
+        skipped: preview.existingEncounterIds,
+        failed: 0,
+      };
+    } catch (error) {
+      throw asStorageError(error, "Encrypted backup import was interrupted; no cases were added.");
+    }
+  }
+
   close() {
     this.key = null;
     this.database.close();
@@ -476,41 +613,7 @@ export class ClinicalVaultStore {
   }
 
   async restoreEncryptedBackup(backup: ClinicalVaultBackup, passphrase: string, replaceExisting = false) {
-    validateClinicalVaultPassphrase(passphrase);
-    if (
-      backup?.exportKind !== "nodedent-encrypted-vault-backup" ||
-      backup.formatVersion !== CLINICAL_VAULT_FORMAT_VERSION ||
-      !backup.metadata ||
-      !Array.isArray(backup.cases) ||
-      backup.cases.length > MAX_BACKUP_CASES
-    ) {
-      throw new ClinicalVaultError("INVALID_BACKUP", "This is not a supported NodeDent encrypted vault backup.");
-    }
-    assertVaultMetadata(backup.metadata);
-    backup.cases.forEach(assertEncryptedCase);
-
-    const key = await deriveClinicalVaultKey(passphrase, backup.metadata.kdf);
-    try {
-      const verifier = await decryptClinicalVaultValue<string>(key, backup.metadata.verifier, VERIFIER_AAD);
-      if (verifier !== VERIFIER_VALUE) throw new Error("Vault verifier did not match.");
-    } catch (error) {
-      throw new ClinicalVaultError("INVALID_PASSPHRASE", "The backup passphrase is incorrect or the backup is damaged.", { cause: error });
-    }
-
-    try {
-      const encounterIds = new Set<string>();
-      for (const record of backup.cases) {
-        if (encounterIds.has(record.id)) throw new Error("Duplicate encounter identifier.");
-        encounterIds.add(record.id);
-        const payload = await decryptClinicalVaultValue<ClinicalCaseSnapshot>(key, record.envelope, caseAad(record.id, record.revision));
-        assertClinicalCaseSnapshot(payload, record);
-      }
-      if (backup.metadata.activeEncounterId && !encounterIds.has(backup.metadata.activeEncounterId)) {
-        throw new Error("Active encounter does not exist in the backup.");
-      }
-    } catch (error) {
-      throw new ClinicalVaultError("INVALID_BACKUP", "An encrypted case in this backup is damaged or inconsistent.", { cause: error });
-    }
+    const { key } = await decryptAndValidateClinicalVaultBackup(backup, passphrase);
 
     const database = await openDatabase(this.factory, this.databaseName);
     try {
