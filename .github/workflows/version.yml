@@ -1,0 +1,56 @@
+name: Version
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: version
+  cancel-in-progress: false
+
+jobs:
+  changesets:
+    name: Create version pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create or update version pull request
+        uses: changesets/action@v1
+        with:
+          version: npm run version
+          title: Version Packages
+          commit: Version Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sync-beta:
+    name: Fast-forward beta after versioning
+    needs: changesets
+    if: contains(github.event.head_commit.message, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Fast-forward beta to main
+        run: |
+          git fetch origin beta
+          git merge-base --is-ancestor origin/beta HEAD
+          git push origin HEAD:beta
