@@ -1323,6 +1323,16 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     setIsSavedCasesOpen(true);
   }
 
+  function openCaseJsonImport() {
+    setShowImportBox(true);
+    openSavedCases();
+  }
+
+  function openEncryptedVaultImport() {
+    setShowImportBox(false);
+    openSavedCases();
+  }
+
   function openPriorVisit() {
     setIsWorkflowLauncherOpen(false);
     setIsPriorVisitOpen(true);
@@ -1382,6 +1392,8 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
           persistentStorage={persistentStorage}
           onContinueCurrentCase={() => setIsCaseEntryOpen(false)}
           onStartNewCase={startCaseFromEntry}
+          onImportCaseJson={openCaseJsonImport}
+          onImportEncryptedVault={openEncryptedVaultImport}
           onReviewSavedCases={openSavedCases}
           onLockVault={() => void lockVault()}
         />

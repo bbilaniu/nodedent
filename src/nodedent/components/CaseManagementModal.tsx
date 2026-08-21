@@ -10,6 +10,8 @@ import type { CatalogItem } from "../workflow/catalogs";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
 import type { ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupImportResult } from "../state/clinicalVault";
 
+const MAX_CASE_JSON_BYTES = 1_000_000;
+
 export function SavedCasesModal({
   savedCases,
   importText,
@@ -47,6 +49,24 @@ export function SavedCasesModal({
   userCatalogItems: CatalogItem[];
   onUserCatalogItemsChange: (items: CatalogItem[]) => void;
 }) {
+  const [importFileName, setImportFileName] = useState("");
+  const [importFileError, setImportFileError] = useState("");
+
+  async function selectImportFile(file?: File) {
+    setImportFileName("");
+    setImportFileError("");
+    if (!file) return;
+
+    try {
+      if (file.size > MAX_CASE_JSON_BYTES) throw new Error("Case JSON exceeds the 1 MB import limit.");
+      onImportTextChange(await file.text());
+      setImportFileName(file.name);
+    } catch (error) {
+      onImportTextChange("");
+      setImportFileError(error instanceof Error ? error.message : "Could not read the selected JSON file.");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
       <section className="mt-6 w-full max-w-3xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
@@ -72,8 +92,31 @@ export function SavedCasesModal({
           </div>
           {showImportBox ? (
             <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
-              <p className="mb-2 text-xs leading-5 text-amber-900">Pasted JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
-              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste explicitly exported NodeDent case JSON here" className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue" />
+              <p className="mb-2 text-xs leading-5 text-amber-900">Case JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
+              <label className="block rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
+                <span className="mb-2 block text-xs font-semibold text-brand-navy">Choose a NodeDent case JSON file</span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(event) => void selectImportFile(event.target.files?.[0])}
+                  className="block w-full text-sm text-brand-slate"
+                />
+              </label>
+              {importFileName ? <p className="mt-2 text-xs text-brand-slate">Selected: {importFileName}</p> : null}
+              {importFileError ? <p role="alert" className="mt-2 text-xs font-semibold text-red-800">{importFileError}</p> : null}
+              <label className="mt-3 block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Or paste case JSON</span>
+                <textarea
+                  value={importText}
+                  onChange={(event) => {
+                    setImportFileName("");
+                    setImportFileError("");
+                    onImportTextChange(event.target.value);
+                  }}
+                  placeholder="Paste explicitly exported NodeDent case JSON here"
+                  className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue"
+                />
+              </label>
               <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-blue-light">Resume imported workflow</button>
             </div>
           ) : null}
