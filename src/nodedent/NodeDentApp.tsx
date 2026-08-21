@@ -183,6 +183,19 @@ function downloadFile(content: BlobPart, type: string, filename: string) {
 export default function NodeDentApp() {
   const [vaultAccess, setVaultAccess] = useState<ClinicalVaultAccess | null>(null);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(() => window.location.hash === PRIVACY_POLICY_HASH);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    document
+      .getElementById("app-favicon")
+      ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    } catch {
+      // Theme persistence is optional and never contains clinical data.
+    }
+  }, [themeMode]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -202,7 +215,13 @@ export default function NodeDentApp() {
   if (showPrivacyPolicy) {
     content = <PrivacyPolicyPage />;
   } else if (!vaultAccess) {
-    content = <ClinicalVaultGate onAccess={setVaultAccess} />;
+    content = (
+      <ClinicalVaultGate
+        onAccess={setVaultAccess}
+        themeMode={themeMode}
+        onToggleTheme={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+      />
+    );
   } else {
     const lockAndReset = () => {
       vaultAccess.session.close();
@@ -211,7 +230,12 @@ export default function NodeDentApp() {
 
     content = (
       <ClinicalWorkspaceErrorBoundary onFatalError={() => vaultAccess.session.close()} onLock={lockAndReset}>
-        <ClinicalWorkspace access={vaultAccess} onLocked={lockAndReset} />
+        <ClinicalWorkspace
+          access={vaultAccess}
+          onLocked={lockAndReset}
+          themeMode={themeMode}
+          onToggleTheme={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+        />
       </ClinicalWorkspaceErrorBoundary>
     );
   }
@@ -224,7 +248,17 @@ export default function NodeDentApp() {
   );
 }
 
-function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; onLocked: () => void }) {
+function ClinicalWorkspace({
+  access,
+  onLocked,
+  themeMode,
+  onToggleTheme,
+}: {
+  access: ClinicalVaultAccess;
+  onLocked: () => void;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+}) {
   const { session, persistentStorage } = access;
   const [caseData, setCaseData] = useState<EndoCase>(createFreshCase);
   const [userCatalogItems, setUserCatalogItems] = useState(() => loadUserCatalogItems());
@@ -254,7 +288,6 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
   const [isVaultReady, setIsVaultReady] = useState(false);
   const [isCaseEntryOpen, setIsCaseEntryOpen] = useState(true);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
@@ -405,18 +438,6 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }, [refreshSavedCases, session]);
 
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = themeMode;
-    document
-      .getElementById("app-favicon")
-      ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
-    } catch {
-      // Theme persistence is optional and never contains clinical data.
-    }
-  }, [themeMode]);
 
   useEffect(() => {
     if (!isVaultReady) return;
@@ -1474,7 +1495,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
               <button
                 type="button"
                 aria-pressed={themeMode === "dark"}
-                onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+                onClick={onToggleTheme}
                 className={cx(headerActionButton.secondaryCompact, "gap-2")}
               >
                 <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
