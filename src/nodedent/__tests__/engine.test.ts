@@ -181,7 +181,7 @@ test("case entry ignores untouched vault placeholders and recognizes recorded cl
   }), false);
 });
 
-test("case entry actions only offer review when another meaningful case exists", () => {
+test("case entry actions offer imports and only offer review when another meaningful case exists", () => {
   const noop = () => {};
   const blankMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: initialCase,
@@ -190,12 +190,18 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
 
   assert.equal(blankMarkup.includes("Start new case"), true);
   assert.equal(blankMarkup.includes("Continue current case"), false);
+  assert.equal(blankMarkup.includes("Import case JSON"), true);
+  assert.equal(blankMarkup.includes("Import existing vault"), true);
+  assert.equal(blankMarkup.includes("Download current vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
@@ -205,6 +211,9 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
@@ -220,6 +229,9 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
