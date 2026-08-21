@@ -113,6 +113,24 @@ test("clinical vault stores encrypted case envelopes and restores authenticated 
   restoredSession.close();
 });
 
+test("a new vault persists and reopens its intentionally incomplete initial draft", async () => {
+  const factory = new IDBFactory();
+  const store = new ClinicalVaultStore(factory, "vault-initial-draft-test");
+  const session = await store.create(PASSPHRASE);
+  const freshDraft = createFreshCase("2026-08-20T12:00:00.000Z");
+  assert.equal(freshDraft.tooth, "");
+
+  const saved = await session.saveCase(freshDraft, "preop", 0);
+  assert.equal(saved.revision, 1);
+  assert.equal((await session.listCases()).length, 1);
+  assert.equal((await session.loadActiveCase())?.caseData.tooth, "");
+  session.close();
+
+  const reopened = await store.unlock(PASSPHRASE);
+  assert.equal((await reopened.loadActiveCase())?.caseData.tooth, "");
+  reopened.close();
+});
+
 test("encrypted backup import previews and adds only new encounter IDs", async () => {
   const sourceFactory = new IDBFactory();
   const sourceStore = new ClinicalVaultStore(sourceFactory, "vault-import-source-test");
@@ -183,15 +201,13 @@ test("encrypted backup import previews and adds only new encounter IDs", async (
     (error: unknown) => error instanceof ClinicalVaultError && error.code === "INVALID_BACKUP"
   );
 
-  await sourceSession.saveCase({
-    ...newEncounter,
-    encounterId: "cccccc12-abcd-4abc-8abc-abcdefabcdef",
-    tooth: "",
-  }, "preop", 0);
-  const malformedCaseBackup = await sourceSession.exportEncryptedBackup();
   await assert.rejects(
-    targetSession.previewEncryptedBackupImport(malformedCaseBackup, PASSPHRASE),
-    (error: unknown) => error instanceof ClinicalVaultError && error.code === "INVALID_BACKUP"
+    sourceSession.saveCase({
+      ...newEncounter,
+      encounterId: "cccccc12-abcd-4abc-8abc-abcdefabcdef",
+      canals: [],
+    }, "preop", 0),
+    (error: unknown) => error instanceof ClinicalVaultError && error.code === "CORRUPT_RECORD"
   );
   assert.equal((await targetSession.listCases()).length, 2);
 

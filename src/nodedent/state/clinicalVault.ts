@@ -1,5 +1,5 @@
 import type { EndoCase } from "../types";
-import { EndoCaseSchema } from "../schemas/EndoCase.schema";
+import { EndoCaseDraftSchema } from "../schemas/EndoCase.schema";
 import { isMeaningfulCase } from "./caseEntry";
 import {
   CLINICAL_VAULT_FORMAT_VERSION,
@@ -189,7 +189,7 @@ function assertClinicalCaseSnapshot(value: unknown, record: StoredEncryptedCase)
     typeof payload.savedAt !== "string" ||
     !Number.isFinite(new Date(payload.savedAt).getTime()) ||
     !caseData ||
-    !EndoCaseSchema.safeParse(caseData).success ||
+    !EndoCaseDraftSchema.safeParse(caseData).success ||
     caseData.encounterId !== record.id ||
     typeof caseData.patientNumber !== "string" ||
     typeof caseData.tooth !== "string" ||
@@ -375,7 +375,14 @@ export class ClinicalVaultSession {
   }
 
   async saveCase(caseData: EndoCase, currentNodeId: string, expectedRevision: number) {
-    if (!caseData.encounterId || caseData.encounterId.length > 128 || !currentNodeId || !Number.isInteger(expectedRevision) || expectedRevision < 0) {
+    if (
+      !caseData.encounterId ||
+      caseData.encounterId.length > 128 ||
+      !currentNodeId ||
+      !Number.isInteger(expectedRevision) ||
+      expectedRevision < 0 ||
+      !EndoCaseDraftSchema.safeParse(caseData).success
+    ) {
       throw new ClinicalVaultError("CORRUPT_RECORD", "The clinical draft identity, node, or revision is invalid.");
     }
     const savedAt = new Date().toISOString();
