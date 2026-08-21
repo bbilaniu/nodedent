@@ -7,6 +7,7 @@ import { getCanalStatus } from "../engine/deriveCanalStatus";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { makeEvent } from "../engine/events";
 import { getManualResumeNodeForCanal } from "../engine/resume";
+import { getCanalsBlockingClosure } from "../engine/validateDecision";
 import { buildCompactNote } from "../notes/buildCompactNote";
 import { buildFullNote } from "../notes/buildFullNote";
 import { buildJsonExport } from "../notes/buildJsonExport";
@@ -167,6 +168,26 @@ test("issue 20 pause after shaping survives export and resumes at the exact next
   assert.equal(getManualResumeNodeForCanal(imported.canals[0]), "irrigate-recapitulate");
   assert.match(buildCompactNote(imported), /Next visit\/plan: Resume with irrigation and recapitulation/);
   assert.match(buildFullNote(imported), /Paused for later continuation/);
+
+  const resumeEvent = makeEvent({
+    type: "workflow.resumedCanal",
+    tooth: imported.tooth,
+    canal: imported.canals[0].name,
+    nodeId: shaped.nextNodeId,
+    label: `Resume ${imported.canals[0].name}`,
+    activeCanal: imported.canals[0],
+    id: "evt_scenario_resume",
+    timestamp: scenarioTimestamp,
+  });
+  const resumedCase = {
+    ...imported,
+    caseStatus: "",
+    canals: imported.canals.map((canal) => ({ ...canal, events: [...(canal.events || []), resumeEvent] })),
+    globalEvents: [...imported.globalEvents, resumeEvent],
+  };
+  assert.equal(getCanalStatus(resumedCase.canals[0]), "shaped");
+  assert.equal(getCaseStatus(resumedCase), "RCT initiated");
+  assert.deepEqual(getCanalsBlockingClosure(resumedCase), ["MB (Shaped)"]);
 });
 
 test("issue 20 persistent-wet route records medication and temporary closure", () => {

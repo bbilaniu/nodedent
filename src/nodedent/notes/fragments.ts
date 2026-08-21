@@ -155,6 +155,7 @@ export function eventFragment(event: ClinicalEvent) {
     "workflow.nextCanalBeforeClosure": "Workflow continued to another canal before final chamber cleanup/closure.",
     "workflow.switchedCanal": `Workflow switched from ${event.details?.previousCanal || event.details?.previousActiveCanal || "previous canal"} to ${event.details?.nextCanal || event.details?.newActiveCanal || event.canal || "selected canal"}; ${event.details?.phaseLabel ? `continued at ${event.details.phaseLabel}` : event.details?.reason || "continued selected canal"}.`,
     "workflow.resumedFromPriorVisit": `Workflow resumed ${event.canal || "selected canal"} from prior visit history at ${event.details?.phaseLabel || event.details?.nextNodeId || "confirmed resume point"}.`,
+    "workflow.resumedCanal": `Workflow resumed ${event.canal || "selected canal"} at ${event.details?.phaseLabel || event.details?.resumeNodeId || event.details?.nodeId || "the saved step"}.`,
     "workflow.allCanalsReadyForClosure": "All canals ready for chamber cleanup and closure.",
     "treatment.referralRecommended": `${canal}Referral or specialist continuation recommended.`,
     "treatment.referralOnlyCompleted": `${canal}Referral note completed without medication/temporization at this visit.`,
