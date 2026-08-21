@@ -1,5 +1,5 @@
 import type { CanalRecord, PriorCanalStatus } from "../types";
-import { hasEvent } from "./deriveCanalStatus";
+import { CANAL_RESUMED_EVENT_TYPE, hasEvent } from "./deriveCanalStatus";
 import { isBlank } from "./measurements";
 
 export const priorCanalStatusLabels: Record<PriorCanalStatus, string> = {
@@ -15,7 +15,7 @@ export const priorCanalStatusLabels: Record<PriorCanalStatus, string> = {
   partiallyObturated: "Partially obturated",
 };
 
-const manualStatusEventTypes = new Set(["canal.paused", "canal.medicated"]);
+const manualStatusEventTypes = new Set(["canal.paused", "canal.medicated", CANAL_RESUMED_EVENT_TYPE]);
 const nonResumeEventTypes = new Set([
   "canal.completed",
   "canal.paused",
@@ -26,6 +26,7 @@ const nonResumeEventTypes = new Set([
   "closure.finalRestoration",
   "medication.calciumHydroxidePlaced",
   "workflow.switchedCanal",
+  CANAL_RESUMED_EVENT_TYPE,
 ]);
 
 export function getConservativeResumeNodeForCanal(canal?: CanalRecord | null) {
@@ -53,6 +54,7 @@ export function getPriorVisitResumeNodeForCanal(canal?: CanalRecord | null) {
 export function getManualResumeNodeForCanal(canal?: CanalRecord | null) {
   const manualEvent = [...(canal?.events || [])].reverse().find((event) => manualStatusEventTypes.has(event.type));
   if (!manualEvent) return null;
+  if (manualEvent.type === CANAL_RESUMED_EVENT_TYPE) return null;
 
   const recordedNode = manualEvent.details?.resumeNodeId || manualEvent.details?.nodeId;
   if (manualEvent.type === "canal.paused" && recordedNode === "endodontic-pathway-complete") return null;

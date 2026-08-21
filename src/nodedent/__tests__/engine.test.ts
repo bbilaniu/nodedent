@@ -2083,6 +2083,21 @@ test("closure guard allows complete paused medicated and referred canals", () =>
   assert.deepEqual(getMissingRequirements("canal-obturation-complete", protocolNodes["canal-obturation-complete"].options[0], caseData, caseData.canals[0]), []);
 });
 
+test("resuming a paused canal restores derived status and blocks stale closure readiness", () => {
+  const shapingEvent = { id: "evt_shape", timestamp: "2026-01-01T00:00:00.000Z", type: "shaping.completed", canal: "ML" };
+  const pausedEvent = { id: "evt_pause", timestamp: "2026-01-01T00:01:00.000Z", type: "canal.paused", canal: "ML", details: { nodeId: "remove-smear-layer" } };
+  const resumedEvent = { id: "evt_resume", timestamp: "2026-01-02T00:00:00.000Z", type: "workflow.resumedCanal", canal: "ML", details: { resumeNodeId: "remove-smear-layer" } };
+  const caseData = baseCase({
+    currentCanal: "ML",
+    canals: [{ ...blankCanal("ML"), events: [shapingEvent, pausedEvent, resumedEvent] }],
+    globalEvents: [shapingEvent, pausedEvent, resumedEvent],
+  });
+
+  assert.equal(getCanalStatus(caseData.canals[0]), "shaped");
+  assert.equal(getManualResumeNodeForCanal(caseData.canals[0]), null);
+  assert.deepEqual(getCanalsBlockingClosure(caseData), ["ML (Shaped)"]);
+});
+
 test("temporary closure requires every existing canal to have declared status", () => {
   const medicationEvent = { id: "evt_med", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
   const pausedEvent = { id: "evt_pause", timestamp: "2026-01-01T00:00:00.000Z", type: "canal.paused", canal: "ML" };

@@ -22,7 +22,7 @@ import { WorkflowLauncher } from "./components/WorkflowLauncher";
 import { cx, headerActionButton } from "./components/uiStyles";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
-import { getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
+import { CANAL_RESUMED_EVENT_TYPE, getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
 import { makeRuntimeEvent } from "./engine/events";
 import { getCanalCheckpointNodeId, getSavedCurrentNodeId, inferCurrentNodeIdFromEvents } from "./engine/getCurrentNode";
 import { getSuggestedLengths } from "./engine/measurements";
@@ -744,11 +744,37 @@ function ClinicalWorkspace({
     const workflowRunId = selectedInstance?.workflowRunId || makeWorkflowRunId(
       workflowId === operativeDirectRestorationWorkflowId ? "operative_direct" : "endo_root"
     );
-    const nextCaseData = addPrimaryWorkflow(caseData, workflowId, currentNodeId, {
+    let nextCaseData = addPrimaryWorkflow(caseData, workflowId, currentNodeId, {
       workflowRunId,
       makeActive: true,
     });
     const nextInstance = getWorkflowInstance(nextCaseData, workflowId, currentNodeId);
+    if (workflowId === endodonticRootWorkflowId && activeCanal && getCanalStatus(activeCanal) === "paused") {
+      setHistory((prev) => [...prev, { caseData, currentNodeId }]);
+      const resumeEvent = makeRuntimeEvent({
+        type: CANAL_RESUMED_EVENT_TYPE,
+        tooth: caseData.tooth,
+        canal: activeCanal.name,
+        nodeId: currentNodeId,
+        label: `Resume ${activeCanal.name} at ${currentNode.title}`,
+        activeCanal,
+        workflowId: endodonticRootWorkflowId,
+        workflowRunId: nextInstance?.workflowRunId || workflowRunId,
+      });
+      resumeEvent.details = {
+        ...resumeEvent.details,
+        resumeNodeId: currentNodeId,
+        phaseLabel: currentNode.title,
+        workflowInstanceId: nextInstance?.id,
+      };
+      nextCaseData = {
+        ...nextCaseData,
+        canals: nextCaseData.canals.map((canal) => canal.name === activeCanal.name
+          ? { ...canal, events: [...(canal.events || []), resumeEvent] }
+          : canal),
+        globalEvents: [...nextCaseData.globalEvents, resumeEvent],
+      };
+    }
     setCaseData({
       ...nextCaseData,
       activeWorkflowInstanceId: nextInstance?.id || nextCaseData.activeWorkflowInstanceId,
