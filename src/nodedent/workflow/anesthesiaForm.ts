@@ -1,6 +1,7 @@
 import type { ClinicalEvent } from "../types";
 import type { AnesthesiaAdequacyResponse, AnesthesiaEventDetails, AnesthesiaEventType, AnesthesiaRoute } from "./anesthesia";
 import { anesthesiaEventTypes, getAnesthesiaEventDetails } from "./anesthesia";
+import { getCurrentTimeString, isCompleteTime24 } from "./dateTime";
 
 export type AnesthesiaMode = "administration" | "assessment";
 export type AnesthesiaAdministrationAction =
@@ -63,7 +64,8 @@ export function anesthesiaRouteFromLabel(label: string): AnesthesiaRoute {
 
 export function defaultAnesthesiaFormState(
   tooth: string,
-  action: AnesthesiaAdministrationAction = anesthesiaEventTypes.administered
+  action: AnesthesiaAdministrationAction = anesthesiaEventTypes.administered,
+  now: Date = new Date()
 ): AnesthesiaFormState {
   return {
     action,
@@ -75,7 +77,7 @@ export function defaultAnesthesiaFormState(
     site: "",
     dose: "",
     doseUnit: "",
-    administeredAt: "",
+    administeredAt: getCurrentTimeString(now),
     vasoconstrictor: "",
     vasoconstrictorDose: "",
     response: "notAssessed",
@@ -105,7 +107,7 @@ export function buildAnesthesiaFormState(
     site: details.site || "",
     dose: details.dose || "",
     doseUnit: details.doseUnit || "",
-    administeredAt: details.administeredAt || "",
+    administeredAt: getCurrentTimeString(),
     vasoconstrictor: details.vasoconstrictor || "",
     vasoconstrictorDose: details.vasoconstrictorDose || "",
     response: details.response || "notAssessed",
@@ -126,6 +128,7 @@ export function hasAnesthesiaTargetScope(form: Pick<AnesthesiaFormState, "target
 
 export function canSubmitAnesthesiaForm(mode: AnesthesiaMode, form: AnesthesiaFormState) {
   return hasAnesthesiaTargetScope(form) &&
+    (mode !== "administration" || !form.administeredAt || isCompleteTime24(form.administeredAt)) &&
     (mode !== "assessment" || form.response === "adequate" || form.response === "notAdequate");
 }
 

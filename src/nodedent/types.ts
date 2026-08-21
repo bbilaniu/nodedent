@@ -248,6 +248,22 @@ export type DecisionOption = {
   moduleCalls?: WorkflowModuleCall[];
 };
 
+export type EndodonticFieldId =
+  | "estimatedChamberDepth"
+  | "estimatedWorkingLength"
+  | "fileTerminalLength"
+  | "availableTreatmentSpace"
+  | "referencePoint"
+  | "eal0"
+  | "patencyLength"
+  | "shapingLength"
+  | "wlRadiographStatus"
+  | "finalShape"
+  | "obturationGauge"
+  | "masterCone"
+  | "coneFitRadiograph"
+  | "dryingStatus";
+
 export type ProtocolNode = {
   id: string;
   phase: string;
@@ -256,6 +272,7 @@ export type ProtocolNode = {
   instruments?: string[];
   materials?: string[];
   requiredInputs?: string[];
+  contextualFieldIds?: EndodonticFieldId[];
   safetyNotes?: string[];
   options: DecisionOption[];
   workflowId?: string;

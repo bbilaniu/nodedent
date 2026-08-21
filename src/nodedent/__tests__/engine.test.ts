@@ -11,6 +11,8 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
+import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
+import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
@@ -35,6 +37,16 @@ import { CanalRecordSchema, RadiographStatusSchema } from "../schemas/CanalRecor
 import { ClinicalEventSchema } from "../schemas/ClinicalEvent.schema";
 import { EndoCaseSchema } from "../schemas/EndoCase.schema";
 import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems, USER_ANESTHESIA_CATALOG_STORAGE_KEY } from "../state/anesthesiaCatalogPersistence";
+import {
+  buildUserCatalogExport,
+  buildUserCatalogExportFilename,
+  loadUserCatalogItems,
+  mergeNewUserCatalogItems,
+  parseUserCatalogExport,
+  previewUserCatalogImport,
+  saveUserCatalogItems,
+  USER_CATALOG_STORAGE_KEY,
+} from "../state/catalogPersistence";
 import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
@@ -54,6 +66,7 @@ import {
 } from "../workflow/anesthesia";
 import { anesthesiaCatalogOwnership, buildUserAnesthesiaCatalogItemsFromForm, createUserAnesthesiaCatalogItem, createUserAnesthesiaCatalogOverride, getAnesthesiaCatalogOptions, seedAnesthesiaCatalogItems } from "../workflow/anesthesiaCatalog";
 import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesiaFormState } from "../workflow/anesthesiaForm";
+import { formatLocalTime24, formatTime24Value, getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
@@ -168,7 +181,7 @@ test("case entry ignores untouched vault placeholders and recognizes recorded cl
   }), false);
 });
 
-test("case entry actions only offer review when another meaningful case exists", () => {
+test("case entry actions offer imports and only offer review when another meaningful case exists", () => {
   const noop = () => {};
   const blankMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: initialCase,
@@ -177,12 +190,18 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
 
   assert.equal(blankMarkup.includes("Start new case"), true);
   assert.equal(blankMarkup.includes("Continue current case"), false);
+  assert.equal(blankMarkup.includes("Import case JSON"), true);
+  assert.equal(blankMarkup.includes("Import existing vault"), true);
+  assert.equal(blankMarkup.includes("Download current vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
@@ -192,6 +211,9 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
@@ -207,6 +229,9 @@ test("case entry actions only offer review when another meaningful case exists",
     persistentStorage: true,
     onContinueCurrentCase: noop,
     onStartNewCase: noop,
+    onImportCaseJson: noop,
+    onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
@@ -356,6 +381,22 @@ function radiologyReviewedEvent(tooth = "30") {
   return {
     ...event,
     capabilitiesSatisfied: [buildRadiographsReviewedCapability(event)],
+  };
+}
+
+function anesthesiaAdequateEvent(tooth = "30") {
+  const event = {
+    id: `evt_anesthesia_adequate_${tooth}`,
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: anesthesiaEventTypes.adequacyConfirmed,
+    workflowId: sharedAnesthesiaWorkflowId,
+    tooth,
+    scope: { kind: "tooth" as const, tooth },
+    details: { tooth, response: "adequate" as const },
+  };
+  return {
+    ...event,
+    capabilitiesSatisfied: [buildAnesthesiaAdequateCapability(event)],
   };
 }
 
@@ -554,6 +595,7 @@ test("handoff nodes are intentional and resolvable", () => {
     "ready-for-obturation",
     "ready-for-sealer-cone-seating",
     "canal-obturation-complete",
+    "temporary-closure",
     "endodontic-pathway-complete",
   ];
 
@@ -755,6 +797,92 @@ test("active workflow target panel renders operative setup without canal control
   assert.equal(markup.includes("36 MO"), true);
   assert.equal(markup.includes("Endodontic progress"), false);
   assert.equal(markup.includes("Active canal status"), false);
+});
+
+test("endodontic end-visit action preserves a plain pause and routes clinical stop pathways", () => {
+  assert.equal(endVisitActionConfig.pause.eventType, "canal.paused");
+  assert.equal(endVisitActionConfig.pause.nextNodeId, null);
+  assert.equal(endVisitActionConfig.pause.requiresPlan, true);
+  assert.equal(endVisitActionConfig.medicate.eventType, "treatment.medicateTemporizeSelected");
+  assert.equal(endVisitActionConfig.medicate.nextNodeId, "calcium-hydroxide");
+  assert.equal(endVisitActionConfig.refer.eventType, "treatment.referralSelected");
+  assert.equal(endVisitActionConfig.refer.nextNodeId, "refer-pathway");
+});
+
+test("endodontic end-visit dialog shows current position and explicit stop choices", () => {
+  const markup = renderToStaticMarkup(React.createElement(EndodonticEndVisitDialog, {
+    activeCanalName: "MB",
+    currentNodeTitle: "Complete final shaping",
+    currentPhase: "Shaping",
+    initialNextVisitPlan: "Continue disinfection",
+    onSelectAction: () => {},
+    onClose: () => {},
+  }));
+
+  assert.equal(markup.includes("MB"), true);
+  assert.equal(markup.includes("Shaping"), true);
+  assert.equal(markup.includes("Complete final shaping"), true);
+  assert.equal(markup.includes("Pause here and continue later"), true);
+  assert.equal(markup.includes("Continue to medication / temporary closure"), true);
+  assert.equal(markup.includes("Open referral / stop pathway"), true);
+});
+
+test("contextual endodontic inputs put pre-op fields and radiology action beside the decision", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    preOp: { ...initialCase.preOp, estimatedChamberDepth: "" },
+    canals: [{ ...blankCanal("MB"), estimatedWorkingLength: "" }],
+    currentCanal: "MB",
+  });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes.preop,
+    caseData,
+    activeCanal: caseData.canals[0],
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+  }));
+
+  assert.equal(markup.includes("Record for this step"), true);
+  assert.equal(markup.includes("Chamber depth"), true);
+  assert.equal(markup.includes("Estimated WL"), true);
+  assert.equal(markup.includes("Record radiograph review"), true);
+  assert.equal(markup.includes("Review anesthesia record"), true);
+  assert.equal(markup.includes("Drying status"), false);
+});
+
+test("contextual endodontic inputs expose only the active step's canal fields", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    currentCanal: "DL",
+    canals: [{ ...blankCanal("MB"), dryingStatus: "dry" }, { ...blankCanal("DL"), shapingLength: "19", dryingStatus: "persistent wet" }],
+  });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes["dry-for-obturation"],
+    caseData,
+    activeCanal: caseData.canals[1],
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+  }));
+
+  assert.equal(markup.includes("DL</strong> canal record"), true);
+  assert.equal(markup.includes("Shaping length"), true);
+  assert.equal(markup.includes("Drying status"), true);
+  assert.equal(markup.includes("persistent wet"), true);
+  assert.equal(markup.includes("Chamber depth"), false);
+});
+
+test("protocol nodes declare structured contextual fields for guarded chairside inputs", () => {
+  assert.deepEqual(protocolNodes["advance-10c"].contextualFieldIds, ["estimatedWorkingLength", "fileTerminalLength"]);
+  assert.deepEqual(protocolNodes["establish-eal0"].contextualFieldIds, ["eal0", "patencyLength", "shapingLength", "referencePoint", "wlRadiographStatus"]);
+  assert.deepEqual(protocolNodes["create-final-shape"].contextualFieldIds, ["finalShape"]);
+  assert.deepEqual(protocolNodes["cone-fit-radiograph"].contextualFieldIds, ["coneFitRadiograph"]);
+  assert.deepEqual(protocolNodes["dry-for-obturation"].contextualFieldIds, ["shapingLength", "dryingStatus"]);
 });
 
 test("shared readiness actions open reusable setup and module paths for operative context", () => {
@@ -1273,7 +1401,7 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
   assert.equal(radiologyMarkup.includes("Radiology"), true);
   assert.equal(radiologyMarkup.includes("Record radiograph review"), true);
-  assert.equal(radiologyMarkup.includes("Latest radiology event"), true);
+  assert.equal(radiologyMarkup.includes("Radiograph entries"), true);
   assert.equal(radiologyMarkup.includes("Close shared workflow"), true);
   assert.equal(activeIsolationMarkup.includes("Record placement"), true);
   assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
@@ -1281,6 +1409,91 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(activeIsolationMarkup.includes("Save shortcuts"), true);
   assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
   assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
+});
+
+test("shared anesthesia and radiology runners keep repeatable events visible as separate entries", () => {
+  const noop = () => {};
+  const anesthesiaEvents = [
+    {
+      id: "evt_anesthesia_entry_1",
+      timestamp: "2026-08-20T09:05:00.000Z",
+      type: anesthesiaEventTypes.administered,
+      workflowId: sharedAnesthesiaWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { route: "injection", agentLabel: "First documented agent", administeredAt: "09:05", tooth: "36" },
+    },
+    {
+      id: "evt_anesthesia_entry_2",
+      timestamp: "2026-08-20T09:25:00.000Z",
+      type: anesthesiaEventTypes.topUpGiven,
+      workflowId: sharedAnesthesiaWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { route: "injection", agentLabel: "Second documented agent", administeredAt: "09:25", tooth: "36" },
+    },
+  ];
+  const radiologyEvents = [
+    {
+      id: "evt_radiology_entry_1",
+      timestamp: "2026-08-20T08:30:00.000Z",
+      type: radiologyEventTypes.reviewed,
+      workflowId: sharedRadiologyWorkflowId,
+      scope: { kind: "tooth" as const, tooth: "36" },
+      details: { modalities: ["pa"], tooth: "36" },
+    },
+    {
+      id: "evt_radiology_entry_2",
+      timestamp: "2026-08-20T08:40:00.000Z",
+      type: radiologyEventTypes.reviewed,
+      workflowId: sharedRadiologyWorkflowId,
+      scope: { kind: "custom" as const, teeth: ["36", "37"] },
+      details: { modalities: ["cbct"], teeth: ["36", "37"], regionKind: "teeth" },
+    },
+  ];
+  const caseData = baseCase({ tooth: "36", globalEvents: [...anesthesiaEvents, ...radiologyEvents] });
+
+  const anesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-record",
+      workflowRunId: "run_shared_anesthesia_entries",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_entries",
+    latestAnesthesiaEvent: anesthesiaEvents.at(-1),
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+  const radiologyMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedRadiologyWorkflowId,
+      entryNodeId: "radiology-complete",
+      workflowRunId: "run_shared_radiology_entries",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_entries",
+    latestRadiologyEvent: radiologyEvents.at(-1),
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+
+  assert.equal(anesthesiaMarkup.includes("Administration #1"), true);
+  assert.equal(anesthesiaMarkup.includes("Administration #2"), true);
+  assert.equal(anesthesiaMarkup.includes("First documented agent"), true);
+  assert.equal(anesthesiaMarkup.includes("Second documented agent"), true);
+  assert.equal(anesthesiaMarkup.includes("Set to now"), true);
+  assert.equal(anesthesiaMarkup.includes("Clear time"), true);
+  assert.match(anesthesiaMarkup, /type="time"/);
+  assert.equal(radiologyMarkup.includes("Radiograph entry #1"), true);
+  assert.equal(radiologyMarkup.includes("Radiograph entry #2"), true);
+  assert.equal(radiologyMarkup.includes("modalities: PA"), true);
+  assert.equal(radiologyMarkup.includes("modalities: CBCT"), true);
+  assert.equal(radiologyMarkup.includes("Add another radiograph entry"), true);
 });
 
 test("every protocol note event has a note fragment", () => {
@@ -1321,7 +1534,7 @@ test("every protocol note event has a note fragment", () => {
 });
 
 test("valid transition produces next node and event", () => {
-  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
   const output = applyDecision({
     currentNodeId: "preop",
     selectedOptionLabel: "Pre-op review complete",
@@ -1334,16 +1547,18 @@ test("valid transition produces next node and event", () => {
   assert.deepEqual(output.errors, []);
   assert.equal(output.nextNodeId, "access-chamber");
   assert.equal(output.generatedEvent?.type, "preop.reviewCompleted");
-  assert.equal(output.updatedCaseData.globalEvents.length, 2);
+  assert.equal(output.updatedCaseData.globalEvents.length, 3);
 });
 
-test("pre-op review uses shared radiology capability instead of raw radiograph checkboxes", () => {
+test("pre-op review requires shared radiology and anesthesia capabilities", () => {
   const option = protocolNodes.preop.options[0];
   const missingRadiology = baseCase();
   const reviewedRadiology = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const ready = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
 
   assert.ok(getMissingRequirements("preop", option, missingRadiology, missingRadiology.canals[0]).includes("Radiograph review recorded for the planned tooth"));
-  assert.deepEqual(getMissingRequirements("preop", option, reviewedRadiology, reviewedRadiology.canals[0]), []);
+  assert.ok(getMissingRequirements("preop", option, reviewedRadiology, reviewedRadiology.canals[0]).includes("Review anesthesia record and confirm current-visit adequacy for the planned tooth"));
+  assert.deepEqual(getMissingRequirements("preop", option, ready, ready.canals[0]), []);
 });
 
 test("invalid node ID returns an error", () => {
@@ -1395,7 +1610,7 @@ test("difficulty flag is applied", () => {
 });
 
 test("input case data is not mutated", () => {
-  const input = baseCase({ globalEvents: [radiologyReviewedEvent()] });
+  const input = baseCase({ globalEvents: [radiologyReviewedEvent(), anesthesiaAdequateEvent()] });
   const before = JSON.stringify(input);
   applyDecision({
     currentNodeId: "preop",
@@ -1914,6 +2129,42 @@ test("temporary closure proceeds when every existing canal is declared", () => {
 
   assert.equal(result.nextNodeId, "endodontic-pathway-complete");
   assert.equal(result.generatedEvent?.type, "closure.temporary");
+});
+
+test("temporary closure handoff medicates unresolved canals one at a time", () => {
+  const medicationEvent = { id: "evt_med_mb", timestamp: "2026-01-01T00:00:00.000Z", type: "medication.calciumHydroxidePlaced", canal: "MB" };
+  let caseData = baseCase({
+    currentCanal: "MB",
+    canals: [
+      { ...blankCanal("MB"), events: [medicationEvent] },
+      blankCanal("DB"),
+      blankCanal("DL"),
+    ],
+    globalEvents: [medicationEvent],
+  });
+
+  let targets = getPhaseAwareCanalTargets(caseData, "temporary-closure", "MB");
+  assert.deepEqual(targets.map((target) => target.canalName), ["DB", "DL"]);
+  assert.deepEqual(targets.map((target) => target.label), ["Place calcium hydroxide in DB", "Place calcium hydroxide in DL"]);
+  assert.equal(targets[0].nextNodeId, "calcium-hydroxide");
+
+  caseData = { ...caseData, currentCanal: "DB" };
+  let result = applyFirstOption(caseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  caseData = result.updatedCaseData;
+
+  targets = getPhaseAwareCanalTargets(caseData, "temporary-closure", "DB");
+  assert.deepEqual(targets.map((target) => target.canalName), ["DL"]);
+
+  caseData = { ...caseData, currentCanal: "DL" };
+  result = applyFirstOption(caseData, "calcium-hydroxide");
+  assert.equal(result.nextNodeId, "temporary-closure");
+  caseData = result.updatedCaseData;
+
+  assert.deepEqual(getPhaseAwareCanalTargets(caseData, "temporary-closure", "DL"), []);
+  assert.deepEqual(getCanalsBlockingClosure(caseData), []);
+  result = applyFirstOption(caseData, "temporary-closure");
+  assert.equal(result.nextNodeId, "endodontic-pathway-complete");
 });
 
 test("completed RCT closure records cleanup rinse final restoration and export status", () => {
@@ -3060,8 +3311,15 @@ test("shared anesthesia catalog suggestions are route scoped and non-prescriptiv
   assert.equal(seedAnesthesiaCatalogItems.every((item) => item.owner === "seed"), true);
   assert.equal(seedAnesthesiaCatalogItems.every((item) => item.category === "anesthesia"), true);
   assert.equal(seedAnesthesiaCatalogItems.some((item) => item.label === "Infiltration" && item.appliesTo?.route === "injection" && item.appliesTo.field === "techniques"), true);
-  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), []);
-  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), []);
+  assert.deepEqual(getAnesthesiaCatalogOptions("injection", "agents"), [
+    "Articaine 4% with 1:200K epinephrine",
+    "Lidocaine 2% with 1:100K epinephrine",
+    "Mepivacaine 3% without epinephrine",
+  ]);
+  assert.deepEqual(getAnesthesiaCatalogOptions("topical", "agents"), [
+    "Benzocaine 20% paste",
+    "ORAQIX® (lidocaine and prilocaine periodontal gel) 2.5%/2.5%",
+  ]);
   assert.deepEqual(getAnesthesiaCatalogOptions("other", "agents"), []);
   assert.equal(getAnesthesiaCatalogOptions("injection", "techniques").includes("Infiltration"), true);
   assert.equal(getAnesthesiaCatalogOptions("topical", "techniques").includes("Infiltration"), false);
@@ -3441,6 +3699,58 @@ test("user anesthesia catalog persistence loads, validates, and merges local use
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
 });
 
+test("unified catalogue persistence migrates legacy module preferences and imports additions without overwrite", () => {
+  const storage = memoryStorage();
+  const anesthesiaItem = createUserAnesthesiaCatalogItem({
+    route: "injection",
+    field: "agents",
+    label: "Clinic anesthetic",
+  });
+  const isolationItem = createUserIsolationCatalogItem({
+    field: "clampCodes",
+    label: "Clinic clamp",
+  });
+  saveUserAnesthesiaCatalogItems([anesthesiaItem], storage);
+  saveUserIsolationCatalogItems([isolationItem], storage);
+
+  const migrated = loadUserCatalogItems(storage);
+  assert.deepEqual(migrated.map((item) => item.category).sort(), ["anesthesia", "isolation"]);
+  assert.ok(storage.getItem(USER_CATALOG_STORAGE_KEY));
+
+  const conflictingAnesthesiaItem = { ...anesthesiaItem, label: "Imported conflicting label" };
+  const importedIsolationItem = createUserIsolationCatalogItem({
+    field: "methodLabels",
+    label: "Imported isolation method",
+  });
+  const exported = buildUserCatalogExport(
+    [conflictingAnesthesiaItem, isolationItem, importedIsolationItem],
+    new Date("2026-08-20T12:34:56.000Z")
+  );
+  const parsed = parseUserCatalogExport(JSON.stringify(exported));
+  const preview = previewUserCatalogImport(migrated, parsed.state.items);
+
+  assert.equal(buildUserCatalogExportFilename(new Date(2026, 7, 20, 12, 34, 56)), "nodedent_catalogues_2026_08_20_12_34_56.json");
+  assert.deepEqual(preview, {
+    additions: 1,
+    equivalentItems: 1,
+    idConflicts: 1,
+    itemsByCategory: { anesthesia: 1, isolation: 2 },
+  });
+
+  const merged = mergeNewUserCatalogItems(migrated, parsed.state.items);
+  assert.equal(merged.length, 3);
+  assert.equal(merged.find((item) => item.id === anesthesiaItem.id)?.label, "Clinic anesthetic");
+  assert.equal(merged.some((item) => item.label === "Imported isolation method"), true);
+  saveUserCatalogItems(merged, storage);
+  assert.equal(loadUserCatalogItems(storage).length, 3);
+
+  assert.throws(() => parseUserCatalogExport("not json"), /not valid JSON/);
+  assert.throws(
+    () => parseUserCatalogExport(JSON.stringify({ ...exported, state: { ...exported.state, items: [...exported.state.items, exported.state.items[0]] } })),
+    /duplicate item identifiers/
+  );
+});
+
 test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {
   const userDoseShortcut = createUserAnesthesiaCatalogItem({
     route: "injection",
@@ -3571,6 +3881,28 @@ test("shared anesthesia phase 6A uses explicit clinician-entered reassessment ti
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administrationEvent), undefined);
   assert.equal(administrationStatus.satisfied, false);
   assert.equal(administrationStatus.needsReassessment, false);
+});
+
+test("anesthesia administration time uses validated local HH:mm values", () => {
+  const now = new Date(2026, 7, 20, 9, 5);
+  const form = defaultAnesthesiaFormState("36", anesthesiaEventTypes.administered, now);
+
+  assert.equal(formatLocalTime24(now), "09:05");
+  assert.equal(getCurrentTimeString(now), "09:05");
+  assert.equal(form.administeredAt, "09:05");
+  assert.equal(formatTime24Value("9:05"), "09:05");
+  assert.equal(formatTime24Value("24:00"), "");
+  assert.equal(isCompleteTime24("09:05"), true);
+  assert.equal(isCompleteTime24("9:05"), false);
+  assert.equal(canSubmitAnesthesiaForm("administration", form), true);
+  assert.equal(canSubmitAnesthesiaForm("administration", { ...form, administeredAt: "9:05" }), false);
+  assert.equal(canSubmitAnesthesiaForm("administration", { ...form, administeredAt: "" }), true);
+
+  const assessment = buildAnesthesiaEventFromForm("assessment", {
+    ...form,
+    response: "adequate",
+  });
+  assert.equal(assessment?.details.administeredAt, undefined);
 });
 
 test("shared anesthesia workflow records explicit adequacy without inferring it from administration", () => {

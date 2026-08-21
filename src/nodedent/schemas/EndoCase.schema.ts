@@ -128,6 +128,13 @@ export const EndoCaseSchema = z.object({
   activeWorkflowInstanceId: z.string().optional(),
 });
 
+// Protected autosaves include the intentionally incomplete draft created before
+// the clinician selects a tooth. External case imports remain subject to the
+// stricter EndoCaseSchema above.
+export const EndoCaseDraftSchema = EndoCaseSchema.extend({
+  tooth: z.string(),
+});
+
 export type DecisionOptionInput = z.infer<typeof DecisionOptionSchema>;
 export type ProtocolNodeInput = z.infer<typeof ProtocolNodeSchema>;
 export type EndoCaseInput = z.infer<typeof EndoCaseSchema>;

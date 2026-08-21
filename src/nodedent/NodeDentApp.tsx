@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { CanalContinuationTarget, CaseSetupFocusTarget, ClinicalEvent, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
 import { DecisionCard } from "./components/DecisionCard";
+import { EndodonticEndVisitDialog, endVisitActionConfig, type EndVisitActionId } from "./components/EndodonticEndVisitDialog";
 import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { CaseSetupPage } from "./components/CaseSetupPage";
 import { CaseEntryGate } from "./components/CaseEntryGate";
@@ -33,10 +34,19 @@ import { buildClinicalExportFilename, buildVaultBackupFilename } from "./notes/e
 import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
-import { loadUserAnesthesiaCatalogItems, saveUserAnesthesiaCatalogItems } from "./state/anesthesiaCatalogPersistence";
+import { loadUserCatalogItems, saveUserCatalogItems } from "./state/catalogPersistence";
 import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "./state/caseEntry";
-import { CLINICAL_VAULT_IDLE_TIMEOUT_MS, ClinicalVaultError, type ClinicalVaultSession, type SavedCaseSummary } from "./state/clinicalVault";
-import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems } from "./state/isolationCatalogPersistence";
+import {
+  CLINICAL_VAULT_IDLE_TIMEOUT_MS,
+  ClinicalVaultError,
+  type BackupConflictResolution,
+  type ClinicalVaultBackup,
+  type ClinicalVaultSession,
+  type EncryptedBackupImportPreview,
+  type EncryptedBackupResolutionResult,
+  type RecoveryHistorySummary,
+  type SavedCaseSummary,
+} from "./state/clinicalVault";
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
@@ -175,6 +185,19 @@ function downloadFile(content: BlobPart, type: string, filename: string) {
 export default function NodeDentApp() {
   const [vaultAccess, setVaultAccess] = useState<ClinicalVaultAccess | null>(null);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(() => window.location.hash === PRIVACY_POLICY_HASH);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themeMode;
+    document
+      .getElementById("app-favicon")
+      ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
+    try {
+      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
+    } catch {
+      // Theme persistence is optional and never contains clinical data.
+    }
+  }, [themeMode]);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -194,7 +217,13 @@ export default function NodeDentApp() {
   if (showPrivacyPolicy) {
     content = <PrivacyPolicyPage />;
   } else if (!vaultAccess) {
-    content = <ClinicalVaultGate onAccess={setVaultAccess} />;
+    content = (
+      <ClinicalVaultGate
+        onAccess={setVaultAccess}
+        themeMode={themeMode}
+        onToggleTheme={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+      />
+    );
   } else {
     const lockAndReset = () => {
       vaultAccess.session.close();
@@ -203,7 +232,12 @@ export default function NodeDentApp() {
 
     content = (
       <ClinicalWorkspaceErrorBoundary onFatalError={() => vaultAccess.session.close()} onLock={lockAndReset}>
-        <ClinicalWorkspace access={vaultAccess} onLocked={lockAndReset} />
+        <ClinicalWorkspace
+          access={vaultAccess}
+          onLocked={lockAndReset}
+          themeMode={themeMode}
+          onToggleTheme={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+        />
       </ClinicalWorkspaceErrorBoundary>
     );
   }
@@ -216,11 +250,22 @@ export default function NodeDentApp() {
   );
 }
 
-function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; onLocked: () => void }) {
+function ClinicalWorkspace({
+  access,
+  onLocked,
+  themeMode,
+  onToggleTheme,
+}: {
+  access: ClinicalVaultAccess;
+  onLocked: () => void;
+  themeMode: ThemeMode;
+  onToggleTheme: () => void;
+}) {
   const { session, persistentStorage } = access;
   const [caseData, setCaseData] = useState<EndoCase>(createFreshCase);
-  const [userAnesthesiaCatalogItems, setUserAnesthesiaCatalogItems] = useState(() => loadUserAnesthesiaCatalogItems());
-  const [userIsolationCatalogItems, setUserIsolationCatalogItems] = useState(() => loadUserIsolationCatalogItems());
+  const [userCatalogItems, setUserCatalogItems] = useState(() => loadUserCatalogItems());
+  const userAnesthesiaCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "anesthesia"), [userCatalogItems]);
+  const userIsolationCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "isolation"), [userCatalogItems]);
   const [currentNodeId, setCurrentNodeId] = useState("preop");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [newCanalName, setNewCanalName] = useState("");
@@ -241,10 +286,11 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
+  const [isEndVisitOpen, setIsEndVisitOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialTheme);
+  const [recoveryHistory, setRecoveryHistory] = useState<RecoveryHistorySummary[]>([]);
   const [isVaultReady, setIsVaultReady] = useState(false);
   const [isCaseEntryOpen, setIsCaseEntryOpen] = useState(true);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
@@ -337,6 +383,12 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     return cases;
   }, [session]);
 
+  const refreshRecoveryHistory = useCallback(async () => {
+    const entries = await session.listRecoveryHistory();
+    setRecoveryHistory(entries);
+    return entries;
+  }, [session]);
+
   const queueCaseSave = useCallback((snapshot: EndoCase, nodeId: string) => {
     const queuedSnapshot = normalizeCaseWorkflowInstances(structuredClone(snapshot), nodeId);
     const job = saveQueue.current.then(async () => {
@@ -395,18 +447,6 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }, [refreshSavedCases, session]);
 
   useEffect(() => setRenameCanalName(activeCanal?.name || ""), [activeCanal?.name]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = themeMode;
-    document
-      .getElementById("app-favicon")
-      ?.setAttribute("href", themeMode === "dark" ? DARK_FAVICON_PATH : LIGHT_FAVICON_PATH);
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, themeMode);
-    } catch {
-      // Theme persistence is optional and never contains clinical data.
-    }
-  }, [themeMode]);
 
   useEffect(() => {
     if (!isVaultReady) return;
@@ -485,13 +525,24 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   }
 
   function updateUserAnesthesiaCatalogItems(items: typeof userAnesthesiaCatalogItems) {
-    setUserAnesthesiaCatalogItems(items);
-    saveUserAnesthesiaCatalogItems(items);
+    setUserCatalogItems((current) => {
+      const nextItems = [...current.filter((item) => item.category !== "anesthesia"), ...items];
+      saveUserCatalogItems(nextItems);
+      return nextItems;
+    });
   }
 
   function updateUserIsolationCatalogItems(items: typeof userIsolationCatalogItems) {
-    setUserIsolationCatalogItems(items);
-    saveUserIsolationCatalogItems(items);
+    setUserCatalogItems((current) => {
+      const nextItems = [...current.filter((item) => item.category !== "isolation"), ...items];
+      saveUserCatalogItems(nextItems);
+      return nextItems;
+    });
+  }
+
+  function updateAllUserCatalogItems(items: typeof userCatalogItems) {
+    setUserCatalogItems(items);
+    saveUserCatalogItems(items);
   }
 
   function updatePreOp(field: string, value: string | boolean) {
@@ -991,6 +1042,43 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     }
   }
 
+  async function previewEncryptedBackupImport(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportPreview> {
+    await saveQueue.current;
+    return session.previewEncryptedBackupImport(backup, passphrase);
+  }
+
+  async function resolveEncryptedBackupImport(
+    backup: ClinicalVaultBackup,
+    passphrase: string,
+    resolutions: BackupConflictResolution[]
+  ): Promise<EncryptedBackupResolutionResult> {
+    await saveQueue.current;
+    const result = await session.resolveEncryptedBackupImport(backup, passphrase, resolutions);
+    await Promise.all([refreshSavedCases(), refreshRecoveryHistory()]);
+    return result;
+  }
+
+  async function restoreRecoveryHistoryEntry(id: string) {
+    await saveQueue.current;
+    await session.restoreRecoveryHistoryEntry(id);
+    await Promise.all([refreshSavedCases(), refreshRecoveryHistory()]);
+  }
+
+  async function lockVaultForRecovery() {
+    try {
+      if (isVaultReady && storageStatusRef.current !== "conflict") {
+        await queueCaseSave(latestCaseData.current, latestNodeId.current);
+        await saveQueue.current;
+      }
+      await session.detachActiveEncounterForRecovery();
+      setIsSavedCasesOpen(false);
+      await lockVault(false);
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not prepare the vault for recovery.");
+    }
+  }
+
   function downloadDisplayedText() {
     if (noteMode === "json") {
       downloadCaseJson();
@@ -1095,6 +1183,23 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
     if (nextNodeId) setCurrentNodeId(nextNodeId);
     setCopied(false);
     setValidationMessage(null);
+  }
+
+  function completeEndVisitAction(actionId: EndVisitActionId, nextVisitPlan: string) {
+    if (!activeCanal) return;
+    const action = endVisitActionConfig[actionId];
+    const actionLabels: Record<EndVisitActionId, string> = {
+      pause: `Pause ${activeCanal.name} at ${currentNode.title}`,
+      medicate: `Continue ${activeCanal.name} to medication and temporary closure`,
+      refer: `Continue ${activeCanal.name} to referral / stop pathway`,
+    };
+
+    addManualCanalEvent(action.eventType, actionLabels[actionId], action.nextNodeId, action.difficultyFlag);
+    if (nextVisitPlan.trim()) {
+      setCaseData((prev) => ({ ...prev, nextVisitPlan: nextVisitPlan.trim() }));
+    }
+    setIsEndVisitOpen(false);
+    if (actionId === "pause") setIsWorkflowLauncherOpen(true);
   }
 
   function resetActiveCanalManualStatus() {
@@ -1271,6 +1376,20 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
   function openSavedCases() {
     setIsWorkflowLauncherOpen(false);
     setIsSavedCasesOpen(true);
+    void refreshRecoveryHistory().catch((error) => {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not read protected recovery history.");
+    });
+  }
+
+  function openCaseJsonImport() {
+    setShowImportBox(true);
+    openSavedCases();
+  }
+
+  function openEncryptedVaultImport() {
+    setShowImportBox(false);
+    openSavedCases();
   }
 
   function openPriorVisit() {
@@ -1332,6 +1451,9 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
           persistentStorage={persistentStorage}
           onContinueCurrentCase={() => setIsCaseEntryOpen(false)}
           onStartNewCase={startCaseFromEntry}
+          onImportCaseJson={openCaseJsonImport}
+          onImportEncryptedVault={openEncryptedVaultImport}
+          onDownloadEncryptedVault={() => void downloadEncryptedVaultBackup()}
           onReviewSavedCases={openSavedCases}
           onLockVault={() => void lockVault()}
         />
@@ -1349,6 +1471,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
+            onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
+            onResolveEncryptedBackupImport={resolveEncryptedBackupImport}
+            recoveryHistory={recoveryHistory}
+            activeEncounterId={caseData.encounterId}
+            onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
+            onLockForRestore={() => void lockVaultForRecovery()}
+            userCatalogItems={userCatalogItems}
+            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
       </>
@@ -1403,7 +1533,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
               <button
                 type="button"
                 aria-pressed={themeMode === "dark"}
-                onClick={() => setThemeMode((value) => value === "dark" ? "light" : "dark")}
+                onClick={onToggleTheme}
                 className={cx(headerActionButton.secondaryCompact, "gap-2")}
               >
                 <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
@@ -1540,6 +1670,11 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
                       onContinueCanal={continueCanal}
                       onCreateNewCanal={() => createNewCanalAtEstimate(caseData)}
                       onOpenCaseSetupStatus={openCasePanel}
+                      onUpdatePreOp={updatePreOp}
+                      onUpdateActiveCanal={updateActiveCanal}
+                      onApplyEalDerivedLengths={applyEalDerivedLengths}
+                      onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
+                      onOpenRadiologyWorkflow={openRadiologyWorkflow}
                     />
                   </section>
 
@@ -1578,8 +1713,29 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             <EventLog events={caseData.globalEvents} />
           </aside>
             </main>
+
+            {isEndodonticWorkflowActive ? (
+              <button
+                type="button"
+                onClick={() => setIsEndVisitOpen(true)}
+                className="fixed bottom-4 right-4 z-40 rounded-full border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-950 shadow-xl transition hover:-translate-y-0.5 hover:bg-amber-100 focus:outline-none focus:ring-4 focus:ring-amber-200"
+              >
+                Pause / end visit
+              </button>
+            ) : null}
           </>
         )}
+
+        {isEndVisitOpen && isEndodonticWorkflowActive ? (
+          <EndodonticEndVisitDialog
+            activeCanalName={activeCanal?.name || "active canal"}
+            currentNodeTitle={currentNode.title}
+            currentPhase={currentNode.phase}
+            initialNextVisitPlan={caseData.nextVisitPlan}
+            onSelectAction={completeEndVisitAction}
+            onClose={() => setIsEndVisitOpen(false)}
+          />
+        ) : null}
 
         {isWorkflowLauncherOpen ? (
           <WorkflowLauncher
@@ -1668,6 +1824,14 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
             onLoadSavedCase={loadSavedCase}
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
+            onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
+            onResolveEncryptedBackupImport={resolveEncryptedBackupImport}
+            recoveryHistory={recoveryHistory}
+            activeEncounterId={caseData.encounterId}
+            onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
+            onLockForRestore={() => void lockVaultForRecovery()}
+            userCatalogItems={userCatalogItems}
+            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
 

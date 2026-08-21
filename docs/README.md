@@ -64,6 +64,8 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Archived Implemented Specs
 
+- [Encrypted backup revision conflict resolution](specs/archive/encrypted-backup-revision-conflict-resolution.md)
+- [Issue 20 chairside and recovery improvements](specs/archive/issue-20-chairside-and-recovery-improvements.md)
 - [Global footer and application-version display](specs/archive/global-footer-and-application-version.md)
 - [Changesets and release-versioning baseline](specs/archive/Implement-Changesets.md)
 - [Codex MVP implementation instructions](specs/archive/codex-endo-guide-mvp-instructions.md)

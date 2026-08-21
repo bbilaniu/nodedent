@@ -5,6 +5,12 @@ import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
 import type { SavedCaseSummary } from "../state/clinicalVault";
 import { SelectInput, TextInput } from "./FormControls";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
+import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
+import type { CatalogItem } from "../workflow/catalogs";
+import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
+import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
+
+const MAX_CASE_JSON_BYTES = 1_000_000;
 
 export function SavedCasesModal({
   savedCases,
@@ -19,6 +25,14 @@ export function SavedCasesModal({
   onLoadSavedCase,
   onDeleteSavedCase,
   onDownloadEncryptedVaultBackup,
+  onPreviewEncryptedBackupImport,
+  onResolveEncryptedBackupImport,
+  recoveryHistory,
+  activeEncounterId,
+  onRestoreRecoveryHistoryEntry,
+  onLockForRestore,
+  userCatalogItems,
+  onUserCatalogItemsChange,
 }: {
   savedCases: SavedCaseSummary[];
   importText: string;
@@ -32,7 +46,33 @@ export function SavedCasesModal({
   onLoadSavedCase: (caseId: string) => void;
   onDeleteSavedCase: (caseId: string) => void;
   onDownloadEncryptedVaultBackup: () => void;
+  onPreviewEncryptedBackupImport: (backup: ClinicalVaultBackup, passphrase: string) => Promise<EncryptedBackupImportPreview>;
+  onResolveEncryptedBackupImport: (backup: ClinicalVaultBackup, passphrase: string, resolutions: BackupConflictResolution[]) => Promise<EncryptedBackupResolutionResult>;
+  recoveryHistory: RecoveryHistorySummary[];
+  activeEncounterId: string;
+  onRestoreRecoveryHistoryEntry: (id: string) => Promise<void>;
+  onLockForRestore: () => void;
+  userCatalogItems: CatalogItem[];
+  onUserCatalogItemsChange: (items: CatalogItem[]) => void;
 }) {
+  const [importFileName, setImportFileName] = useState("");
+  const [importFileError, setImportFileError] = useState("");
+
+  async function selectImportFile(file?: File) {
+    setImportFileName("");
+    setImportFileError("");
+    if (!file) return;
+
+    try {
+      if (file.size > MAX_CASE_JSON_BYTES) throw new Error("Case JSON exceeds the 1 MB import limit.");
+      onImportTextChange(await file.text());
+      setImportFileName(file.name);
+    } catch (error) {
+      onImportTextChange("");
+      setImportFileError(error instanceof Error ? error.message : "Could not read the selected JSON file.");
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
       <section className="mt-6 w-full max-w-3xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
@@ -48,10 +88,9 @@ export function SavedCasesModal({
         <ClinicalDataNotice compact />
 
         <div className="mt-4 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-brand-navy">Import / library actions</h3>
+          <h3 className="mb-3 text-sm font-semibold text-brand-navy">Case library actions</h3>
           <div className="grid gap-3 md:grid-cols-2">
             <button onClick={onToggleImportBox} className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Import case JSON</button>
-            <button onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">Download encrypted vault backup</button>
             <div className="flex gap-2">
               <button onClick={onClearSavedCurrentCase} className="flex-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-100">Clear current</button>
               <button onClick={onResetAllSavedCases} className="flex-1 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">Reset all</button>
@@ -59,12 +98,47 @@ export function SavedCasesModal({
           </div>
           {showImportBox ? (
             <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
-              <p className="mb-2 text-xs leading-5 text-amber-900">Pasted JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
-              <textarea value={importText} onChange={(event) => onImportTextChange(event.target.value)} placeholder="Paste explicitly exported NodeDent case JSON here" className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue" />
+              <p className="mb-2 text-xs leading-5 text-amber-900">Case JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
+              <label className="block rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
+                <span className="mb-2 block text-xs font-semibold text-brand-navy">Choose a NodeDent case JSON file</span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(event) => void selectImportFile(event.target.files?.[0])}
+                  className="block w-full text-sm text-brand-slate"
+                />
+              </label>
+              {importFileName ? <p className="mt-2 text-xs text-brand-slate">Selected: {importFileName}</p> : null}
+              {importFileError ? <p role="alert" className="mt-2 text-xs font-semibold text-red-800">{importFileError}</p> : null}
+              <label className="mt-3 block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Or paste case JSON</span>
+                <textarea
+                  value={importText}
+                  onChange={(event) => {
+                    setImportFileName("");
+                    setImportFileError("");
+                    onImportTextChange(event.target.value);
+                  }}
+                  placeholder="Paste explicitly exported NodeDent case JSON here"
+                  className="h-28 w-full rounded-lg border border-brand-blue-light/60 bg-white p-2 font-mono text-xs outline-none focus:border-brand-blue"
+                />
+              </label>
               <button onClick={onImportCaseJson} className="mt-2 rounded-lg bg-brand-blue px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-blue-light">Resume imported workflow</button>
             </div>
           ) : null}
         </div>
+
+        <BackupRecoveryPanel
+          onDownloadEncryptedVaultBackup={onDownloadEncryptedVaultBackup}
+          onPreviewEncryptedBackupImport={onPreviewEncryptedBackupImport}
+          onResolveEncryptedBackupImport={onResolveEncryptedBackupImport}
+          recoveryHistory={recoveryHistory}
+          activeEncounterId={activeEncounterId}
+          onRestoreRecoveryHistoryEntry={onRestoreRecoveryHistoryEntry}
+          onLockForRestore={onLockForRestore}
+        />
+
+        <CatalogAdministrationPanel items={userCatalogItems} onChange={onUserCatalogItemsChange} />
 
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Recent autosaves</p>
