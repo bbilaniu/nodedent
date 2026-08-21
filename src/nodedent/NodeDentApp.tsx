@@ -39,10 +39,12 @@ import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "./state/caseEntr
 import {
   CLINICAL_VAULT_IDLE_TIMEOUT_MS,
   ClinicalVaultError,
+  type BackupConflictResolution,
   type ClinicalVaultBackup,
   type ClinicalVaultSession,
   type EncryptedBackupImportPreview,
-  type EncryptedBackupImportResult,
+  type EncryptedBackupResolutionResult,
+  type RecoveryHistorySummary,
   type SavedCaseSummary,
 } from "./state/clinicalVault";
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
@@ -288,6 +290,7 @@ function ClinicalWorkspace({
   const [importText, setImportText] = useState("");
   const [showImportBox, setShowImportBox] = useState(false);
   const [savedCases, setSavedCases] = useState<SavedCaseSummary[]>([]);
+  const [recoveryHistory, setRecoveryHistory] = useState<RecoveryHistorySummary[]>([]);
   const [isVaultReady, setIsVaultReady] = useState(false);
   const [isCaseEntryOpen, setIsCaseEntryOpen] = useState(true);
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("loading");
@@ -378,6 +381,12 @@ function ClinicalWorkspace({
     const cases = await session.listCases();
     setSavedCases(cases);
     return cases;
+  }, [session]);
+
+  const refreshRecoveryHistory = useCallback(async () => {
+    const entries = await session.listRecoveryHistory();
+    setRecoveryHistory(entries);
+    return entries;
   }, [session]);
 
   const queueCaseSave = useCallback((snapshot: EndoCase, nodeId: string) => {
@@ -1038,11 +1047,36 @@ function ClinicalWorkspace({
     return session.previewEncryptedBackupImport(backup, passphrase);
   }
 
-  async function importNewCasesFromEncryptedBackup(backup: ClinicalVaultBackup, passphrase: string): Promise<EncryptedBackupImportResult> {
+  async function resolveEncryptedBackupImport(
+    backup: ClinicalVaultBackup,
+    passphrase: string,
+    resolutions: BackupConflictResolution[]
+  ): Promise<EncryptedBackupResolutionResult> {
     await saveQueue.current;
-    const result = await session.importNewCasesFromEncryptedBackup(backup, passphrase);
-    await refreshSavedCases();
+    const result = await session.resolveEncryptedBackupImport(backup, passphrase, resolutions);
+    await Promise.all([refreshSavedCases(), refreshRecoveryHistory()]);
     return result;
+  }
+
+  async function restoreRecoveryHistoryEntry(id: string) {
+    await saveQueue.current;
+    await session.restoreRecoveryHistoryEntry(id);
+    await Promise.all([refreshSavedCases(), refreshRecoveryHistory()]);
+  }
+
+  async function lockVaultForRecovery() {
+    try {
+      if (isVaultReady && storageStatusRef.current !== "conflict") {
+        await queueCaseSave(latestCaseData.current, latestNodeId.current);
+        await saveQueue.current;
+      }
+      await session.detachActiveEncounterForRecovery();
+      setIsSavedCasesOpen(false);
+      await lockVault(false);
+    } catch (error) {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not prepare the vault for recovery.");
+    }
   }
 
   function downloadDisplayedText() {
@@ -1342,6 +1376,10 @@ function ClinicalWorkspace({
   function openSavedCases() {
     setIsWorkflowLauncherOpen(false);
     setIsSavedCasesOpen(true);
+    void refreshRecoveryHistory().catch((error) => {
+      setStorageStatus("failed");
+      setStorageMessage(error instanceof Error ? error.message : "Could not read protected recovery history.");
+    });
   }
 
   function openCaseJsonImport() {
@@ -1434,11 +1472,11 @@ function ClinicalWorkspace({
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
             onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
-            onImportNewCasesFromEncryptedBackup={importNewCasesFromEncryptedBackup}
-            onLockForRestore={() => {
-              setIsSavedCasesOpen(false);
-              void lockVault();
-            }}
+            onResolveEncryptedBackupImport={resolveEncryptedBackupImport}
+            recoveryHistory={recoveryHistory}
+            activeEncounterId={caseData.encounterId}
+            onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
+            onLockForRestore={() => void lockVaultForRecovery()}
             userCatalogItems={userCatalogItems}
             onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
@@ -1787,11 +1825,11 @@ function ClinicalWorkspace({
             onDeleteSavedCase={deleteSavedCase}
             onDownloadEncryptedVaultBackup={downloadEncryptedVaultBackup}
             onPreviewEncryptedBackupImport={previewEncryptedBackupImport}
-            onImportNewCasesFromEncryptedBackup={importNewCasesFromEncryptedBackup}
-            onLockForRestore={() => {
-              setIsSavedCasesOpen(false);
-              void lockVault();
-            }}
+            onResolveEncryptedBackupImport={resolveEncryptedBackupImport}
+            recoveryHistory={recoveryHistory}
+            activeEncounterId={caseData.encounterId}
+            onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
+            onLockForRestore={() => void lockVaultForRecovery()}
             userCatalogItems={userCatalogItems}
             onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
