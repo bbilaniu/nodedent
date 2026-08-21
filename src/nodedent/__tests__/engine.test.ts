@@ -192,6 +192,7 @@ test("case entry actions offer imports and only offer review when another meanin
     onStartNewCase: noop,
     onImportCaseJson: noop,
     onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
@@ -200,6 +201,7 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(blankMarkup.includes("Continue current case"), false);
   assert.equal(blankMarkup.includes("Import case JSON"), true);
   assert.equal(blankMarkup.includes("Import existing vault"), true);
+  assert.equal(blankMarkup.includes("Download current vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
@@ -211,6 +213,7 @@ test("case entry actions offer imports and only offer review when another meanin
     onStartNewCase: noop,
     onImportCaseJson: noop,
     onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));
@@ -228,6 +231,7 @@ test("case entry actions offer imports and only offer review when another meanin
     onStartNewCase: noop,
     onImportCaseJson: noop,
     onImportEncryptedVault: noop,
+    onDownloadEncryptedVault: noop,
     onReviewSavedCases: noop,
     onLockVault: noop,
   }));

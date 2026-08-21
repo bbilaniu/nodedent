@@ -1394,6 +1394,7 @@ function ClinicalWorkspace({ access, onLocked }: { access: ClinicalVaultAccess; 
           onStartNewCase={startCaseFromEntry}
           onImportCaseJson={openCaseJsonImport}
           onImportEncryptedVault={openEncryptedVaultImport}
+          onDownloadEncryptedVault={() => void downloadEncryptedVaultBackup()}
           onReviewSavedCases={openSavedCases}
           onLockVault={() => void lockVault()}
         />

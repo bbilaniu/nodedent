@@ -17,6 +17,7 @@ export function CaseEntryGate({
   onStartNewCase,
   onImportCaseJson,
   onImportEncryptedVault,
+  onDownloadEncryptedVault,
   onReviewSavedCases,
   onLockVault,
 }: {
@@ -28,6 +29,7 @@ export function CaseEntryGate({
   onStartNewCase: () => void;
   onImportCaseJson: () => void;
   onImportEncryptedVault: () => void;
+  onDownloadEncryptedVault: () => void;
   onReviewSavedCases: () => void;
   onLockVault: () => void;
 }) {
@@ -109,6 +111,13 @@ export function CaseEntryGate({
               className="rounded-xl border border-brand-mint bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-mint/20"
             >
               Import existing vault
+            </button>
+            <button
+              type="button"
+              onClick={onDownloadEncryptedVault}
+              className="rounded-xl border border-brand-mint bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-mint/20"
+            >
+              Download current vault
             </button>
             {otherCaseCount > 0 ? (
               <button
