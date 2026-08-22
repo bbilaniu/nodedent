@@ -9,6 +9,7 @@ import {
   type UserCatalogExport,
   type UserCatalogImportPreview,
 } from "../state/catalogPersistence";
+import { FilePickerControl } from "./FilePickerControl";
 
 function downloadCatalogExport(items: CatalogItem[]) {
   const blob = new Blob([JSON.stringify(buildUserCatalogExport(items), null, 2)], { type: "application/json" });
@@ -73,17 +74,14 @@ export function CatalogAdministrationPanel({
         >
           Download catalogue preferences
         </button>
-        <label className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/20">
-          <span>Select catalogue export</span>
-          <input
-            type="file"
-            accept=".json,application/json"
-            onChange={(event) => void selectImportFile(event.target.files?.[0])}
-            className="mt-2 block w-full text-xs font-normal text-brand-slate"
-          />
-        </label>
+        <FilePickerControl
+          label="Catalogue export file"
+          buttonLabel="Select catalogue export"
+          accept=".json,application/json"
+          fileName={selectedFilename}
+          onFileSelect={(file) => void selectImportFile(file)}
+        />
       </div>
-      {selectedFilename ? <p className="mt-2 text-xs text-brand-slate">Selected: {selectedFilename}</p> : null}
       {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
       {preview ? (
         <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-3">

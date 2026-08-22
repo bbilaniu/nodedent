@@ -14,6 +14,7 @@ import { CaseSetupPage } from "../components/CaseSetupPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
 import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
+import { FilePickerControl } from "../components/FilePickerControl";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
@@ -479,6 +480,23 @@ test("encrypted backup restore reports missing input instead of silently disabli
   assert.match(getEncryptedBackupRestoreInputError(false, ""), /choose an encrypted NodeDent backup file/i);
   assert.match(getEncryptedBackupRestoreInputError(true, ""), /original passphrase/i);
   assert.equal(getEncryptedBackupRestoreInputError(true, "clinic test passphrase 2026"), "");
+});
+
+test("shared file picker uses application typography and an accessible custom trigger", () => {
+  const markup = renderToStaticMarkup(React.createElement(FilePickerControl, {
+    id: "test-file-picker",
+    label: "Encrypted backup file",
+    buttonLabel: "Choose backup file",
+    accept: ".nodedent,application/json",
+    onFileSelect: () => {},
+  }));
+
+  assert.match(markup, /type="file"[^>]*class="peer sr-only"/);
+  assert.match(markup, /for="test-file-picker"[^>]*text-sm font-semibold leading-5/);
+  assert.match(markup, /Choose backup file/);
+  assert.match(markup, /No file selected/);
+  assert.match(markup, /aria-labelledby="test-file-picker-label"/);
+  assert.match(markup, /aria-describedby="test-file-picker-name"/);
 });
 
 function radiologyReviewedEvent(tooth = "30") {

@@ -6,6 +6,7 @@ import type {
   EncryptedBackupResolutionResult,
   RecoveryHistorySummary,
 } from "../state/clinicalVault";
+import { FilePickerControl } from "./FilePickerControl";
 
 const MAX_ENCRYPTED_BACKUP_BYTES = 50 * 1024 * 1024;
 
@@ -134,21 +135,20 @@ export function BackupRecoveryPanel({
       <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-3">
         <p className="text-sm font-semibold text-brand-navy">Import and resolve encrypted backup</p>
         <p className="mt-1 text-xs leading-5 text-brand-slate">The complete backup is authenticated and validated before comparison. New encounters are added; differing existing encounters stay local unless you explicitly replace them.</p>
-        <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-medium text-brand-slate">Encrypted backup file</span>
-          <input
-            type="file"
+        <div className="mt-3">
+          <FilePickerControl
+            label="Encrypted backup file"
+            buttonLabel="Choose backup file"
             accept=".nodedent,application/json"
-            onChange={(event) => {
-              setFile(event.target.files?.[0] || null);
+            fileName={file?.name}
+            onFileSelect={(selectedFile) => {
+              setFile(selectedFile || null);
               resetPreview();
             }}
-            className="block w-full text-sm text-brand-slate"
           />
-        </label>
-        {file ? <p className="mt-1 text-xs text-brand-slate">Selected: {file.name}</p> : null}
+        </div>
         <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-medium text-brand-slate">Original backup passphrase</span>
+          <span className="mb-1 block text-sm font-semibold text-brand-navy">Original backup passphrase</span>
           <input
             type="password"
             autoComplete="current-password"
