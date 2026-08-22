@@ -13,6 +13,8 @@ import {
 } from "../state/legacyClinicalStorage";
 import { PRIVACY_POLICY_HASH } from "./AppFooter";
 
+const backupActionClassName = "inline-flex min-h-10 items-center justify-center rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold leading-5 text-brand-navy";
+
 export type ClinicalVaultAccess = {
   session: ClinicalVaultSession;
   persistentStorage: boolean;
@@ -250,19 +252,32 @@ export function ClinicalVaultGate({
           <div className="mt-6 rounded-2xl border border-brand-blue-light bg-brand-blue-light/10 p-4">
             <h2 className="text-sm font-bold">Restore encrypted backup</h2>
             <p id="restore-backup-help" className="mt-1 text-xs leading-5 text-brand-slate">Select a `.nodedent` encrypted vault backup and enter the backup's original passphrase below. Restoring never reads prototype `localStorage` records.</p>
-            <label className="mt-3 block">
-              <span className="mb-1 block text-sm font-semibold">Encrypted backup file</span>
+            <div className="mt-3">
+              <span id="encrypted-backup-file-label" className="mb-1 block text-sm font-semibold">Encrypted backup file</span>
               <input
+                id="encrypted-backup-file"
                 type="file"
                 accept=".nodedent,application/json"
-                aria-describedby="restore-backup-help"
+                aria-labelledby="encrypted-backup-file-label"
+                aria-describedby="restore-backup-help encrypted-backup-file-name"
                 onChange={(event) => {
                   setRestoreFile(event.target.files?.[0] || null);
                   setRestoreError("");
                 }}
-                className="block w-full text-sm"
+                className="peer sr-only"
               />
-            </label>
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+                <label
+                  htmlFor="encrypted-backup-file"
+                  className={`${backupActionClassName} cursor-pointer hover:bg-brand-light-slate peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-brand-mint peer-focus-visible:ring-offset-2`}
+                >
+                  Choose backup file
+                </label>
+                <span id="encrypted-backup-file-name" className="min-w-0 break-all text-sm text-brand-slate">
+                  {restoreFile?.name || "No file selected"}
+                </span>
+              </div>
+            </div>
             <label className="mt-3 block">
               <span className="mb-1 block text-sm font-semibold">Backup passphrase</span>
               <input
@@ -278,7 +293,7 @@ export function ClinicalVaultGate({
               />
             </label>
             {restoreError ? <div id="restore-backup-error" role="alert" className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">{restoreError}</div> : null}
-            <button type="button" disabled={busy || !store || hasVault === null} onClick={restoreBackup} className="mt-3 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">{busy ? "Working…" : "Restore encrypted backup"}</button>
+            <button type="button" disabled={busy || !store || hasVault === null} onClick={restoreBackup} className={`${backupActionClassName} mt-3 hover:bg-brand-light-slate disabled:cursor-not-allowed disabled:opacity-50`}>{busy ? "Working…" : "Restore encrypted backup"}</button>
           </div>
 
           {legacyKeys.length ? (

@@ -197,11 +197,11 @@ test("case entry actions offer imports and only offer review when another meanin
     onLockVault: noop,
   }));
 
-  assert.equal(blankMarkup.includes("Start new case"), true);
-  assert.equal(blankMarkup.includes("Continue current case"), false);
-  assert.equal(blankMarkup.includes("Import case JSON"), true);
-  assert.equal(blankMarkup.includes("Import existing vault"), true);
-  assert.equal(blankMarkup.includes("Download current vault"), true);
+  assert.equal(blankMarkup.includes("New case"), true);
+  assert.equal(blankMarkup.includes("Continue case"), false);
+  assert.equal(blankMarkup.includes("Import case"), true);
+  assert.equal(blankMarkup.includes("Import vault"), true);
+  assert.equal(blankMarkup.includes("Download vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
@@ -218,8 +218,8 @@ test("case entry actions offer imports and only offer review when another meanin
     onLockVault: noop,
   }));
 
-  assert.equal(blankWithOtherCasesMarkup.includes("Continue current case"), false);
-  assert.equal(blankWithOtherCasesMarkup.includes("Start new case"), true);
+  assert.equal(blankWithOtherCasesMarkup.includes("Continue case"), false);
+  assert.equal(blankWithOtherCasesMarkup.includes("New case"), true);
   assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved case"), true);
 
   const resumableMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
@@ -236,8 +236,8 @@ test("case entry actions offer imports and only offer review when another meanin
     onLockVault: noop,
   }));
 
-  assert.equal(resumableMarkup.includes("Continue current case"), true);
-  assert.equal(resumableMarkup.includes("Start new case"), true);
+  assert.equal(resumableMarkup.includes("Continue case"), true);
+  assert.equal(resumableMarkup.includes("New case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
 });
 
