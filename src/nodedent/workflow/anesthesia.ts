@@ -21,9 +21,23 @@ export const anesthesiaInvalidatingEventTypes = [
   anesthesiaEventTypes.needsReassessment,
 ] as const;
 
+const anesthesiaEventTypeSet = new Set<string>(Object.values(anesthesiaEventTypes));
+const anesthesiaAdministrationEventTypeSet = new Set<string>([
+  anesthesiaEventTypes.administered,
+  anesthesiaEventTypes.topUpGiven,
+]);
+
 export type AnesthesiaEventType = typeof anesthesiaEventTypes[keyof typeof anesthesiaEventTypes];
 export type AnesthesiaRoute = typeof anesthesiaRoutes[number];
 export type AnesthesiaAdequacyResponse = typeof anesthesiaAdequacyResponses[number];
+
+export function isAnesthesiaEvent(event: ClinicalEvent) {
+  return anesthesiaEventTypeSet.has(event.type);
+}
+
+export function isAnesthesiaAdministrationEvent(event: ClinicalEvent) {
+  return anesthesiaAdministrationEventTypeSet.has(event.type);
+}
 
 export type AnesthesiaEventDetails = {
   route?: AnesthesiaRoute;

@@ -43,5 +43,13 @@ export function buildClinicalExportFilename(
 }
 
 export function buildVaultBackupFilename(now = new Date()) {
-  return `nodedent_encrypted_vault_${formatFilenameDate(now.toISOString())}.nodedent`;
+  const timestamp = [
+    now.getFullYear(),
+    now.getMonth() + 1,
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds(),
+  ].map((part) => String(part).padStart(2, "0")).join("_");
+  return `nodedent_encrypted_vault_${timestamp}.nodedent`;
 }

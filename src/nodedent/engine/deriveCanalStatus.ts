@@ -1,6 +1,8 @@
 import type { CanalRecord, CanalStatus } from "../types";
 import { isBlank } from "./measurements";
 
+export const CANAL_RESUMED_EVENT_TYPE = "workflow.resumedCanal";
+
 export const statusStyles: Record<CanalStatus, string> = {
   notStarted: "bg-brand-light-slate text-brand-slate border-brand-light-node",
   estimated: "bg-brand-blue-light/20 text-brand-navy border-brand-blue-light/50",
@@ -34,7 +36,14 @@ export function hasEvent(canal: CanalRecord | null | undefined, type: string) {
 }
 
 export function isManualCanalStatusEvent(type: string) {
-  return ["canal.completed", "canal.paused", "canal.medicated", "canal.referred"].includes(type);
+  return ["canal.completed", "canal.paused", "canal.medicated", "canal.referred", CANAL_RESUMED_EVENT_TYPE].includes(type);
+}
+
+export function hasActiveCanalPause(canal?: CanalRecord | null) {
+  const latestPauseTransition = [...(canal?.events || [])]
+    .reverse()
+    .find((event) => event.type === "canal.paused" || event.type === CANAL_RESUMED_EVENT_TYPE);
+  return latestPauseTransition?.type === "canal.paused";
 }
 
 export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
@@ -46,7 +55,7 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
     hasEvent(canal, "downpack.gpStableAfterCompaction")
   ) return "complete";
   if (hasEvent(canal, "canal.completed")) return "complete";
-  if (hasEvent(canal, "canal.paused")) return "paused";
+  if (hasActiveCanalPause(canal)) return "paused";
   if (hasEvent(canal, "canal.medicated") || hasEvent(canal, "medication.calciumHydroxidePlaced")) return "medicated";
   if (hasEvent(canal, "sealer.reapplied") || hasEvent(canal, "sealer.applied")) return "disinfected";
   if (hasEvent(canal, "coneFit.radiographAcceptable")) return "disinfected";
@@ -64,4 +73,10 @@ export function getCanalStatus(canal?: CanalRecord | null): CanalStatus {
   if (canal.priorVisitStatus === "wlEstablished") return "wlEstablished";
   if (canal.priorVisitStatus === "locatedScouted") return "scouted";
   return "notStarted";
+}
+
+const closureReadyStatuses = new Set<CanalStatus>(["complete", "paused", "medicated", "referred"]);
+
+export function isCanalReadyForClosure(canal?: CanalRecord | null) {
+  return closureReadyStatuses.has(getCanalStatus(canal));
 }

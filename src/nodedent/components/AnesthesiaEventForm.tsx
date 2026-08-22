@@ -22,6 +22,7 @@ import {
 } from "../workflow/anesthesiaForm";
 import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMode } from "../workflow/anesthesiaForm";
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
+import { getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import { SelectInput, TextInput } from "./FormControls";
 
 export function AnesthesiaEventForm({
@@ -61,6 +62,7 @@ export function AnesthesiaEventForm({
   const routeLabelSuggestions = getAnesthesiaCatalogOptions(form.route, "routeLabels", userCatalogItems);
   const shortcutItems = mode === "administration" ? buildUserAnesthesiaCatalogItemsFromForm(form) : [];
   const canSaveShortcuts = Boolean(onSaveCatalogItems && shortcutItems.length);
+  const administeredAtInvalid = Boolean(form.administeredAt && !isCompleteTime24(form.administeredAt));
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -108,6 +110,28 @@ export function AnesthesiaEventForm({
     if (!canSaveShortcuts) return;
     onSaveCatalogItems?.(shortcutItems);
   }
+
+  const timeAdministeredInput = (
+    <div>
+      <label htmlFor="anesthesia-administered-at" className="mb-1 block text-xs font-medium text-brand-slate">Time administered</label>
+      <div className="flex flex-wrap gap-2">
+        <input
+          id="anesthesia-administered-at"
+          type="time"
+          value={form.administeredAt}
+          onChange={(event) => updateForm({ administeredAt: event.target.value })}
+          className={`min-w-36 flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${administeredAtInvalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
+        />
+        <button type="button" onClick={() => updateForm({ administeredAt: getCurrentTimeString() })} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-light-slate">
+          Set to now
+        </button>
+        <button type="button" onClick={() => updateForm({ administeredAt: "" })} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-light-slate">
+          Clear time
+        </button>
+      </div>
+      {administeredAtInvalid ? <p role="status" className="mt-1 text-xs text-red-800">Enter time as HH:mm or clear it.</p> : null}
+    </div>
+  );
 
   return (
     <>
@@ -185,7 +209,7 @@ export function AnesthesiaEventForm({
             <TextInput label="Dose unit" value={form.doseUnit} onChange={(value) => updateForm({ doseUnit: value })} placeholder="e.g., mL, carpule" suggestions={doseUnitSuggestions} />
             <TextInput label="Vasoconstrictor" value={form.vasoconstrictor} onChange={(value) => updateForm({ vasoconstrictor: value })} placeholder="optional" suggestions={vasoconstrictorSuggestions} />
             <TextInput label="Vasoconstrictor dose" value={form.vasoconstrictorDose} onChange={(value) => updateForm({ vasoconstrictorDose: value })} placeholder="e.g., 1:100K epinephrine/adrenaline" suggestions={vasoconstrictorDoseSuggestions} />
-            <TextInput label="Time administered" value={form.administeredAt} onChange={(value) => updateForm({ administeredAt: value })} placeholder="e.g., 09:55" />
+            {timeAdministeredInput}
           </>
         ) : null}
         {routeIsTopical ? (
@@ -193,7 +217,7 @@ export function AnesthesiaEventForm({
             <TextInput label="Application type" value={form.applicationType} onChange={(value) => updateForm({ applicationType: value })} placeholder="optional" suggestions={applicationTypeSuggestions} />
             <TextInput label="Site" value={form.site} onChange={(value) => updateForm({ site: value })} placeholder="optional" />
             <TextInput label="Agent" value={form.agentLabel} onChange={(value) => updateForm({ agentLabel: value })} placeholder="optional" suggestions={agentSuggestions} />
-            <TextInput label="Time administered" value={form.administeredAt} onChange={(value) => updateForm({ administeredAt: value })} placeholder="e.g., 09:55" />
+            {timeAdministeredInput}
           </>
         ) : null}
         {routeIsOther ? (

@@ -44,7 +44,7 @@ function validatePackage(packageJson) {
 
   const requiredScripts = {
     changeset: "changeset",
-    version: "changeset version",
+    version: "changeset version && npm install --package-lock-only",
     release: "changeset tag",
     "versioning:check": "node scripts/check-versioning.mjs",
   };

@@ -1,3 +1,4 @@
-name = "systematic-endo-guide"
-compatibility_date = "2026-06-07"
-pages_build_output_dir = "dist"
+name = "nodedent"
+compatibility_date = "2026-08-20"
+[assets]
+directory = "./dist"

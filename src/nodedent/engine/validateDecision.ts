@@ -1,16 +1,14 @@
 import type { CanalRecord, CapabilityRequirement, DecisionOption, EndoCase, WorkflowScope } from "../types";
-import { getCanalStatus, statusLabels } from "./deriveCanalStatus";
+import { getCanalStatus, isCanalReadyForClosure, statusLabels } from "./deriveCanalStatus";
 import { evaluateDecisionGuards } from "../protocol/guards";
 import { protocolNodes } from "../protocol/nodes";
 import { getCapabilityStatus, isKnownCapabilityName } from "../workflow/selectors";
 import { isBlank, isPositiveMeasurement, isValidFinalShape } from "./measurements";
 
-const closureReadyStatuses = new Set(["complete", "paused", "medicated", "referred"]);
-
 export function getCanalsBlockingClosure(caseData: EndoCase) {
   return (caseData.canals || [])
     .map((canal) => ({ canal, status: getCanalStatus(canal) }))
-    .filter(({ status }) => !closureReadyStatuses.has(status))
+    .filter(({ canal }) => !isCanalReadyForClosure(canal))
     .map(({ canal, status }) => `${canal.name || "Unnamed canal"} (${statusLabels[status]})`);
 }
 

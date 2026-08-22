@@ -168,11 +168,9 @@ export function EndodonticTargetPanel({
           </div>
           <div className="grid gap-2 text-sm">
             <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.success}>Mark {activeCanalName} complete</button>
-            <button onClick={() => onManualEvent("canal.paused", `Pause ${activeCanalName}`, "endodontic-pathway-complete")} className={panelActionButton.muted}>Pause {activeCanalName}</button>
-            <button onClick={() => onManualEvent("canal.medicated", `Medicate ${activeCanalName}`, "temporary-closure", "high")} className={panelActionButton.warning}>Medicate {activeCanalName}</button>
-            <button onClick={() => onManualEvent("canal.referred", `Refer ${activeCanalName}`, "refer-pathway", "refer")} className={panelActionButton.danger}>Refer {activeCanalName}</button>
             <button onClick={onResetManualStatus} className={panelActionButton.secondary}>Return {activeCanalName} to automatic status</button>
           </div>
+          <p className="mt-3 text-xs leading-5 text-brand-slate">Use the always-visible <strong>Pause / end visit</strong> action to pause, medicate and temporize, or enter the referral pathway.</p>
         </div>
       </div>
     </SectionCard>
