@@ -38,9 +38,59 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  release-tag:
+    name: Tag versioned release
+    needs: changesets
+    if: contains(github.event.head_commit.message, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate released version
+        run: npm run versioning:check
+
+      - name: Create and push release tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          head_commit="$(git rev-parse HEAD)"
+
+          git fetch --tags origin
+
+          if git show-ref --verify --quiet "refs/tags/${tag}"; then
+            tag_commit="$(git rev-list -n 1 "${tag}")"
+            if [[ "${tag_commit}" != "${head_commit}" ]]; then
+              echo "Release tag ${tag} already points to ${tag_commit}, not ${head_commit}." >&2
+              exit 1
+            fi
+          else
+            npm run release
+          fi
+
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          if [[ "${tag_commit}" != "${head_commit}" ]]; then
+            echo "Release tag ${tag} was not created for ${head_commit}." >&2
+            exit 1
+          fi
+
+          git push origin "refs/tags/${tag}"
+
   sync-beta:
     name: Fast-forward beta after versioning
-    needs: changesets
+    needs: release-tag
     if: contains(github.event.head_commit.message, 'Version Packages')
     runs-on: ubuntu-latest
     steps:
