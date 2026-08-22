@@ -266,10 +266,10 @@ export function ClinicalVaultGate({
                 }}
                 className="peer sr-only"
               />
-              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+              <div className="flex flex-col items-start gap-2 peer-focus-visible:rounded-xl peer-focus-visible:ring-2 peer-focus-visible:ring-brand-mint peer-focus-visible:ring-offset-2 sm:flex-row sm:items-center">
                 <label
                   htmlFor="encrypted-backup-file"
-                  className={`${backupActionClassName} cursor-pointer hover:bg-brand-light-slate peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-brand-mint peer-focus-visible:ring-offset-2`}
+                  className={`${backupActionClassName} cursor-pointer hover:bg-brand-light-slate`}
                 >
                   Choose backup file
                 </label>
