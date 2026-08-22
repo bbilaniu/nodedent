@@ -10,6 +10,7 @@ import {
   type UserCatalogImportPreview,
 } from "../state/catalogPersistence";
 import { FilePickerControl } from "./FilePickerControl";
+import { ImportDisclosure } from "./ImportDisclosure";
 
 function downloadCatalogExport(items: CatalogItem[]) {
   const blob = new Blob([JSON.stringify(buildUserCatalogExport(items), null, 2)], { type: "application/json" });
@@ -35,6 +36,7 @@ export function CatalogAdministrationPanel({
   const [preview, setPreview] = useState<UserCatalogImportPreview | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   async function selectImportFile(file?: File) {
     setSelectedFilename(file?.name || "");
@@ -66,14 +68,21 @@ export function CatalogAdministrationPanel({
       <p className="mt-1 text-xs leading-5 text-brand-slate">
         Export or import patient-independent anesthesia and isolation shortcuts. Clinical events and case data are not included.
       </p>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => downloadCatalogExport(items)}
-          className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20"
-        >
-          Download catalogue preferences
-        </button>
+      <ImportDisclosure
+        id="catalogue-preferences-import"
+        buttonLabel="Import catalogue preferences"
+        expanded={isImportOpen}
+        onToggle={() => setIsImportOpen((open) => !open)}
+        action={(
+          <button
+            type="button"
+            onClick={() => downloadCatalogExport(items)}
+            className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20"
+          >
+            Download catalogue preferences
+          </button>
+        )}
+      >
         <FilePickerControl
           label="Catalogue export file"
           buttonLabel="Select catalogue export"
@@ -81,27 +90,27 @@ export function CatalogAdministrationPanel({
           fileName={selectedFilename}
           onFileSelect={(file) => void selectImportFile(file)}
         />
-      </div>
+        {preview ? (
+          <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-brand-light-slate p-3">
+            <p className="text-sm font-semibold text-brand-navy">Import preview</p>
+            <p className="mt-1 text-xs leading-5 text-brand-slate">
+              {preview.additions} new · {preview.equivalentItems} already identical · {preview.idConflicts} ID conflict{preview.idConflicts === 1 ? "" : "s"}
+            </p>
+            <p className="mt-1 text-xs leading-5 text-brand-slate">
+              {preview.itemsByCategory.anesthesia || 0} anesthesia · {preview.itemsByCategory.isolation || 0} isolation
+            </p>
+            <button
+              type="button"
+              disabled={!preview.additions}
+              onClick={importNewItems}
+              className="mt-2 rounded-lg border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate"
+            >
+              Import new catalogue items
+            </button>
+          </div>
+        ) : null}
+      </ImportDisclosure>
       {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
-      {preview ? (
-        <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-3">
-          <p className="text-sm font-semibold text-brand-navy">Import preview</p>
-          <p className="mt-1 text-xs leading-5 text-brand-slate">
-            {preview.additions} new · {preview.equivalentItems} already identical · {preview.idConflicts} ID conflict{preview.idConflicts === 1 ? "" : "s"}
-          </p>
-          <p className="mt-1 text-xs leading-5 text-brand-slate">
-            {preview.itemsByCategory.anesthesia || 0} anesthesia · {preview.itemsByCategory.isolation || 0} isolation
-          </p>
-          <button
-            type="button"
-            disabled={!preview.additions}
-            onClick={importNewItems}
-            className="mt-2 rounded-lg border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate"
-          >
-            Import new catalogue items
-          </button>
-        </div>
-      ) : null}
       {message ? <p role="status" className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2 text-sm text-brand-navy">{message}</p> : null}
     </div>
   );

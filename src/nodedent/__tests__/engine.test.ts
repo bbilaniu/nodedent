@@ -9,12 +9,15 @@ import { applicationVersion } from "../applicationVersion";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
+import { BackupRecoveryPanel, canAutoPreviewEncryptedBackup } from "../components/BackupRecoveryPanel";
+import { CatalogAdministrationPanel } from "../components/CatalogAdministrationPanel";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
 import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
 import { FilePickerControl } from "../components/FilePickerControl";
+import { ImportDisclosure } from "../components/ImportDisclosure";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
@@ -497,6 +500,66 @@ test("shared file picker uses application typography and an accessible custom tr
   assert.match(markup, /No file selected/);
   assert.match(markup, /aria-labelledby="test-file-picker-label"/);
   assert.match(markup, /aria-describedby="test-file-picker-name"/);
+});
+
+test("shared import disclosure exposes accessible collapsed and expanded states", () => {
+  const action = React.createElement("button", { type: "button" }, "Download backup");
+  const child = React.createElement("p", null, "Import form contents");
+  const collapsedMarkup = renderToStaticMarkup(React.createElement(ImportDisclosure, {
+    action,
+    buttonLabel: "Import backup",
+    children: child,
+    expanded: false,
+    id: "backup-import",
+    onToggle: () => {},
+  }));
+  const expandedMarkup = renderToStaticMarkup(React.createElement(ImportDisclosure, {
+    action,
+    buttonLabel: "Import backup",
+    children: child,
+    expanded: true,
+    id: "backup-import",
+    onToggle: () => {},
+  }));
+
+  assert.match(collapsedMarkup, /aria-expanded="false"/);
+  assert.match(collapsedMarkup, /aria-controls="backup-import"/);
+  assert.match(collapsedMarkup, /id="backup-import" role="region" aria-labelledby="backup-import-trigger" hidden=""/);
+  assert.match(expandedMarkup, /aria-expanded="true"/);
+  assert.match(expandedMarkup, /id="backup-import" role="region" aria-labelledby="backup-import-trigger"/);
+  assert.doesNotMatch(expandedMarkup, /id="backup-import"[^>]*hidden/);
+  assert.match(expandedMarkup, /Import form contents/);
+});
+
+test("backup and catalogue cards keep import forms collapsed until requested", () => {
+  const noop = () => {};
+  const backupMarkup = renderToStaticMarkup(React.createElement(BackupRecoveryPanel, {
+    onDownloadEncryptedVaultBackup: noop,
+    onPreviewEncryptedBackupImport: async () => { throw new Error("not called"); },
+    onResolveEncryptedBackupImport: async () => { throw new Error("not called"); },
+    recoveryHistory: [],
+    activeEncounterId: "active-encounter",
+    onRestoreRecoveryHistoryEntry: async () => {},
+    onLockForRestore: noop,
+  }));
+  const catalogueMarkup = renderToStaticMarkup(React.createElement(CatalogAdministrationPanel, {
+    items: [],
+    onChange: noop,
+  }));
+
+  assert.match(backupMarkup, /Import encrypted backup/);
+  assert.match(backupMarkup, /id="encrypted-backup-import"[^>]*hidden=""/);
+  assert.match(backupMarkup, /preview starts automatically/i);
+  assert.doesNotMatch(backupMarkup, /Preview encrypted import/);
+  assert.match(backupMarkup, /Encrypted recovery history:<\/strong> No displaced versions are stored/);
+  assert.match(catalogueMarkup, /Import catalogue preferences/);
+  assert.match(catalogueMarkup, /id="catalogue-preferences-import"[^>]*hidden=""/);
+});
+
+test("encrypted backup auto-preview waits for a selected file and minimum-length passphrase", () => {
+  assert.equal(canAutoPreviewEncryptedBackup(false, "clinic backup passphrase"), false);
+  assert.equal(canAutoPreviewEncryptedBackup(true, "short pass"), false);
+  assert.equal(canAutoPreviewEncryptedBackup(true, "twelve chars"), true);
 });
 
 function radiologyReviewedEvent(tooth = "30") {
