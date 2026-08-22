@@ -26,11 +26,14 @@ body {
   min-width: 320px;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+@layer base {
+  /* Keep native controls consistent without overriding typography utilities. */
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 html[data-theme="dark"] body {

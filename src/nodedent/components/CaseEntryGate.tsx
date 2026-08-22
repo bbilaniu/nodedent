@@ -79,62 +79,88 @@ export function CaseEntryGate({
             </dl>
           ) : null}
 
-          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {hasMeaningfulActiveCase ? (
+          <div className="mt-6 space-y-5">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              {hasMeaningfulActiveCase ? (
+                <button
+                  type="button"
+                  onClick={onContinueCurrentCase}
+                  className="w-full rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep sm:w-auto"
+                >
+                  Continue case
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={onContinueCurrentCase}
-                className="rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep"
+                onClick={onStartNewCase}
+                className={hasMeaningfulActiveCase
+                  ? "w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                  : "w-full rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep sm:w-auto"}
               >
-                Continue current case
+                New case
               </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={onStartNewCase}
-              className={hasMeaningfulActiveCase
-                ? "rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate"
-                : "rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep"}
-            >
-              Start new case
-            </button>
-            <button
-              type="button"
-              onClick={onImportCaseJson}
-              className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-blue-light/30"
-            >
-              Import case JSON
-            </button>
-            <button
-              type="button"
-              onClick={onImportEncryptedVault}
-              className="rounded-xl border border-brand-mint bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-mint/20"
-            >
-              Import existing vault
-            </button>
-            <button
-              type="button"
-              onClick={onDownloadEncryptedVault}
-              className="rounded-xl border border-brand-mint bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-mint/20"
-            >
-              Download current vault
-            </button>
+            </div>
+
             {otherCaseCount > 0 ? (
-              <button
-                type="button"
-                onClick={onReviewSavedCases}
-                className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-blue-light/30"
-              >
-                Review {otherCaseCount} other saved case{otherCaseCount === 1 ? "" : "s"}
-              </button>
+              <section aria-labelledby="saved-case-actions-heading">
+                <h2 id="saved-case-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
+                  Other saved cases
+                </h2>
+                <button
+                  type="button"
+                  onClick={onReviewSavedCases}
+                  className="mt-2 w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                >
+                  Review {otherCaseCount} other saved case{otherCaseCount === 1 ? "" : "s"}
+                </button>
+              </section>
             ) : null}
-            <button
-              type="button"
-              onClick={onLockVault}
-              className="rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate sm:ml-auto"
-            >
-              Lock vault
-            </button>
+
+            <div className="grid gap-5 border-t border-brand-light-node pt-5 sm:grid-cols-2">
+              <section aria-labelledby="import-actions-heading">
+                <h2 id="import-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
+                  Import
+                </h2>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={onImportCaseJson}
+                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                  >
+                    Import case
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onImportEncryptedVault}
+                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                  >
+                    Import vault
+                  </button>
+                </div>
+              </section>
+
+              <section aria-labelledby="vault-actions-heading">
+                <h2 id="vault-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
+                  Vault
+                </h2>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  <button
+                    type="button"
+                    onClick={onDownloadEncryptedVault}
+                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                  >
+                    Download vault
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onLockVault}
+                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate sm:w-auto"
+                  >
+                    Lock vault
+                  </button>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </div>
