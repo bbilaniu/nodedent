@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.1
+
+### Patch Changes
+
+- 225c69d: Show derived workflow progress in Case Setup and preserve workflow-owned targets when the default tooth changes.
+
 ## 2.2.0
 
 ### Minor Changes
