@@ -27,13 +27,14 @@ The first protected-storage implementation provides:
 - explicit, 15-minute inactivity, hidden-tab, page-exit, and cross-tab locking;
 - transactional writes, monotonic revisions, stale-write rejection, visible save failures, and 30-day retention-review flags;
 - destructive confirmations including unrecoverable-vault deletion, plus encrypted whole-vault backup/restore with verifier and per-record authentication before replacement;
+- timestamped encrypted backup creation, in-place backup download and import after unlock, safe addition of new encounter IDs, content-aware conflict preview, protected replacement, and recoverable encrypted replacement history;
 - required kind/version and Zod validation for plaintext case imports;
 - explicit plaintext copy/download warnings and safe chart/discipline/random-suffix filenames;
 - detection, raw plaintext backup, and confirmed deletion of legacy records without parsing or migration;
 - a production CSP with `connect-src 'none'` plus CI checks for the CSP, accidental network APIs, and case `localStorage` regression;
-- unit tests covering ciphertext-only records, unlock failure, revision conflict, backup tampering, legacy separation, and filenames.
+- unit tests covering ciphertext-only records, unlock failure, revision conflict, backup tampering, additive backup import, conflict resolution, transactional rollback, recovery history, legacy separation, and filenames.
 
-The implementation and operational boundary are described in the [local clinical deployment guide](../guides/local-clinical-deployment.md) and [local clinical threat model](../security/local-clinical-threat-model.md). Remaining work before ADR 0008 can be accepted includes browser/manual failure scenarios, reviewed purge and index-repair procedures, independent threat/dependency review, and the clinic's Alberta privacy/operational assessment and PIA decision.
+The implementation and operational boundary are described in the [local clinical deployment guide](../guides/local-clinical-deployment.md) and [local clinical threat model](../security/local-clinical-threat-model.md). The completed backup-conflict tranche is recorded in [Encrypted backup revision conflict resolution](archive/encrypted-backup-revision-conflict-resolution.md). Remaining work before ADR 0008 can be accepted includes browser/manual failure scenarios, reviewed purge and index-repair procedures, independent threat/dependency review, and the clinic's Alberta privacy/operational assessment and PIA decision.
 
 ## Required Outcomes
 

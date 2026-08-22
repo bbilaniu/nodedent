@@ -5,9 +5,9 @@ created_on: 2026-07-24
 
 # Case Target And Status Model
 
-## Proposal Status
+## Scope Status
 
-This document records design ideas for discussion. It does not authorize implementation or establish new clinical guidance.
+This document records the implemented first tranche and the remaining design work. It does not authorize new clinical guidance.
 
 The proposal separates appointment-level defaults, workflow-owned treatment targets, workflow progress, clinical outcomes, and visit disposition so that future disciplines do not extend the current free-text fields indefinitely.
 
@@ -23,11 +23,23 @@ Confirmed on 2026-07-24:
 - existing `caseStatus`, note wording, import, and export behavior remain compatibility concerns during this tranche; and
 - a structured default target and non-tooth appointment default remain deferred until an implemented workflow requires them.
 
+## Implementation Progress
+
+The first tranche is implemented:
+
+- the case-level scalar is labelled **Default tooth** and explains that it seeds only new workflow selections;
+- existing workflow targets remain unchanged when the appointment default tooth changes;
+- workflow rows show the durable instance lifecycle as **Not started**, **In progress**, or **Complete**;
+- Case Setup shows a read-only overall progress value derived from all selected workflow instances; and
+- regression coverage protects mixed lifecycle aggregation, default-target preservation, and instance-specific event matching.
+
+This spec remains active for the separately modeled visit disposition, a future structured default target, explicit appointment boundaries for longitudinal treatment, and the compatibility sunset for `tooth` and `caseStatus`.
+
 ## Context
 
 The full-page Case Setup currently includes:
 
-- a `Tooth` field under **Chart and default treatment area**;
+- a **Default tooth** field under case identity;
 - one or more selected primary workflows;
 - a workflow-owned target on each durable workflow instance;
 - a growing `Visit status` menu that combines procedure, progress, outcome, and disposition; and
@@ -256,12 +268,12 @@ Any migration must:
 
 ## Suggested Implementation Sequence
 
-1. Rename the current UI label from `Tooth` to `Default tooth` and retain its existing scalar behavior.
-2. Display the existing derived lifecycle status on each workflow card.
-3. Replace the long case-level status menu with a read-only aggregate plus an optional, separately modeled visit disposition.
-4. Add a structured default-target editor only when an implemented workflow needs multiple teeth or a non-tooth scope.
-5. Complete repeatable same-type workflow instances before assuming that one workflow instance can safely represent several independent treatment targets.
-6. Plan and document removal of superseded compatibility fields after supported migration and export windows.
+1. **Completed:** rename the current UI label from `Tooth` to `Default tooth` and retain its existing scalar behavior.
+2. **Completed:** display the derived lifecycle status on each workflow card and a read-only aggregate in Case Setup.
+3. **Active:** replace the long case-level status menu only after an optional, separately modeled visit disposition is reviewed.
+4. **Deferred:** add a structured default-target editor only when an implemented workflow needs multiple teeth or a non-tooth scope.
+5. **Active elsewhere:** complete repeatable same-type workflow instances before assuming that one workflow instance can safely represent several independent treatment targets.
+6. **Active:** plan and document removal of superseded compatibility fields after supported migration and export windows.
 
 ## Open Decisions
 
@@ -275,6 +287,6 @@ Any migration must:
 ## Related Specifications
 
 - [Repeatable workflow instances](repeatable-workflow-instances.md)
-- [Workspace cross-workflow consistency](workspace-cross-workflow-consistency.md)
+- [Workspace cross-workflow consistency](archive/workspace-cross-workflow-consistency.md)
 - [NodeDent vision](nodedent-vision.md)
 - [Clinical note generator QA](codex-verification-outputs.md)

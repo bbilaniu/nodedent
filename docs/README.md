@@ -21,7 +21,6 @@ This folder separates clinical source material, active product specs, architectu
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [Repeatable workflow instances](specs/repeatable-workflow-instances.md)
-- [Workspace cross-workflow consistency](specs/workspace-cross-workflow-consistency.md)
 
 ## Engineering Guides
 
@@ -64,6 +63,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Archived Implemented Specs
 
+- [Workspace cross-workflow consistency](specs/archive/workspace-cross-workflow-consistency.md)
 - [Encrypted backup revision conflict resolution](specs/archive/encrypted-backup-revision-conflict-resolution.md)
 - [Issue 20 chairside and recovery improvements](specs/archive/issue-20-chairside-and-recovery-improvements.md)
 - [Global footer and application-version display](specs/archive/global-footer-and-application-version.md)

@@ -124,7 +124,7 @@ Residual follow-up:
 
 - Add scenario fixtures that exercise the full acceptance paths end-to-end instead of relying only on focused engine and note/export tests.
 - Review whether the prior-visit capture surface should move from endodontic-specific case management into a reusable continuity/shared-history module.
-- Improve state-aware workflow labels so a never-started workflow says `Start workflow`, saved progress says `Continue workflow`, and completed cases say `Review / reopen`.
+- Complete the remaining state-aware endodontic label states. Never-started, planned, and saved-progress entry labels are implemented; completed cases still need a distinct `Review / reopen` path.
 
 ## Phase 2: Clinical Scenario Regression Fixtures
 

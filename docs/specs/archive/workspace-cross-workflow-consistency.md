@@ -1,9 +1,28 @@
 ---
-status: active
+status: implemented
 created_on: 2026-06-20
+completed_on: 2026-08-22
 ---
 
 # Workspace Cross-Workflow Consistency
+
+## Implementation Outcome
+
+The consistency pass is implemented across NodeDent Home, the shared-readiness band, Case Setup & Status, workflow-specific target panels, and the endodontic, operative, anesthesia, isolation, and radiology runners.
+
+The delivered behavior includes:
+
+- state-aware start, resume, review, and record labels in the launcher and shared-module entry points;
+- a full-width, row-specific shared-readiness band without a duplicate generic Case Setup action;
+- fail-closed target-panel routing that keeps endodontic canals, operative surfaces, and shared-module contexts separate;
+- grouped Case Setup surfaces with operative setup owned by the active operative runner and summarized from Case Setup;
+- consistent shared-workflow close behavior and non-recursive entry while a shared module is open;
+- shared panel, heading, action, status, and launcher styles across the affected workspace surfaces; and
+- regression coverage for launcher state, readiness actions, setup visibility, target-panel routing, shared-module re-entry, and runner close behavior.
+
+Broader visual-system consolidation remains active in [GUI consistency and design system](../gui-consistency-and-design-system.md). Browser accessibility and manual device evidence remain active in [Accessible interaction](../accessible-interaction.md) and [Automated assurance](../automated-assurance.md).
+
+The implementation plan and original baseline below are retained as historical context.
 
 This spec defines the next workspace cleanup pass after the operative direct restoration workflow became usable. It focuses on making NodeDent feel like one clinical workspace across endodontic, operative, and shared-module contexts before adding another primary workflow family.
 
@@ -249,7 +268,7 @@ Reasoning level needed: medium.
 
 Reasoning level needed: medium.
 
-Status: partially implemented by moving shared readiness into a full-width band below the header, removing the generic Case Setup action from the readiness surface, keeping row-specific readiness actions, showing explicit review/open action labels on readiness rows, using patient-specific shared-module status in launcher cards, dynamically labeling not-started endodontic workflow launch as `Start workflow`, disabling the currently open shared-module row to prevent recursive modal launch, and removing the duplicate operative-runner readiness block so the workspace band owns shared readiness.
+Status: implemented by moving shared readiness into a full-width band below the header, removing the generic Case Setup action from the readiness surface, keeping row-specific readiness actions, showing explicit review/open action labels on readiness rows, using patient-specific shared-module status in launcher cards, dynamically labeling not-started endodontic workflow launch as `Start workflow`, disabling the currently open shared-module row to prevent recursive modal launch, and removing the duplicate operative-runner readiness block so the workspace band owns shared readiness.
 
 - Normalize NodeDent Home launcher labels and status text.
 - Normalize shared readiness row labels and actions across endodontic and operative contexts.
@@ -262,7 +281,7 @@ Status: partially implemented by moving shared readiness into a full-width band 
 
 Reasoning level needed: medium-high.
 
-Status: partially implemented by adding explicit routing coverage for endodontic, operative, shared-module, and unknown workflow IDs; confirming shared-module contexts render no workflow target setup in Case Setup & Status; grouping Case Setup & Status into Case identity, Shared readiness, Endodontic setup, and Operative setup surfaces; and wiring the operative setup group to the same event-backed operative setup state used by the active workflow panel.
+Status: implemented by adding explicit routing coverage for endodontic, operative, shared-module, and unknown workflow IDs; confirming shared-module contexts render no workflow target setup in Case Setup & Status; grouping Case Setup & Status into Case identity, Shared readiness, Endodontic setup, and Operative setup surfaces; and wiring the operative setup group to the same event-backed operative setup state used by the active workflow panel.
 
 - Verify endodontic panels are hidden in operative and shared-module contexts.
 - Verify operative setup does not appear in endodontic-only contexts unless explicitly opened.
@@ -273,7 +292,7 @@ Status: partially implemented by adding explicit routing coverage for endodontic
 
 Reasoning level needed: medium.
 
-Status: partially implemented by changing shared-module runner dismiss actions from `Return to parent workflow` to `Close shared workflow`, keeping the modal header action as `Close`, adding regression coverage so dismiss UI does not use return language reserved for modeled workflow options, and aligning the isolation runner with the anesthesia runner by keeping the workflow close action visible before completion, grouping record/save actions inside the form card, and retaining the full form layout with an appended-event confirmation after placement events are recorded.
+Status: implemented by changing shared-module runner dismiss actions from `Return to parent workflow` to `Close shared workflow`, keeping the modal header action as `Close`, adding regression coverage so dismiss UI does not use return language reserved for modeled workflow options, and aligning the isolation runner with the anesthesia runner by keeping the workflow close action visible before completion, grouping record/save actions inside the form card, and retaining the full form layout with an appended-event confirmation after placement events are recorded.
 
 - Normalize runner action labels and completion states.
 - Keep note and export output unchanged unless intentionally tested.
@@ -283,7 +302,7 @@ Status: partially implemented by changing shared-module runner dismiss actions f
 
 Reasoning level needed: medium.
 
-Status: partially implemented by introducing shared panel and section-heading styles, applying them to the shared readiness band, Case Setup & Status groups and focus targets, and operative runner panels while leaving clinical event semantics and generated note behavior unchanged.
+Status: implemented by introducing shared panel and section-heading styles, applying them to the shared readiness band, Case Setup & Status groups and focus targets, and operative runner panels while leaving clinical event semantics and generated note behavior unchanged.
 
 - Apply a restrained visual cleanup across the touched workflow surfaces.
 - Check mobile and desktop layouts for text wrapping and overlapping controls.
@@ -293,7 +312,7 @@ Status: partially implemented by introducing shared panel and section-heading st
 
 Reasoning level needed: medium-high.
 
-Status: partially implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, changing shared module re-entry labels to `Review` when current anesthesia, isolation, or radiology status already exists, extracting shared status/action helpers, moving anesthesia/isolation catalog managers out of `CaseSetupStatusPanel`, adding shared radiology as a Home-launchable embedded module, and defining a shared-module form contract for future modules.
+Status: implemented by confirming NodeDent Home remains the persistent first screen before workflow activation and quick-switcher modal after activation, moving Case Setup & Status operative setup from a duplicate editor to a summary/link surface, routing that link back to the active operative workflow, changing shared module re-entry labels to `Review` when current anesthesia, isolation, or radiology status already exists, extracting shared status/action helpers, moving anesthesia/isolation catalog managers out of `CaseSetupStatusPanel`, adding shared radiology as a Home-launchable embedded module, and defining a shared-module form contract for future modules.
 
 - Treat NodeDent Home as the persistent first screen and keep the modal launcher as a quick-switcher, without duplicating workflow state or clearing event-backed state when switching.
 - Split Case Setup & Status conceptually and internally into global case setup, shared readiness/documentation capture, workflow setup summaries, saved-case lifecycle, and audit/history surfaces, without creating separate user-facing setup screens yet.
@@ -321,7 +340,7 @@ Status: partially implemented by confirming NodeDent Home remains the persistent
 - Run `npm run build` after code or config changes.
 - Run `npm run docs:check` after documentation lifecycle or structure changes.
 
-## Open Questions
+## Resolved Decisions
 
 - Should NodeDent Home become a persistent first screen now that there are two primary workflows, or remain available as the workspace launcher modal?
 - Yes. Make it a persistent first screen. Keep the launcher modal as a quick-switcher.

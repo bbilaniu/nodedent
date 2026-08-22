@@ -17,6 +17,20 @@ The unmerged branch contains a tested prototype across commits `8d4d9a7`, `19dbb
 
 The branch's clinical-note commits are out of scope here and remain owned by [Clinical note generator QA](codex-verification-outputs.md). The ancestor branch `note-artifacts-and-treatment-plan-model` must not be integrated separately.
 
+## Implementation Progress
+
+The durable model and compatibility boundary are implemented:
+
+- cases persist workflow instance IDs, workflow IDs and types, targets, lifecycle status, workflow-run IDs, timestamps, and source-event IDs;
+- normalization migrates compatible legacy state, reconciles partial collections, and remains idempotent;
+- endodontic and operative event writers attach workflow-run and workflow-instance identity;
+- operative events and instance lifecycle derivation are filtered to the matching instance;
+- shared capabilities use explicit scope overlap instead of appointment membership;
+- neutral cases remain workflow-neutral; and
+- JSON export/import and regression tests preserve instance identity and target state.
+
+This spec remains active because the user-facing appointment map does not yet expose each durable instance independently or allow explicit creation and navigation of multiple same-type instances. The compatibility fallbacks also remain within their documented support window.
+
 ## Required Model
 
 Each durable instance needs:
