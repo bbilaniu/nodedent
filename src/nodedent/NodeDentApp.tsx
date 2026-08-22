@@ -35,7 +35,7 @@ import { getPhaseAwareCanalTargets } from "./protocol/continuation";
 import { handoffNodeIds, protocolNodes } from "./protocol/nodes";
 import { getConservativeResumeNodeForCanal, getManualResumeNodeForCanal, getPriorVisitResumeNodeForCanal } from "./engine/resume";
 import { loadUserCatalogItems, saveUserCatalogItems } from "./state/catalogPersistence";
-import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "./state/caseEntry";
+import { getOtherMeaningfulSavedCases, isMeaningfulCase } from "./state/caseEntry";
 import {
   CLINICAL_VAULT_IDLE_TIMEOUT_MS,
   ClinicalVaultError,
@@ -310,7 +310,7 @@ function ClinicalWorkspace({
     [caseData, currentNodeId]
   );
   const otherMeaningfulCases = useMemo(
-    () => savedCases.filter((summary) => summary.id !== caseData.encounterId && isMeaningfulSavedCaseSummary(summary)),
+    () => getOtherMeaningfulSavedCases(savedCases, caseData.encounterId),
     [caseData.encounterId, savedCases]
   );
   const activeCanal = useMemo(

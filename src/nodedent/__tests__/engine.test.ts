@@ -52,7 +52,7 @@ import {
   saveUserCatalogItems,
   USER_CATALOG_STORAGE_KEY,
 } from "../state/catalogPersistence";
-import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
+import { getOtherMeaningfulSavedCases, isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
@@ -225,7 +225,7 @@ test("case entry actions offer imports and only offer review when another meanin
 
   assert.equal(blankWithOtherCasesMarkup.includes("Continue case"), false);
   assert.equal(blankWithOtherCasesMarkup.includes("New case"), true);
-  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved case"), true);
+  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved cases"), true);
 
   const resumableMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: baseCase(),
@@ -244,6 +244,31 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(resumableMarkup.includes("Continue case"), true);
   assert.equal(resumableMarkup.includes("New case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+});
+
+test("case entry excludes the active encounter from other saved cases", () => {
+  const activeCase = baseCase();
+  const activeSummary = {
+    id: activeCase.encounterId,
+    patientNumber: activeCase.patientNumber,
+    tooth: activeCase.tooth,
+    procedureType: activeCase.procedureType,
+    currentNodeId: "preop",
+    canalCount: activeCase.canals.length,
+    eventCount: activeCase.globalEvents.length,
+    meaningful: true,
+    autosavedAt: activeCase.createdAt || "",
+    revision: 1,
+    expired: false,
+  };
+
+  assert.equal(getOtherMeaningfulSavedCases([activeSummary], activeCase.encounterId).length, 0);
+
+  const otherSummary = {
+    ...activeSummary,
+    id: "44444444-4444-4444-8444-444444444444",
+  };
+  assert.deepEqual(getOtherMeaningfulSavedCases([activeSummary, otherSummary], activeCase.encounterId), [otherSummary]);
 });
 
 test("workflow selection supports a neutral case and multiple disciplines without duplicate instances", () => {

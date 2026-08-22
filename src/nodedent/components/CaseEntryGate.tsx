@@ -111,7 +111,7 @@ export function CaseEntryGate({
                   onClick={onReviewSavedCases}
                   className="mt-2 w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
                 >
-                  Review {otherCaseCount} other saved case{otherCaseCount === 1 ? "" : "s"}
+                  Review {otherCaseCount} other saved cases
                 </button>
               </section>
             ) : null}
