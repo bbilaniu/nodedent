@@ -66,6 +66,18 @@ function operativeEvents(caseData: EndoCase) {
   return uniqueEvents(caseData).filter((event) => event.workflowId === operativeDirectRestorationWorkflowId);
 }
 
+function eventMatchesWorkflowInstance(event: ClinicalEvent, instance: PrimaryWorkflowInstance) {
+  const eventInstanceId = hasText(event.details?.workflowInstanceId)
+    ? String(event.details?.workflowInstanceId)
+    : undefined;
+  if (eventInstanceId) return eventInstanceId === instance.id;
+  if (hasText(event.workflowRunId)) return event.workflowRunId === instance.workflowRunId;
+
+  // Untagged events are accepted only at this transitional compatibility
+  // boundary. Current event writers attach both durable identities.
+  return true;
+}
+
 function hasEndodonticActivity(caseData: EndoCase, currentNodeId = caseData.currentNodeId || "preop") {
   return (
     endodonticProcedureOptions.includes(caseData.procedureType) ||
@@ -190,12 +202,15 @@ function normalizeInstance(value: unknown, caseData: EndoCase, now: string): Pri
 
 function updateKnownInstance(instance: PrimaryWorkflowInstance, caseData: EndoCase, currentNodeId: string) {
   if (instance.workflowId === endodonticRootWorkflowId) {
-    const events = endodonticEvents(caseData);
-    const complete = currentNodeId === "endodontic-pathway-complete" || events.some((event) => event.type === "closure.finalRestoration");
-    const endodonticNodeActive = currentNodeId !== "preop" && Boolean(protocolNodes[currentNodeId]);
+    const events = endodonticEvents(caseData).filter((event) => eventMatchesWorkflowInstance(event, instance));
+    const matchingInstanceIsActive = caseData.activeWorkflowInstanceId
+      ? caseData.activeWorkflowInstanceId === instance.id
+      : (caseData.workflowInstances || []).filter((item) => item.workflowId === endodonticRootWorkflowId).length <= 1;
+    const endodonticNodeActive = matchingInstanceIsActive && currentNodeId !== "preop" && Boolean(protocolNodes[currentNodeId]);
+    const complete = events.some((event) => event.type === "closure.finalRestoration")
+      || (matchingInstanceIsActive && currentNodeId === "endodontic-pathway-complete");
     return {
       ...instance,
-      target: toothScope(caseData.tooth),
       status: complete ? "complete" as const : events.length > 0 || endodonticNodeActive ? "inProgress" as const : instance.status,
       updatedAt: events.at(-1)?.timestamp || instance.updatedAt,
       sourceEventIds: Array.from(new Set([...(instance.sourceEventIds || []), ...events.map((event) => event.id).filter(Boolean)])),
@@ -203,15 +218,13 @@ function updateKnownInstance(instance: PrimaryWorkflowInstance, caseData: EndoCa
   }
 
   if (instance.workflowId === operativeDirectRestorationWorkflowId) {
-    const events = operativeEvents(caseData).filter((event) => {
-      const eventInstanceId = event.details?.workflowInstanceId;
-      return !eventInstanceId || eventInstanceId === instance.id;
-    });
+    const events = operativeEvents(caseData).filter((event) => eventMatchesWorkflowInstance(event, instance));
     const complete = events.some((event) => event.type === "finalRestoration.placed");
     const hasSetup = events.some(isOperativeScopeRecordedEvent);
+    const latestTargetEvent = events.filter((event) => isOperativeScopeRecordedEvent(event) || event.type === "finalRestoration.placed").at(-1);
     return {
       ...instance,
-      target: events.length ? operativeScope(caseData) : instance.target,
+      target: latestTargetEvent?.scope ? normalizeScope(latestTargetEvent.scope, instance.target) : instance.target,
       status: complete ? "complete" as const : hasSetup ? "inProgress" as const : instance.status,
       updatedAt: events.at(-1)?.timestamp || instance.updatedAt,
       sourceEventIds: Array.from(new Set([...(instance.sourceEventIds || []), ...events.map((event) => event.id).filter(Boolean)])),

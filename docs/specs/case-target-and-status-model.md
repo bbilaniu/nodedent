@@ -11,6 +11,18 @@ This document records design ideas for discussion. It does not authorize impleme
 
 The proposal separates appointment-level defaults, workflow-owned treatment targets, workflow progress, clinical outcomes, and visit disposition so that future disciplines do not extend the current free-text fields indefinitely.
 
+## Confirmed Decisions
+
+Confirmed on 2026-07-24:
+
+- a mixture of complete and not-started workflows is displayed as **In progress** in the appointment-level aggregate;
+- the existing `Visit status` replacement is deferred until a visit-disposition vocabulary has been reviewed;
+- the existing scalar is labelled **Default tooth** and seeds a workflow target only when that workflow instance is created;
+- an existing workflow instance retains its authoritative target when the appointment default changes;
+- generic lifecycle remains limited to **Not started**, **In progress**, and **Complete** and is derived from instance-specific workflow and event evidence where possible;
+- existing `caseStatus`, note wording, import, and export behavior remain compatibility concerns during this tranche; and
+- a structured default target and non-tooth appointment default remain deferred until an implemented workflow requires them.
+
 ## Context
 
 The full-page Case Setup currently includes:
@@ -114,7 +126,7 @@ Tentative aggregation:
 - no selected workflows: **No workflow selected**;
 - every selected workflow is not started: **Not started**;
 - any selected workflow is in progress: **In progress**;
-- complete and not-started workflows coexist: **Partially complete** or **In progress**, pending terminology approval; and
+- complete and not-started workflows coexist: **In progress**; and
 - every selected workflow is complete: **Complete**.
 
 The aggregate must never hide the individual workflow states.
@@ -128,6 +140,64 @@ Disposition is separate from lifecycle and may describe what happens after the c
 `Continue` should not be used alone as a stored state because it reads as an action. A label such as **Continue next visit** is clearer when that disposition is supported.
 
 The existing free-text **Next visit / plan** field remains separate and can provide detail without expanding a status menu.
+
+### Appointment end and treatment end
+
+An appointment ending is not the same event as a treatment workflow completing.
+
+Every attended appointment reaches an end, but its selected workflow instances may finish in different states. One workflow may complete during the appointment while another remains not started or in progress. A multi-appointment treatment may also end the current appointment with the same workflow still in progress.
+
+The future model should therefore keep these questions separate:
+
+1. **What is the state of each treatment?**
+   - answered by the durable workflow-instance lifecycle and workflow-owned outcome events;
+2. **Why or how did this appointment end?**
+   - answered, if needed, by a narrowly defined appointment disposition;
+3. **What should happen next?**
+   - answered by structured follow-up information where supported and by `Next visit / plan` for free-text detail.
+
+Completing an appointment must not automatically complete its workflows. Completing every selected workflow also does not by itself establish why the appointment ended or whether review, referral, or other follow-up is planned.
+
+### Candidate future visit dispositions
+
+The following are design candidates for clinic and source-material review, not approved clinical vocabulary:
+
+- **Continue next appointment** — planned treatment remains for a later appointment;
+- **Referred / transferred** — responsibility or next action moves outside the current workflow or clinic context;
+- **Review or follow-up planned** — active treatment may be complete, but another appointment is expected for review;
+- **No further appointment planned** — the current appointment closes without a planned return in this treatment context;
+- **Care deferred or interrupted** — intended appointment work did not proceed or did not reach its planned endpoint.
+
+Before implementation, each candidate must answer:
+
+- whether it describes appointment disposition, treatment outcome, scheduling intent, or more than one of these;
+- whether an existing workflow event already records the same fact more precisely;
+- whether it applies to the whole appointment or only to one workflow instance;
+- whether the term can be supported without adding new clinical guidance;
+- whether a reason or provenance is required; and
+- how it should appear in notes and exports.
+
+Candidates that cannot be kept distinct from workflow lifecycle or clinical outcome should not become appointment-level values. The final stored values should be stable codes with separately controlled display labels.
+
+### Appointment note and longitudinal export boundaries
+
+Future note work should distinguish at least two artifacts:
+
+- an **appointment note**, representing facts and events recorded during one appointment; and
+- a **longitudinal treatment summary**, representing selected workflow history across multiple appointments.
+
+An appointment note should:
+
+- identify the appointment or encounter independently from the longer-running treatment;
+- include the workflows addressed during that appointment and their targets;
+- report workflow status as of the appointment boundary without allowing later activity to rewrite the historical note;
+- include appointment-specific clinical events, outcomes, disposition when implemented, and next-visit planning;
+- retain workflow-instance and workflow-run identifiers in structured exports; and
+- include shared-module events once at the appointment level while preserving their scope and linkage to relevant workflows.
+
+A longitudinal summary may show progress across appointments, but it should not replace or silently regenerate the note for an earlier appointment. If the same durable treatment instance continues across visits, future persistence will need an explicit appointment identifier on events or an equivalent immutable event boundary. The current case object should not be assumed to provide that boundary merely because it has an `encounterId`.
+
+For a multidisciplinary appointment, the default should be one canonical appointment note with clearly separated workflow sections rather than independent notes that could omit shared context or contradict each other. Workflow-specific exports may still be useful as secondary artifacts, but they should reference the same appointment and event identities.
 
 ## Proposed Case Setup Presentation
 
@@ -198,7 +268,8 @@ Any migration must:
 - Which target kinds should the first structured default-target editor support?
 - Should multiple teeth create one multi-target workflow instance or several independently auditable instances for each implemented workflow?
 - Is a manual visit disposition required, or can workflow events and the next-visit plan represent every current use case?
-- Which aggregate label should represent a mixture of complete and not-started workflows?
+- Which candidate dispositions describe genuine appointment-level state after review against clinic usage, source material, and note requirements?
+- What creates the immutable appointment boundary for events and appointment-note exports when one treatment spans multiple appointments?
 - Which existing `caseStatus` values must remain importable, and for how long?
 
 ## Related Specifications
