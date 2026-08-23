@@ -61,7 +61,7 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0009: Defer Structured EMR Interoperability](adr/0009-defer-structured-emr-interoperability.md)
 - [ADR 0010: Configure Clinical Vault Lock Policy Within Guardrails](adr/0010-configure-clinical-vault-lock-policy.md)
 - [ADR 0011: Define Isolated Local Vault Profiles](adr/0011-define-isolated-local-vault-profiles.md)
-- [ADR 0012: Define Historical Vault Compatibility And Recovery](adr/0012-define-historical-vault-compatibility-and-recovery.md)
+- [ADR 0012: Define Current, Beta, And Sandbox Deployment Modes](adr/0012-define-current-beta-and-sandbox-deployment-modes.md)
 
 ## Archived Implemented Specs
 

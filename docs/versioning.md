@@ -100,7 +100,7 @@ npm run docs:check
 
 After a `Version Packages` pull request merges into `main`, the Version workflow creates and pushes `vM.m.p` for that exact released commit. It refuses to reuse a version tag that points to another commit, and fast-forwards `beta` only after tagging succeeds. `npm run release` remains the underlying local Changesets command used by that workflow; contributors should not normally run it manually. NodeDent is private and this release flow does not publish it to npm.
 
-The decision to retain tagged releases as isolated historical recovery readers, and the additional gates required before creating archive deployments, are defined in [ADR 0012](adr/0012-define-historical-vault-compatibility-and-recovery.md).
+The Current, Beta, and Sandbox branch classifications, including the synthetic-only boundary for historical archive deployments, are defined in [ADR 0012](adr/0012-define-current-beta-and-sandbox-deployment-modes.md).
 
 ## Ongoing versioning validation
 
