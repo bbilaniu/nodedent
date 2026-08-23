@@ -19,11 +19,14 @@ Every published build must provide these values at build time:
 | `NODEDENT_DEPLOYMENT_COMMIT` | exact source commit | exact source commit | exact source commit when available |
 | `NODEDENT_DEPLOYMENT_ORIGIN` | approved Current HTTPS origin | approved Beta HTTPS origin | unset |
 
-Vite also accepts Cloudflare's `CF_PAGES_BRANCH` and `CF_PAGES_COMMIT_SHA`, or
-GitHub's `GITHUB_REF_NAME` and `GITHUB_SHA`, as branch and commit fallbacks. It
-does not infer Current or Beta from a hostname. Missing, unknown, or malformed
-mode input becomes Sandbox; an incomplete or contradictory Current/Beta build
-fails. At runtime, a Current or Beta origin mismatch blocks vault access.
+Vite also accepts Workers Builds' `WORKERS_CI_BRANCH` and
+`WORKERS_CI_COMMIT_SHA`, classic Pages' `CF_PAGES_BRANCH` and
+`CF_PAGES_COMMIT_SHA`, or GitHub's `GITHUB_REF_NAME` and `GITHUB_SHA` as branch
+and commit fallbacks. Explicit `NODEDENT_*` metadata takes precedence. Platform
+metadata never selects Current or Beta by itself: privileged mode and expected
+origin remain explicit. Missing, unknown, or malformed mode input becomes
+Sandbox; an incomplete or contradictory Current/Beta build fails. At runtime,
+a Current or Beta origin mismatch blocks vault access.
 
 The built `deployment.json` contains only mode, branch, source commit,
 application version, expected clinical origin when applicable, and Sandbox
@@ -67,29 +70,37 @@ After a `Version Packages` merge, the Version workflow retains the canonical
 refuses to overwrite an archive branch pointing elsewhere. Repository branch
 protection or a ruleset must separately prevent ordinary edits to `archive/*`.
 
-## Cloudflare Pages Configuration
+## Cloudflare Workers Builds Configuration
 
 The Cloudflare project must be reviewed against this table. Do not put secrets
 or private account identifiers in this repository.
 
 | Setting | Required configuration |
 | --- | --- |
-| Production branch | Record whether Cloudflare serves `main`; reconcile it with the GitHub Pages Current route |
-| Beta branch | `beta`, at one stable approved Beta origin |
-| Preview branches | Other included branches build Sandbox; restrict them with Cloudflare Access where operationally available |
+| Production branch | `beta`, at one stable approved Beta origin; Current remains reconciled with the GitHub Pages `main` route |
+| Non-production branches | Enabled when development and historical Sandbox previews are wanted; restrict them with Cloudflare Access where operationally available |
 | Build command | `npm ci && npm run ci:local` |
-| Output directory | `dist` |
-| Node version | 24 |
-| Mode variables | Set by branch using the build-contract table; never give preview/archive branches Current or Beta values |
+| Production deploy command | `npx wrangler deploy` |
+| Non-production version command | `npx wrangler versions upload`; uploads a preview version without promoting it over Beta |
+| Static asset directory | `dist`, declared in `wrangler.toml` |
+| Node version | `NODE_VERSION=24` |
+| Production build variables | `NODEDENT_DEPLOYMENT_MODE=beta` and `NODEDENT_DEPLOYMENT_ORIGIN=<stable Beta origin>` |
+| Preview build variables | `NODEDENT_DEPLOYMENT_MODE=sandbox`; leave `NODEDENT_DEPLOYMENT_ORIGIN` unset |
+| Injected source metadata | Allow `WORKERS_CI_BRANCH` and `WORKERS_CI_COMMIT_SHA` to provide branch and commit; do not replace them with static values |
+| Branch control | `*` is acceptable when every non-production branch should receive a Sandbox preview; use an `archive/*` branch rule only if previews should be historical-only |
+| Build watch paths | Keep include path `*`; this matches changed files, not branch names. Do not enter `archive/*` here |
 | Search exclusion | Preserve generated `_headers` and verify `X-Robots-Tag` plus HTML robots metadata for Beta/Sandbox |
 | Failed builds | Publication must stop; the prior sound deployment remains the recovery route |
 | Retention/rollback | Record retained deployment behavior and verify it without using real data |
 
 A separately passing GitHub workflow is not evidence that an independently
-published Cloudflare artifact passed. The Cloudflare build itself must run the
-complete command above, or publication must be moved behind an exact-commit
-GitHub check/deploy integration. Before clinical Beta activation, deliberately
-fail one synthetic Beta build and confirm Cloudflare does not publish it.
+published Cloudflare artifact passed. Workers Builds must run the complete
+command above, or publication must be moved behind an exact-commit GitHub
+check/deploy integration. Production and preview build variables must be scoped
+separately; applying Beta mode to every preview must fail rather than make a
+non-`beta` branch clinical-capable. Before clinical Beta activation,
+deliberately fail one synthetic Beta build and confirm Cloudflare does not
+publish it.
 
 ## Origin And Rollback Rules
 

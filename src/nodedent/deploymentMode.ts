@@ -17,10 +17,41 @@ export type DeploymentBuildInput = {
   expectedOrigin?: string;
 };
 
+export type DeploymentBuildEnvironment = Partial<Record<
+  | "NODEDENT_DEPLOYMENT_MODE"
+  | "NODEDENT_DEPLOYMENT_BRANCH"
+  | "NODEDENT_DEPLOYMENT_COMMIT"
+  | "NODEDENT_DEPLOYMENT_ORIGIN"
+  | "WORKERS_CI_BRANCH"
+  | "WORKERS_CI_COMMIT_SHA"
+  | "CF_PAGES_BRANCH"
+  | "CF_PAGES_COMMIT_SHA"
+  | "GITHUB_REF_NAME"
+  | "GITHUB_SHA",
+  string
+>>;
+
 const COMMIT_PATTERN = /^[0-9a-f]{7,64}$/i;
 
 function clean(value: string | undefined) {
   return value?.trim() || undefined;
+}
+
+export function deploymentBuildInputFromEnvironment(
+  environment: DeploymentBuildEnvironment,
+): DeploymentBuildInput {
+  return {
+    requestedMode: environment.NODEDENT_DEPLOYMENT_MODE,
+    branch: environment.NODEDENT_DEPLOYMENT_BRANCH
+      ?? environment.WORKERS_CI_BRANCH
+      ?? environment.CF_PAGES_BRANCH
+      ?? environment.GITHUB_REF_NAME,
+    commitSha: environment.NODEDENT_DEPLOYMENT_COMMIT
+      ?? environment.WORKERS_CI_COMMIT_SHA
+      ?? environment.CF_PAGES_COMMIT_SHA
+      ?? environment.GITHUB_SHA,
+    expectedOrigin: environment.NODEDENT_DEPLOYMENT_ORIGIN,
+  };
 }
 
 function requireClinicalOrigin(value: string | undefined, mode: "current" | "beta") {

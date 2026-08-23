@@ -2,7 +2,11 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { version as applicationVersion } from "./package.json";
-import { resolveDeploymentIdentity, type DeploymentIdentity } from "./src/nodedent/deploymentMode";
+import {
+  deploymentBuildInputFromEnvironment,
+  resolveDeploymentIdentity,
+  type DeploymentIdentity,
+} from "./src/nodedent/deploymentMode";
 
 function clinicalContentSecurityPolicy(command: "build" | "serve"): Plugin {
   const scriptSource = command === "serve" ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'" : "script-src 'self'";
@@ -86,12 +90,7 @@ function deploymentArtifact(identity: DeploymentIdentity): Plugin {
 export default defineConfig(({ command, mode }) => {
   const loadedEnvironment = loadEnv(mode, process.cwd(), "");
   const environment = { ...loadedEnvironment, ...process.env };
-  const identity = resolveDeploymentIdentity({
-    requestedMode: environment.NODEDENT_DEPLOYMENT_MODE,
-    branch: environment.NODEDENT_DEPLOYMENT_BRANCH ?? environment.CF_PAGES_BRANCH ?? environment.GITHUB_REF_NAME,
-    commitSha: environment.NODEDENT_DEPLOYMENT_COMMIT ?? environment.CF_PAGES_COMMIT_SHA ?? environment.GITHUB_SHA,
-    expectedOrigin: environment.NODEDENT_DEPLOYMENT_ORIGIN,
-  });
+  const identity = resolveDeploymentIdentity(deploymentBuildInputFromEnvironment(environment));
 
   return {
     define: {
