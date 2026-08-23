@@ -67,8 +67,12 @@ for the exact `main` commit before uploading that artifact.
 
 After a `Version Packages` merge, the Version workflow retains the canonical
 `vM.m.p` tag behavior and creates `archive/vM.m.p` from that exact tag. It
-refuses to overwrite an archive branch pointing elsewhere. Repository branch
-protection or a ruleset must separately prevent ordinary edits to `archive/*`.
+first builds that tagged commit with an explicit Historical Sandbox identity
+and checks the generated deployment metadata and security boundary. It refuses
+to overwrite an archive branch pointing elsewhere. The workflow summary records
+the artifact validation separately from the still-pending external Cloudflare
+branch build. Repository branch protection or a ruleset must separately prevent
+ordinary edits to `archive/*`.
 
 ## Cloudflare Workers Builds Configuration
 
