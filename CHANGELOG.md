@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0
+
+### Minor Changes
+
+- 1bfb9c5: Add fail-safe Current, Beta, and Sandbox deployment identities for GitHub and Cloudflare Workers Builds, visible mode warnings, artifact validation, and historical release branch automation with pre-publication Sandbox checks.
+
+### Patch Changes
+
+- 9eb06ea: Hide the active encounter from the saved-case review action, use consistent plural wording for saved cases, standardize file-picker controls, collapse backup and catalogue import workflows until needed, and automatically preview authenticated backup imports.
+
 ## 2.2.1
 
 ### Patch Changes
