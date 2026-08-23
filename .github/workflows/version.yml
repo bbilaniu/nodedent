@@ -178,7 +178,7 @@ jobs:
           fi
 
           if [[ -z "${remote_commit}" ]]; then
-            git push origin "refs/tags/${tag}:refs/heads/${archive_branch}"
+            git push origin "${tag_commit}:refs/heads/${archive_branch}"
           fi
 
           {
