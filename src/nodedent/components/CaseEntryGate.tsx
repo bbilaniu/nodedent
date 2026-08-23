@@ -1,6 +1,7 @@
 import React from "react";
 import type { EndoCase } from "../types";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 function formatStartedAt(createdAt?: string) {
   if (!createdAt) return "Not recorded";
@@ -121,6 +122,7 @@ export function CaseEntryGate({
                 <h2 id="import-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
                   Import
                 </h2>
+                <SandboxDataWarning className="mt-2" />
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                   <button
                     type="button"

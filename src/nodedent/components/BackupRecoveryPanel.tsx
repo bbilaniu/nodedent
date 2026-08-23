@@ -9,6 +9,7 @@ import type {
 import { CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH } from "../state/clinicalVaultCrypto";
 import { FilePickerControl } from "./FilePickerControl";
 import { ImportDisclosure } from "./ImportDisclosure";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 const MAX_ENCRYPTED_BACKUP_BYTES = 50 * 1024 * 1024;
 const AUTO_PREVIEW_DELAY_MS = 500;
@@ -168,6 +169,7 @@ export function BackupRecoveryPanel({
           </button>
         )}
       >
+        <SandboxDataWarning className="mb-3" />
         <p className="mt-1 text-xs leading-5 text-brand-slate">The complete backup is authenticated and validated before comparison. The preview starts automatically after you choose a file and enter its original passphrase. New encounters are added; differing existing encounters stay local unless you explicitly replace them.</p>
         <div className="mt-3">
           <FilePickerControl

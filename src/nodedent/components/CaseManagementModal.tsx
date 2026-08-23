@@ -10,6 +10,7 @@ import { FilePickerControl } from "./FilePickerControl";
 import type { CatalogItem } from "../workflow/catalogs";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
 import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 const MAX_CASE_JSON_BYTES = 1_000_000;
 
@@ -100,6 +101,7 @@ export function SavedCasesModal({
           {showImportBox ? (
             <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
               <p className="mb-2 text-xs leading-5 text-amber-900">Case JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
+              <SandboxDataWarning className="mb-2" />
               <div className="rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
                 <FilePickerControl
                   label="NodeDent case JSON file"

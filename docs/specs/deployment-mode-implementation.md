@@ -408,6 +408,36 @@ Verify at least one synthetic Current build, one synthetic Beta build, one
 development Sandbox branch, and one historical Sandbox branch at their actual
 deployment origins before clinical Beta activation.
 
+## Implementation Progress
+
+Repository implementation completed on 2026-08-22:
+
+- typed, immutable build identity with exact Current/Beta branch, commit, and
+  HTTPS-origin validation plus fail-safe Sandbox fallback;
+- runtime Current/Beta origin blocking, persistent mode banners, footer identity,
+  mode-specific titles, Sandbox warnings, and Beta/Sandbox search exclusion;
+- `deployment.json`, deployment artifact validation, resolver/component tests,
+  and a reproducible four-mode build matrix;
+- Quality coverage for `main` and `beta`, an exact-artifact GitHub Pages gate,
+  and release-tag-derived `archive/vM.m.p` branch automation; and
+- privacy, threat-model, deployment, training, device-checklist, and Cloudflare
+  operations documentation.
+
+The spec remains active. The following external gates cannot be completed by a
+repository change and must be recorded before clinical Beta activation:
+
+- configure and verify the Current/Beta repository origins and Cloudflare branch
+  variables, complete build command, access restrictions, and retained deployment
+  behavior;
+- prove with a deliberately failing synthetic commit that Cloudflare does not
+  publish Beta before the exact-commit gate succeeds;
+- perform actual-origin, browser, accessibility, separate-storage, migration,
+  rollback, and recovery testing with synthetic fixtures;
+- protect or freeze `archive/*` branches and verify a future release archive at
+  its Cloudflare historical Sandbox origin; and
+- complete the ADR 0008/0007 transition and clinic approval record for each
+  clinical origin and Beta operating procedure.
+
 ## Completion
 
 Archive this spec only after all five phases are complete or remaining work has

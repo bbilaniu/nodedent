@@ -9,6 +9,8 @@ import { CaseEntryGate } from "./components/CaseEntryGate";
 import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
 import { ClinicalVaultGate, type ClinicalVaultAccess } from "./components/ClinicalVaultGate";
 import { AppFooter, PRIVACY_POLICY_HASH } from "./components/AppFooter";
+import { DeploymentConfigurationError } from "./components/DeploymentConfigurationError";
+import { DeploymentModeBanner } from "./components/DeploymentModeBanner";
 import { PrivacyPolicyPage } from "./components/PrivacyPolicyPage";
 import { DifficultyBanner } from "./components/DifficultyBanner";
 import { EventLog } from "./components/EventLog";
@@ -51,6 +53,7 @@ import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
 import { noTreatmentSelectedProcedure } from "./workflow/procedures";
+import { deploymentIdentity, deploymentOriginMatches } from "./deploymentMode";
 import {
   buildOperativeSetupEventDetails,
   buildOperativeRestorationPlacedEvent,
@@ -213,9 +216,12 @@ export default function NodeDentApp() {
   }, [vaultAccess]);
 
   let content: React.ReactNode;
+  const originAllowed = deploymentOriginMatches(deploymentIdentity, window.location.origin);
 
   if (showPrivacyPolicy) {
     content = <PrivacyPolicyPage />;
+  } else if (!originAllowed) {
+    content = <DeploymentConfigurationError />;
   } else if (!vaultAccess) {
     content = (
       <ClinicalVaultGate
@@ -244,6 +250,7 @@ export default function NodeDentApp() {
 
   return (
     <div className="min-h-screen bg-brand-light-slate">
+      <DeploymentModeBanner />
       {content}
       <AppFooter />
     </div>

@@ -13,6 +13,7 @@ import {
 } from "../state/legacyClinicalStorage";
 import { PRIVACY_POLICY_HASH } from "./AppFooter";
 import { FilePickerControl } from "./FilePickerControl";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 import { formControlActionButton } from "./uiStyles";
 
 export type ClinicalVaultAccess = {
@@ -205,6 +206,8 @@ export function ClinicalVaultGate({
             Review the <a href={PRIVACY_POLICY_HASH} className="font-semibold text-brand-navy underline decoration-brand-light-node underline-offset-4 hover:decoration-brand-navy focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint">NodeDent privacy policy</a> before creating or unlocking a clinical vault.
           </p>
 
+          {!hasVault ? <SandboxDataWarning className="mt-5" /> : null}
+
           {!secureContextReady ? (
             <div className="mt-5 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm leading-6 text-red-900">
               Protected clinical storage requires HTTPS, Web Crypto, and IndexedDB. This browser context does not provide all required capabilities.
@@ -252,6 +255,7 @@ export function ClinicalVaultGate({
           <div className="mt-6 rounded-2xl border border-brand-blue-light bg-brand-blue-light/10 p-4">
             <h2 className="text-sm font-bold">Restore encrypted backup</h2>
             <p id="restore-backup-help" className="mt-1 text-xs leading-5 text-brand-slate">Select a `.nodedent` encrypted vault backup and enter the backup's original passphrase below. Restoring never reads prototype `localStorage` records.</p>
+            <SandboxDataWarning className="mt-3" />
             <div className="mt-3">
               <FilePickerControl
                 id="encrypted-backup-file"

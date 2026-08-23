@@ -104,3 +104,47 @@ jobs:
           git fetch origin beta
           git merge-base --is-ancestor origin/beta HEAD
           git push origin HEAD:beta
+
+  archive-release:
+    name: Create historical Sandbox branch
+    needs: release-tag
+    if: contains(github.event.head_commit.message, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Create immutable archive branch from release tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          archive_branch="archive/${tag}"
+
+          git fetch --tags origin
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          remote_commit="$(git ls-remote --heads origin "refs/heads/${archive_branch}" | cut -f1)"
+
+          if [[ -n "${remote_commit}" && "${remote_commit}" != "${tag_commit}" ]]; then
+            echo "Archive branch ${archive_branch} already points to ${remote_commit}, not ${tag_commit}." >&2
+            exit 1
+          fi
+
+          if [[ -z "${remote_commit}" ]]; then
+            git push origin "refs/tags/${tag}:refs/heads/${archive_branch}"
+          fi
+
+          {
+            echo "### Historical Sandbox source"
+            echo "- Tag: \`${tag}\`"
+            echo "- Commit: \`${tag_commit}\`"
+            echo "- Branch: \`${archive_branch}\`"
+            echo "- Deployment mode: Sandbox (validated by the branch build)"
+          } >> "${GITHUB_STEP_SUMMARY}"

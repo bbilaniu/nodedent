@@ -27,6 +27,7 @@ This folder separates clinical source material, active product specs, architectu
 
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 - [Local clinical deployment guide](guides/local-clinical-deployment.md)
+- [Deployment mode operations](guides/deployment-mode-operations.md)
 - [Clinical device, browser, and synthetic-test checklist](guides/clinical-device-browser-and-synthetic-test-checklist.md)
 - [Clinical operator training and collection-notice package](guides/clinical-operator-training-and-collection-notice.md)
 - [Versioning and releases](versioning.md)

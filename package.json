@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
+    "ci:local": "npm run versioning:check && npm run typecheck && npm test && npm run docs:check && npm run build && npm run deployment:check && npm run security:check",
+    "deployment:check": "node scripts/check-deployment-mode.mjs",
+    "deployment:matrix": "node scripts/check-deployment-matrix.mjs",
     "docs:check": "node scripts/check-doc-lifecycle.mjs",
     "docs:workflow-graph": "tsx scripts/export-protocol-graph.ts",
     "test": "node --import tsx --test src/nodedent/__tests__/*.test.ts",
