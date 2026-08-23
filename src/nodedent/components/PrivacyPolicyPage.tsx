@@ -1,5 +1,7 @@
 import React from "react";
 import { applicationVersion } from "../applicationVersion";
+import { deploymentIdentity, deploymentModeLabel } from "../deploymentMode";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 function PolicySection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -18,11 +20,13 @@ export function PrivacyPolicyPage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">NodeDent</p>
           <h1 id="privacy-policy-title" className="mt-2 text-3xl font-bold tracking-tight">Privacy policy</h1>
           <p className="mt-3 text-sm leading-6 text-brand-slate">
-            Last updated July 22, 2026{applicationVersion ? ` · Applies to NodeDent v${applicationVersion}` : ""}
+            Last updated August 22, 2026{applicationVersion ? ` · Applies to NodeDent v${applicationVersion}` : ""}
           </p>
           <p className="mt-3 text-sm leading-6 text-brand-slate">
             This policy describes NodeDent's local clinical workspace. It does not replace the deploying clinic's privacy notice, professional duties, records policy, or jurisdiction-specific assessment.
           </p>
+          <p className="mt-3 text-sm font-semibold text-brand-navy">Deployment: {deploymentModeLabel(deploymentIdentity)}</p>
+          <SandboxDataWarning className="mt-4" />
           <a href="#" className="mt-4 inline-flex rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-node focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint">
             Return to NodeDent
           </a>
@@ -45,6 +49,8 @@ export function PrivacyPolicyPage() {
 
         <PolicySection title="Local storage and safeguards">
           <p>Clinical cases are stored in an encrypted IndexedDB vault in the clinic browser profile. The vault uses authenticated encryption, and the usable key exists only in memory while unlocked. NodeDent locks explicitly, after inactivity, when hidden or left, and when another tab takes control.</p>
+          <p>Current and Beta run at separate approved origins and therefore hold separate local vaults, settings, and catalogues. Deploying code from Beta to Current does not transfer any of that browser-held data.</p>
+          <p>Sandbox deployments are for synthetic data only. Their isolated browser storage is disposable and may become unavailable if a branch deployment is removed, its origin changes, or the browser clears local data.</p>
           <p>The display theme and reusable, patient-independent shortcut catalogs may remain in ordinary browser storage. Never put a chart number, patient fact, or identifier into a reusable shortcut.</p>
           <p>Browser storage can be deleted, corrupted, or evicted. The clinic controls device encryption, operating-system accounts, browser extensions, screen locking, backups, retention, and secure deletion.</p>
         </PolicySection>

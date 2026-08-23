@@ -61,3 +61,12 @@ export function isMeaningfulSavedCaseSummary(summary: SavedCaseSummary) {
     summary.eventCount > 0
   );
 }
+
+export function getOtherMeaningfulSavedCases(
+  savedCases: readonly SavedCaseSummary[],
+  activeEncounterId: string
+) {
+  return savedCases.filter(
+    (summary) => summary.id !== activeEncounterId && isMeaningfulSavedCaseSummary(summary)
+  );
+}

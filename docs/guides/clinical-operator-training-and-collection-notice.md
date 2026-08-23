@@ -44,6 +44,12 @@ NodeDent with clinical information:
     chats, analytics, or remote logs.
 11. State how and when the clinic provides its collection notice and where
     privacy questions are directed.
+12. Distinguish Current, Beta, development Sandbox, and historical Sandbox from
+    their visible title, banner, footer mode, version, and commit; never enter
+    or import real data into Sandbox.
+13. Explain that Current and Beta have separate local vaults, that Beta requires
+    explicit clinic authorization, and that promoting or rolling back code does
+    not transfer or roll back browser data.
 
 ## Instructor Walkthrough
 
@@ -64,6 +70,9 @@ Use the approved v2.0.0 release and the target-device checklist:
    confirmation.
 9. Locate the downtime, incident, retention, backup, and deletion procedures.
 10. Complete the competency check and record any remediation.
+11. Open approved Current and Beta examples plus a synthetic Sandbox example,
+    verify their visible identity, and rehearse closing an unexpected or stale
+    deployment without unlocking it.
 
 ## Competency Check
 
@@ -79,6 +88,8 @@ Use the approved v2.0.0 release and the target-device checklist:
 | TRN-08 | Completes and verifies a synthetic EMR handoff | Pending | Pending |
 | TRN-09 | Locates and explains downtime and incident escalation | Pending | Pending |
 | TRN-10 | Explains the collection notice and privacy contact route | Pending | Pending |
+| TRN-11 | Identifies Current, Beta, and Sandbox and refuses real data in Sandbox | Pending | Pending |
+| TRN-12 | Explains separate Current/Beta vaults and the Beta backup/rollback procedure | Pending | Pending |
 
 The training owner records trainee and instructor identities, completion date,
 release, configuration identifier, remediation, expiry/renewal, and signatures
@@ -162,4 +173,3 @@ network connections.
 Retraining triggers should include material changes to the NodeDent release,
 permitted data, device/browser configuration, storage/export behavior,
 retention, backup, incident process, collection notice, or EMR handoff.
-

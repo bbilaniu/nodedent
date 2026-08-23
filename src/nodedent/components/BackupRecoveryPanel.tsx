@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
   BackupConflictResolution,
   ClinicalVaultBackup,
@@ -6,8 +6,17 @@ import type {
   EncryptedBackupResolutionResult,
   RecoveryHistorySummary,
 } from "../state/clinicalVault";
+import { CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH } from "../state/clinicalVaultCrypto";
+import { FilePickerControl } from "./FilePickerControl";
+import { ImportDisclosure } from "./ImportDisclosure";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 const MAX_ENCRYPTED_BACKUP_BYTES = 50 * 1024 * 1024;
+const AUTO_PREVIEW_DELAY_MS = 500;
+
+export function canAutoPreviewEncryptedBackup(hasFile: boolean, passphrase: string) {
+  return hasFile && passphrase.length >= CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH;
+}
 
 export function BackupRecoveryPanel({
   onDownloadEncryptedVaultBackup,
@@ -34,42 +43,68 @@ export function BackupRecoveryPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [previewRetry, setPreviewRetry] = useState(0);
+  const previewRequestId = useRef(0);
+  const previewJob = useRef<Promise<void>>(Promise.resolve());
+  const previewImportRef = useRef(onPreviewEncryptedBackupImport);
+
+  useEffect(() => {
+    previewImportRef.current = onPreviewEncryptedBackupImport;
+  }, [onPreviewEncryptedBackupImport]);
 
   function resetPreview() {
     setBackup(null);
     setPreview(null);
     setDecisions({});
+    setPreviewError("");
+    setIsPreviewing(false);
     setError("");
     setMessage("");
+    previewRequestId.current += 1;
   }
 
-  async function previewImport() {
-    if (!file) {
-      setError("Choose an encrypted NodeDent backup file.");
-      return;
-    }
-    if (!passphrase) {
-      setError("Enter the original passphrase for this encrypted backup.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      if (file.size > MAX_ENCRYPTED_BACKUP_BYTES) throw new Error("Encrypted vault backups are limited to 50 MB.");
-      const parsed = JSON.parse(await file.text()) as ClinicalVaultBackup;
-      const nextPreview = await onPreviewEncryptedBackupImport(parsed, passphrase);
-      setBackup(parsed);
-      setPreview(nextPreview);
-      setDecisions(Object.fromEntries(nextPreview.conflicts.map((conflict) => [conflict.encounterId, "keepLocal"])));
-    } catch (cause) {
-      setBackup(null);
-      setPreview(null);
-      setError(cause instanceof Error ? cause.message : "Encrypted backup preview failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
+  useEffect(() => {
+    const requestId = ++previewRequestId.current;
+    if (!file || !canAutoPreviewEncryptedBackup(true, passphrase)) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setIsPreviewing(true);
+      setPreviewError("");
+      setError("");
+      setMessage("");
+
+      previewJob.current = previewJob.current.then(async () => {
+        if (previewRequestId.current !== requestId) return;
+        try {
+          if (file.size > MAX_ENCRYPTED_BACKUP_BYTES) throw new Error("Encrypted vault backups are limited to 50 MB.");
+          const fileText = await file.text();
+          if (previewRequestId.current !== requestId) return;
+          const parsed = JSON.parse(fileText) as ClinicalVaultBackup;
+          const nextPreview = await previewImportRef.current(parsed, passphrase);
+          if (previewRequestId.current !== requestId) return;
+          setBackup(parsed);
+          setPreview(nextPreview);
+          setDecisions(Object.fromEntries(nextPreview.conflicts.map((conflict) => [conflict.encounterId, "keepLocal"])));
+        } catch (cause) {
+          if (previewRequestId.current !== requestId) return;
+          setBackup(null);
+          setPreview(null);
+          setDecisions({});
+          setPreviewError(cause instanceof Error ? cause.message : "Encrypted backup preview failed.");
+        } finally {
+          if (previewRequestId.current === requestId) setIsPreviewing(false);
+        }
+      });
+    }, AUTO_PREVIEW_DELAY_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (previewRequestId.current === requestId) previewRequestId.current += 1;
+    };
+  }, [file, passphrase, previewRetry]);
 
   async function applyReviewedImport() {
     if (!backup || !preview || (!preview.additions && !preview.conflicts.length)) return;
@@ -123,32 +158,33 @@ export function BackupRecoveryPanel({
       <p className="mt-1 text-xs leading-5 text-brand-slate">
         Download a complete encrypted vault backup, or compare another backup and explicitly resolve differing encounter versions.
       </p>
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
-        <button type="button" onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">
-          Download encrypted backup
-        </button>
-        <button type="button" onClick={onLockForRestore} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-slate">
-          Lock vault for restore or active conflict
-        </button>
-      </div>
-      <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-3">
-        <p className="text-sm font-semibold text-brand-navy">Import and resolve encrypted backup</p>
-        <p className="mt-1 text-xs leading-5 text-brand-slate">The complete backup is authenticated and validated before comparison. New encounters are added; differing existing encounters stay local unless you explicitly replace them.</p>
-        <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-medium text-brand-slate">Encrypted backup file</span>
-          <input
-            type="file"
+      <ImportDisclosure
+        id="encrypted-backup-import"
+        buttonLabel="Import encrypted backup"
+        expanded={isImportOpen}
+        onToggle={() => setIsImportOpen((open) => !open)}
+        action={(
+          <button type="button" onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">
+            Download encrypted backup
+          </button>
+        )}
+      >
+        <SandboxDataWarning className="mb-3" />
+        <p className="mt-1 text-xs leading-5 text-brand-slate">The complete backup is authenticated and validated before comparison. The preview starts automatically after you choose a file and enter its original passphrase. New encounters are added; differing existing encounters stay local unless you explicitly replace them.</p>
+        <div className="mt-3">
+          <FilePickerControl
+            label="Encrypted backup file"
+            buttonLabel="Choose backup file"
             accept=".nodedent,application/json"
-            onChange={(event) => {
-              setFile(event.target.files?.[0] || null);
+            fileName={file?.name}
+            onFileSelect={(selectedFile) => {
+              setFile(selectedFile || null);
               resetPreview();
             }}
-            className="block w-full text-sm text-brand-slate"
           />
-        </label>
-        {file ? <p className="mt-1 text-xs text-brand-slate">Selected: {file.name}</p> : null}
+        </div>
         <label className="mt-3 block">
-          <span className="mb-1 block text-xs font-medium text-brand-slate">Original backup passphrase</span>
+          <span className="mb-1 block text-sm font-semibold text-brand-navy">Original backup passphrase</span>
           <input
             type="password"
             autoComplete="current-password"
@@ -160,12 +196,21 @@ export function BackupRecoveryPanel({
             className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
           />
         </label>
-        <button type="button" disabled={busy} onClick={() => void previewImport()} className="mt-3 rounded-lg border border-brand-blue-light bg-white px-3 py-2 text-xs font-semibold text-brand-navy hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50">
-          {busy ? "Working…" : "Preview encrypted import"}
-        </button>
+        {file && passphrase.length < CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH ? (
+          <p className="mt-2 text-xs leading-5 text-brand-slate">Enter the complete original passphrase to preview this backup automatically.</p>
+        ) : null}
+        {isPreviewing ? <p role="status" className="mt-3 text-sm font-semibold text-brand-slate">Previewing encrypted backup…</p> : null}
+        {previewError ? (
+          <div role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <p>{previewError}</p>
+            <button type="button" onClick={() => setPreviewRetry((attempt) => attempt + 1)} className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">
+              Retry preview
+            </button>
+          </div>
+        ) : null}
         {preview ? (
           <div className="mt-3 rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
-            <p className="text-sm font-semibold text-brand-navy">Backup import preview</p>
+            <p className="text-sm font-semibold text-brand-navy">Import preview</p>
             <p className="mt-1 text-xs leading-5 text-brand-slate">
               Format {preview.formatVersion} · exported {new Date(preview.exportedAt).toLocaleString()} · {preview.totalCases} total · {preview.additions} new · {preview.existingEncounterIds} existing
             </p>
@@ -233,13 +278,21 @@ export function BackupRecoveryPanel({
             </button>
           </div>
         ) : null}
-        {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
-        {message ? <p role="status" className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2 text-sm text-brand-navy">{message}</p> : null}
-      </div>
-      <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
-        <p className="text-sm font-semibold text-brand-navy">Encrypted recovery history</p>
-        <p className="mt-1 text-xs leading-5 text-brand-slate">Versions displaced by an explicit recovery replacement remain encrypted, are included in new vault backups, and are removed when their encounter or the entire vault is deleted.</p>
-        {recoveryHistory.length ? (
+        <div className="mt-4 flex flex-col gap-2 border-t border-brand-light-node pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-brand-slate">
+            <strong className="text-brand-navy">Full vault restore:</strong> lock the vault before replacing the complete local vault or resolving a conflict involving the active encounter.
+          </p>
+          <button type="button" onClick={onLockForRestore} className="shrink-0 rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-slate">
+            Lock vault to restore
+          </button>
+        </div>
+      </ImportDisclosure>
+      {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
+      {message ? <p role="status" className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2 text-sm text-brand-navy">{message}</p> : null}
+      {recoveryHistory.length ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
+          <p className="text-sm font-semibold text-brand-navy">Encrypted recovery history</p>
+          <p className="mt-1 text-xs leading-5 text-brand-slate">Versions displaced by an explicit recovery replacement remain encrypted, are included in new vault backups, and are removed when their encounter or the entire vault is deleted.</p>
           <div className="mt-2 space-y-2">
             {recoveryHistory.map((entry) => {
               const active = entry.encounterId === activeEncounterId;
@@ -256,8 +309,12 @@ export function BackupRecoveryPanel({
               );
             })}
           </div>
-        ) : <p className="mt-2 text-xs text-brand-slate">No displaced versions are stored.</p>}
-      </div>
+        </div>
+      ) : (
+        <p className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs text-brand-slate">
+          <strong className="text-brand-navy">Encrypted recovery history:</strong> No displaced versions are stored.
+        </p>
+      )}
     </div>
   );
 }

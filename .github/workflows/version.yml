@@ -38,9 +38,59 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  release-tag:
+    name: Tag versioned release
+    needs: changesets
+    if: contains(github.event.head_commit.message, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate released version
+        run: npm run versioning:check
+
+      - name: Create and push release tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          head_commit="$(git rev-parse HEAD)"
+
+          git fetch --tags origin
+
+          if git show-ref --verify --quiet "refs/tags/${tag}"; then
+            tag_commit="$(git rev-list -n 1 "${tag}")"
+            if [[ "${tag_commit}" != "${head_commit}" ]]; then
+              echo "Release tag ${tag} already points to ${tag_commit}, not ${head_commit}." >&2
+              exit 1
+            fi
+          else
+            npm run release
+          fi
+
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          if [[ "${tag_commit}" != "${head_commit}" ]]; then
+            echo "Release tag ${tag} was not created for ${head_commit}." >&2
+            exit 1
+          fi
+
+          git push origin "refs/tags/${tag}"
+
   sync-beta:
     name: Fast-forward beta after versioning
-    needs: changesets
+    needs: release-tag
     if: contains(github.event.head_commit.message, 'Version Packages')
     runs-on: ubuntu-latest
     steps:
@@ -54,3 +104,83 @@ jobs:
           git fetch origin beta
           git merge-base --is-ancestor origin/beta HEAD
           git push origin HEAD:beta
+
+  archive-release:
+    name: Create historical Sandbox branch
+    needs: release-tag
+    if: contains(github.event.head_commit.message, 'Version Packages')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare historical Sandbox build identity
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          archive_branch="archive/${tag}"
+          head_commit="$(git rev-parse HEAD)"
+
+          git fetch --tags origin
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+
+          if [[ "${tag_commit}" != "${head_commit}" ]]; then
+            echo "Release tag ${tag} points to ${tag_commit}, not checked-out commit ${head_commit}." >&2
+            exit 1
+          fi
+
+          {
+            echo "NODEDENT_DEPLOYMENT_MODE=sandbox"
+            echo "NODEDENT_DEPLOYMENT_BRANCH=${archive_branch}"
+            echo "NODEDENT_DEPLOYMENT_COMMIT=${tag_commit}"
+          } >> "${GITHUB_ENV}"
+
+      - name: Build historical Sandbox artifact
+        run: npm run build
+
+      - name: Check historical Sandbox deployment identity
+        run: npm run deployment:check
+
+      - name: Check historical Sandbox security boundary
+        run: npm run security:check
+
+      - name: Create immutable archive branch from release tag
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          archive_branch="archive/${tag}"
+
+          git fetch --tags origin
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          remote_commit="$(git ls-remote --heads origin "refs/heads/${archive_branch}" | cut -f1)"
+
+          if [[ -n "${remote_commit}" && "${remote_commit}" != "${tag_commit}" ]]; then
+            echo "Archive branch ${archive_branch} already points to ${remote_commit}, not ${tag_commit}." >&2
+            exit 1
+          fi
+
+          if [[ -z "${remote_commit}" ]]; then
+            git push origin "refs/tags/${tag}:refs/heads/${archive_branch}"
+          fi
+
+          {
+            echo "### Historical Sandbox source"
+            echo "- Tag: \`${tag}\`"
+            echo "- Commit: \`${tag_commit}\`"
+            echo "- Branch: \`${archive_branch}\`"
+            echo "- Artifact validation: Historical Sandbox checks passed"
+            echo "- Cloudflare deployment: Pending external branch build"
+          } >> "${GITHUB_STEP_SUMMARY}"

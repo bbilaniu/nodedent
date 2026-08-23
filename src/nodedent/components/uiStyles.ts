@@ -34,6 +34,8 @@ export const panelActionButton = {
   destructive: cx(panelButtonBase, panelButtonDefaultSize, "border-red-700 bg-red-700 text-white hover:bg-red-800"),
 };
 
+export const formControlActionButton = "inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold leading-5 text-brand-navy hover:bg-brand-blue-light/20";
+
 export const panelSurface = {
   card: "rounded-2xl border border-brand-light-node bg-white shadow-sm",
   cardPadded: "rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm",

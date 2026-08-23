@@ -17,16 +17,17 @@ This folder separates clinical source material, active product specs, architectu
 - [GUI consistency and design system](specs/gui-consistency-and-design-system.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
+- [Deployment mode implementation](specs/deployment-mode-implementation.md)
 - [Local clinical data security, integrity, and recovery](specs/local-data-integrity-and-recovery.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
 - [Repeatable workflow instances](specs/repeatable-workflow-instances.md)
-- [Workspace cross-workflow consistency](specs/workspace-cross-workflow-consistency.md)
 
 ## Engineering Guides
 
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 - [Local clinical deployment guide](guides/local-clinical-deployment.md)
+- [Deployment mode operations](guides/deployment-mode-operations.md)
 - [Clinical device, browser, and synthetic-test checklist](guides/clinical-device-browser-and-synthetic-test-checklist.md)
 - [Clinical operator training and collection-notice package](guides/clinical-operator-training-and-collection-notice.md)
 - [Versioning and releases](versioning.md)
@@ -61,9 +62,12 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0008: Adopt a Constrained Local Clinical Mode](adr/0008-adopt-constrained-local-clinical-mode.md)
 - [ADR 0009: Defer Structured EMR Interoperability](adr/0009-defer-structured-emr-interoperability.md)
 - [ADR 0010: Configure Clinical Vault Lock Policy Within Guardrails](adr/0010-configure-clinical-vault-lock-policy.md)
+- [ADR 0011: Define Isolated Local Vault Profiles](adr/0011-define-isolated-local-vault-profiles.md)
+- [ADR 0012: Define Current, Beta, And Sandbox Deployment Modes](adr/0012-define-current-beta-and-sandbox-deployment-modes.md)
 
 ## Archived Implemented Specs
 
+- [Workspace cross-workflow consistency](specs/archive/workspace-cross-workflow-consistency.md)
 - [Encrypted backup revision conflict resolution](specs/archive/encrypted-backup-revision-conflict-resolution.md)
 - [Issue 20 chairside and recovery improvements](specs/archive/issue-20-chairside-and-recovery-improvements.md)
 - [Global footer and application-version display](specs/archive/global-footer-and-application-version.md)

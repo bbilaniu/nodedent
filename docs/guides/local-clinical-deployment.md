@@ -34,10 +34,22 @@ Before unlocking NodeDent with approved clinical data, the clinic must verify:
 
 Run `npm run build` followed by `npm run security:check` against the exact artifact before deployment. Review dependency advisories and build provenance under the clinic's release process.
 
+Also verify the visible mode, full source commit, expected origin, page title,
+and generated `deployment.json` using `npm run deployment:check`. Current must
+come from `main`; Beta must come from `beta`; any other or unknown build must
+identify itself as Sandbox. Follow the complete branch and Cloudflare procedure
+in [deployment mode operations](deployment-mode-operations.md).
+
 For v2.0.0, record the approved configuration and manual evidence in the
 [clinical device, browser, and synthetic-test checklist](clinical-device-browser-and-synthetic-test-checklist.md).
 
 ## Vault Setup And Daily Use
+
+Before entering data, identify the deployment in the persistent banner or
+footer. Current and Beta may use real clinical data only when that exact origin,
+commit, device/profile, and operating procedure are approved. Sandbox is always
+synthetic-only. A bookmarked or stale tab whose identity or origin is unexpected
+must be closed rather than unlocked.
 
 1. Create a unique vault passphrase of at least 12 characters. NodeDent does not store or recover it.
 2. Store any recovery copy of the passphrase through the clinic's approved secret-management process, separate from encrypted vault backups.
@@ -67,6 +79,12 @@ The unlocked key exists only in browser memory. Encryption protects the locked r
 - If corruption or passphrase loss makes the vault unusable, the lock screen can delete the entire encrypted vault after a typed confirmation. This is irreversible and should follow the clinic's recovery and retention process.
 - If autosave reports failure or conflict, do not assume the draft is durable. If clinic policy allows, export the current plaintext JSON to an approved destination, then lock and reopen the latest protected record.
 - Loss of both the passphrase and an unlocked session makes encrypted records unrecoverable.
+- Current and Beta origins have separate vaults. Code promotion does not move
+  cases or settings between them, and a code rollback is not a data rollback.
+- Before clinically exercising a Beta persistence or migration change, verify
+  an encrypted backup under the prior approved Beta build, test the upgrade
+  synthetically, and record whether the previous build can reopen the upgraded
+  database.
 
 ## Incident And Change Response
 

@@ -17,6 +17,8 @@ not approved because the application opens or the automated suite passes.
 | Release | `2.0.0` |
 | Reviewed commit | `a75f87c716cae4920f0a65093e378908890774b2` |
 | Public URL | `https://nodedent.com/` |
+| Deployment mode and branch | Pending |
+| Built `deployment.json` evidence | Pending |
 | Clinic-controlled device reference | Pending |
 | OS name/build and patch date | Pending |
 | Browser name/version/update channel | Pending |
@@ -107,6 +109,12 @@ requires a finding and approved disposition; it cannot be silently omitted.
 | SYN-22 | EMR handoff rehearsal | Synthetic note is matched, transferred, reviewed, and confirmed in a training/test destination | Pending | Pending |
 | SYN-23 | Network inspection | No unexpected application connections, telemetry, analytics, or reports are observed | Pending | Pending |
 | SYN-24 | Backup loss/unavailability | Staff can follow the downtime and recovery procedure without inventing data | Pending | Pending |
+| SYN-25 | Mode identity | Title, persistent banner where required, footer mode/version/commit, and built identity agree | Pending | Pending |
+| SYN-26 | Wrong clinical origin | A Current/Beta artifact served from another origin blocks vault access without opening storage | Pending | Pending |
+| SYN-27 | Separate origins | Synthetic Current and Beta vaults remain isolated; code promotion does not copy data | Pending | Pending |
+| SYN-28 | Sandbox import boundary | Vault creation, case import, and encrypted-backup import show synthetic-only warnings | Pending | Pending |
+| SYN-29 | Beta migration and rollback | Prior-build backup, synthetic upgrade, old-build compatibility, and recovery route are recorded | Pending | Pending |
+| SYN-30 | Failed Beta build | Exact failing commit is not published and the prior sound deployment remains available | Pending | Pending |
 
 ## Accessibility And Chairside Use
 
@@ -136,4 +144,3 @@ Approved configuration identifier: **Pending**
 
 Approval applies only to the release, device, OS, browser version policy,
 profile, extensions, settings, and procedures recorded above.
-

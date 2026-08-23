@@ -120,7 +120,7 @@ Recommendations record desired outcomes. Detailed implementation requirements an
 | A11Y-01 through A11Y-03, TOUCH-01 | Static-source findings; runtime accessibility and ergonomics need browser/manual verification | [Accessible interaction](../specs/accessible-interaction.md) |
 | REL-01 through REL-03 | Confirmed missing recovery/feedback paths plus inferred failure modes | [ADR 0006](../adr/0006-define-autosave-and-draft-workflow-state-policy.md) and [Local data integrity and recovery](../specs/local-data-integrity-and-recovery.md) |
 | PROV-01 | Confirmed product-status/provenance gap | [Global footer and application version](../specs/global-footer-and-application-version.md) owns only the application-version portion; broader workflow/schema provenance remains roadmap work |
-| UX-01, UX-02 | Confirmed terminology and information-density concerns; usability impact needs testing | [Workspace cross-workflow consistency](../specs/workspace-cross-workflow-consistency.md) |
+| UX-01, UX-02 | Confirmed terminology and information-density concerns; usability impact needs testing | [Workspace cross-workflow consistency](../specs/archive/workspace-cross-workflow-consistency.md) |
 | OFFLINE-01, THEME-01, META-01, I18N-01, OBS-01 | Confirmed implementation state with strategic choices still open | [NodeDent long-term product roadmap](../specs/nodedent-long-term-product-roadmap.md) |
 
 ## P0 — Address before routine use with real patient identifiers
@@ -422,7 +422,7 @@ Use distinct vocabulary:
 | Workflow ended                          | Complete         |
 | Clinical judgment still required        | Clinician review |
 
-Terminology and launcher consistency are owned by [Workspace cross-workflow consistency](../specs/workspace-cross-workflow-consistency.md).
+Terminology and launcher consistency were implemented under [Workspace cross-workflow consistency](../specs/archive/workspace-cross-workflow-consistency.md).
 
 
 ### UX-02: The first-run/home screen remains information-dense
@@ -440,7 +440,7 @@ The home screen shows case facts, shared-module status, primary workflow cards, 
 - Continue generalizing `Prior visit` so it is not visually owned by endodontics when other workflows need it.
 - Test whether “Case Setup & Status” is understandable to a first-time user without prior product knowledge.
 
-Home/launcher hierarchy work is owned by [Workspace cross-workflow consistency](../specs/workspace-cross-workflow-consistency.md).
+Home/launcher hierarchy work was implemented under [Workspace cross-workflow consistency](../specs/archive/workspace-cross-workflow-consistency.md).
 
 ### DATA-03: Saved encounter identity can collide
 

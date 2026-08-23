@@ -9,11 +9,15 @@ import { applicationVersion } from "../applicationVersion";
 import type { EndoCase } from "../types";
 import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPanel";
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
+import { BackupRecoveryPanel, canAutoPreviewEncryptedBackup } from "../components/BackupRecoveryPanel";
+import { CatalogAdministrationPanel } from "../components/CatalogAdministrationPanel";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
 import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
+import { FilePickerControl } from "../components/FilePickerControl";
+import { ImportDisclosure } from "../components/ImportDisclosure";
 import { OperativeWorkflowRunner } from "../components/OperativeWorkflowRunner";
 import { PrivacyPolicyPage } from "../components/PrivacyPolicyPage";
 import { hasRadiologyReviewScope, type RadiologyReviewFormState } from "../components/RadiologyEventForm";
@@ -52,7 +56,7 @@ import {
   saveUserCatalogItems,
   USER_CATALOG_STORAGE_KEY,
 } from "../state/catalogPersistence";
-import { isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
+import { getOtherMeaningfulSavedCases, isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
 import { blankCanal, hydrateCanalEventsFromGlobalEvents, initialCase, normalizeImportedEndoCase } from "../state/persistence";
 import {
@@ -225,7 +229,7 @@ test("case entry actions offer imports and only offer review when another meanin
 
   assert.equal(blankWithOtherCasesMarkup.includes("Continue case"), false);
   assert.equal(blankWithOtherCasesMarkup.includes("New case"), true);
-  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved case"), true);
+  assert.equal(blankWithOtherCasesMarkup.includes("Review 1 other saved cases"), true);
 
   const resumableMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: baseCase(),
@@ -244,6 +248,31 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(resumableMarkup.includes("Continue case"), true);
   assert.equal(resumableMarkup.includes("New case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+});
+
+test("case entry excludes the active encounter from other saved cases", () => {
+  const activeCase = baseCase();
+  const activeSummary = {
+    id: activeCase.encounterId,
+    patientNumber: activeCase.patientNumber,
+    tooth: activeCase.tooth,
+    procedureType: activeCase.procedureType,
+    currentNodeId: "preop",
+    canalCount: activeCase.canals.length,
+    eventCount: activeCase.globalEvents.length,
+    meaningful: true,
+    autosavedAt: activeCase.createdAt || "",
+    revision: 1,
+    expired: false,
+  };
+
+  assert.equal(getOtherMeaningfulSavedCases([activeSummary], activeCase.encounterId).length, 0);
+
+  const otherSummary = {
+    ...activeSummary,
+    id: "44444444-4444-4444-8444-444444444444",
+  };
+  assert.deepEqual(getOtherMeaningfulSavedCases([activeSummary, otherSummary], activeCase.encounterId), [otherSummary]);
 });
 
 test("workflow selection supports a neutral case and multiple disciplines without duplicate instances", () => {
@@ -454,6 +483,83 @@ test("encrypted backup restore reports missing input instead of silently disabli
   assert.match(getEncryptedBackupRestoreInputError(false, ""), /choose an encrypted NodeDent backup file/i);
   assert.match(getEncryptedBackupRestoreInputError(true, ""), /original passphrase/i);
   assert.equal(getEncryptedBackupRestoreInputError(true, "clinic test passphrase 2026"), "");
+});
+
+test("shared file picker uses application typography and an accessible custom trigger", () => {
+  const markup = renderToStaticMarkup(React.createElement(FilePickerControl, {
+    id: "test-file-picker",
+    label: "Encrypted backup file",
+    buttonLabel: "Choose backup file",
+    accept: ".nodedent,application/json",
+    onFileSelect: () => {},
+  }));
+
+  assert.match(markup, /type="file"[^>]*class="peer sr-only"/);
+  assert.match(markup, /for="test-file-picker"[^>]*text-sm font-semibold leading-5/);
+  assert.match(markup, /Choose backup file/);
+  assert.match(markup, /No file selected/);
+  assert.match(markup, /aria-labelledby="test-file-picker-label"/);
+  assert.match(markup, /aria-describedby="test-file-picker-name"/);
+});
+
+test("shared import disclosure exposes accessible collapsed and expanded states", () => {
+  const action = React.createElement("button", { type: "button" }, "Download backup");
+  const child = React.createElement("p", null, "Import form contents");
+  const collapsedMarkup = renderToStaticMarkup(React.createElement(ImportDisclosure, {
+    action,
+    buttonLabel: "Import backup",
+    children: child,
+    expanded: false,
+    id: "backup-import",
+    onToggle: () => {},
+  }));
+  const expandedMarkup = renderToStaticMarkup(React.createElement(ImportDisclosure, {
+    action,
+    buttonLabel: "Import backup",
+    children: child,
+    expanded: true,
+    id: "backup-import",
+    onToggle: () => {},
+  }));
+
+  assert.match(collapsedMarkup, /aria-expanded="false"/);
+  assert.match(collapsedMarkup, /aria-controls="backup-import"/);
+  assert.match(collapsedMarkup, /id="backup-import" role="region" aria-labelledby="backup-import-trigger" hidden=""/);
+  assert.match(expandedMarkup, /aria-expanded="true"/);
+  assert.match(expandedMarkup, /id="backup-import" role="region" aria-labelledby="backup-import-trigger"/);
+  assert.doesNotMatch(expandedMarkup, /id="backup-import"[^>]*hidden/);
+  assert.match(expandedMarkup, /Import form contents/);
+});
+
+test("backup and catalogue cards keep import forms collapsed until requested", () => {
+  const noop = () => {};
+  const backupMarkup = renderToStaticMarkup(React.createElement(BackupRecoveryPanel, {
+    onDownloadEncryptedVaultBackup: noop,
+    onPreviewEncryptedBackupImport: async () => { throw new Error("not called"); },
+    onResolveEncryptedBackupImport: async () => { throw new Error("not called"); },
+    recoveryHistory: [],
+    activeEncounterId: "active-encounter",
+    onRestoreRecoveryHistoryEntry: async () => {},
+    onLockForRestore: noop,
+  }));
+  const catalogueMarkup = renderToStaticMarkup(React.createElement(CatalogAdministrationPanel, {
+    items: [],
+    onChange: noop,
+  }));
+
+  assert.match(backupMarkup, /Import encrypted backup/);
+  assert.match(backupMarkup, /id="encrypted-backup-import"[^>]*hidden=""/);
+  assert.match(backupMarkup, /preview starts automatically/i);
+  assert.doesNotMatch(backupMarkup, /Preview encrypted import/);
+  assert.match(backupMarkup, /Encrypted recovery history:<\/strong> No displaced versions are stored/);
+  assert.match(catalogueMarkup, /Import catalogue preferences/);
+  assert.match(catalogueMarkup, /id="catalogue-preferences-import"[^>]*hidden=""/);
+});
+
+test("encrypted backup auto-preview waits for a selected file and minimum-length passphrase", () => {
+  assert.equal(canAutoPreviewEncryptedBackup(false, "clinic backup passphrase"), false);
+  assert.equal(canAutoPreviewEncryptedBackup(true, "short pass"), false);
+  assert.equal(canAutoPreviewEncryptedBackup(true, "twelve chars"), true);
 });
 
 function radiologyReviewedEvent(tooth = "30") {

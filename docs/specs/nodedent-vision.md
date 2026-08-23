@@ -7,9 +7,9 @@ created_on: 2026-06-19
 
 ## Current UI Quirks and Proposed Changes
 
-### 1. Global header should not be endo-specific
+### 1. Keep the global header workflow-neutral
 
-The current header still shows items such as **Tooth / RCT / RCT Planned**. This feels too specific to endodontics if nodedent is becoming the shared platform for multiple dental workflows.
+The shared workspace header and NodeDent Home now use general case and workflow context, while endodontic canal progress stays inside the endodontic target surface. Continue applying this boundary as new workflows are added.
 
 The global case header should contain general encounter information, such as:
 
@@ -45,7 +45,7 @@ This module should be available to any workflow rather than being owned by the E
 
 ### 3. Workflow buttons should be state-aware
 
-Currently, the Endodontic RCT card says **Continue workflow** even when the workflow has never been started.
+The launcher now distinguishes never-started, planned, and saved-progress states. Operative completion also exposes a review action. Completed endodontic review/reopen and converted or abandoned history remain future states.
 
 The button label should reflect the actual workflow state:
 
@@ -68,7 +68,7 @@ It would be useful to add placeholder primary workflows such as:
 
 Operative direct restoration is now the first usable non-endodontic primary workflow. The remaining placeholder workflows should wait until there is a clear minimum useful note or workflow shell for each.
 
-These could initially appear as disabled roadmap cards, “coming soon” cards, or minimal unguided workflow containers.
+Extraction and hygiene already appear as unavailable/model-only launcher entries. Emergency and diagnostic workflows should wait until a minimum useful note or workflow shell is specified.
 
 A useful compromise would be to allow some placeholder workflows to launch a simple unguided note form before full guided decision support is implemented.
 
@@ -131,7 +131,7 @@ It includes:
 * Autosaving even if the browser is closed or a new case is started
 * Optional tracking of decision-relevant clinical parameters
 * Canal-level data entry, including measurements and obturation details
-* A NodeDent Home launcher with endodontic RCT, operative direct restoration, and shared anesthesia/isolation modules
+* A NodeDent Home launcher with endodontic RCT, operative direct restoration, and shared anesthesia, isolation, and radiology modules
 * Shared readiness summaries for diagnosis, radiographs, anesthesia, and isolation
 
 ## Product Vision

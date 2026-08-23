@@ -6,9 +6,11 @@ import type { SavedCaseSummary } from "../state/clinicalVault";
 import { SelectInput, TextInput } from "./FormControls";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
+import { FilePickerControl } from "./FilePickerControl";
 import type { CatalogItem } from "../workflow/catalogs";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
 import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
+import { SandboxDataWarning } from "./SandboxDataWarning";
 
 const MAX_CASE_JSON_BYTES = 1_000_000;
 
@@ -99,16 +101,16 @@ export function SavedCasesModal({
           {showImportBox ? (
             <div className="mt-3 rounded-xl border border-brand-blue-light/60 bg-white p-2">
               <p className="mb-2 text-xs leading-5 text-amber-900">Case JSON is plaintext clinical data. Import only an approved NodeDent case file; legacy browser storage is never migrated automatically.</p>
-              <label className="block rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
-                <span className="mb-2 block text-xs font-semibold text-brand-navy">Choose a NodeDent case JSON file</span>
-                <input
-                  type="file"
+              <SandboxDataWarning className="mb-2" />
+              <div className="rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
+                <FilePickerControl
+                  label="NodeDent case JSON file"
+                  buttonLabel="Choose case file"
                   accept=".json,application/json"
-                  onChange={(event) => void selectImportFile(event.target.files?.[0])}
-                  className="block w-full text-sm text-brand-slate"
+                  fileName={importFileName}
+                  onFileSelect={(file) => void selectImportFile(file)}
                 />
-              </label>
-              {importFileName ? <p className="mt-2 text-xs text-brand-slate">Selected: {importFileName}</p> : null}
+              </div>
               {importFileError ? <p role="alert" className="mt-2 text-xs font-semibold text-red-800">{importFileError}</p> : null}
               <label className="mt-3 block">
                 <span className="mb-1 block text-xs font-medium text-brand-slate">Or paste case JSON</span>

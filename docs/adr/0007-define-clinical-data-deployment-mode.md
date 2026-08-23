@@ -56,6 +56,6 @@ This ADR does not select encryption, server storage, authentication, or a specif
 
 ## Follow-Up
 
-- Add and verify the persistent prototype/no-PHI warning.
+- Add and verify the persistent prototype/no-PHI warning for sandbox type once build configuration types are implemented
 - Implement mode-independent integrity and recovery work through [Local clinical data security, integrity, and recovery](../specs/local-data-integrity-and-recovery.md).
 - Revisit and supersede this decision when server persistence, multi-user access, clinic synchronization, local clinical use, or formal clinical deployment is proposed.

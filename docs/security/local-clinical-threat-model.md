@@ -8,7 +8,7 @@ ClearDent or Dentrix remains the official record. NodeDent has no server account
 
 ## Trust Boundaries
 
-1. **Reviewed static build and origin:** JavaScript executes with access to decrypted data while unlocked. The production CSP blocks network connections but cannot make malicious same-origin code trustworthy.
+1. **Reviewed static build, mode, and origin:** JavaScript executes with access to decrypted data while unlocked. Current and Beta are separately approved origins; every other build is synthetic-only Sandbox. The production CSP blocks network connections but cannot make malicious same-origin code trustworthy.
 2. **Browser profile and IndexedDB:** encrypted envelopes and minimum vault metadata persist here. Browser deletion or eviction can remove them.
 3. **In-memory unlocked session:** the non-extractable Web Crypto key and decrypted React state exist until lock or page teardown.
 4. **Device and operating system:** disk encryption, account access, screen lock, malware controls, backups, and physical access are clinic responsibilities.
@@ -33,6 +33,10 @@ ClearDent or Dentrix remains the official record. NodeDent has no server account
 | Legacy plaintext browser records | Detection by key only; no parse/copy/migration; explicit raw backup or typed-confirmation deletion | A requested legacy backup is plaintext. Old records remain exposed until the clinic handles or deletes them. |
 | Patient data entered into reusable preferences | Case data is routed to the encrypted vault; theme and reusable catalog storage is structurally separate | Catalog labels are plaintext non-patient preferences. Users must not place a chart number, patient fact, or identifier in a reusable shortcut. |
 | Forgotten passphrase | Explicit no-recovery warning and encrypted backup support | Without the passphrase, backups are also unrecoverable. Clinic secret custody is required. |
+| Wrong origin, stale bookmark, or mislabeled build | Immutable build identity, persistent Beta/Sandbox banner, footer commit, exact Current/Beta branch checks, and runtime origin mismatch block | A malicious same-origin build can remove client controls. Operators and deployment evidence must verify the expected origin and exact artifact before use. |
+| Preview link receives clinical data | Every non-Current/Beta build defaults to Sandbox and warns before vault creation and clinical-file import; Beta/Sandbox are excluded from search | The application cannot determine whether entered or imported data is real. Access restrictions and operator compliance remain required. |
+| Beta update or rollback strands local data | Stable Beta origin, prior-build backup procedure, synthetic migration/rollback test, and exact-commit deployment gate | IndexedDB migrations may be irreversible for older code. Code rollback is not data rollback; recovery may require the supported backup path. |
+| Branch-deployment misconfiguration publishes unchecked code | Current/Beta builds require exact branch, commit, and origin; artifact checks and complete Cloudflare build gate are specified | Cloudflare and repository settings are external state. Their configuration and failed-build behavior require recorded verification. |
 
 ## Excluded Or Deferred Scenarios
 

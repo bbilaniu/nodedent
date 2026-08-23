@@ -17,6 +17,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: current
+      NODEDENT_DEPLOYMENT_BRANCH: ${{ github.ref_name }}
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ vars.NODEDENT_CURRENT_ORIGIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -30,11 +35,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
-
-      - name: Check clinical security boundary
-        run: npm run security:check
+      - name: Run exact-commit quality gate and build
+        run: npm run ci:local
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

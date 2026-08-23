@@ -9,7 +9,7 @@ created_on: 2026-07-20
 
 Define and apply a coherent NodeDent visual system across workflow launchers, shared modules, clinical runners, setup panels, forms, dialogs, tables, and state feedback without flattening clinically meaningful differences.
 
-This spec owns broad GUI consistency that is not fully covered by [Workspace cross-workflow consistency](workspace-cross-workflow-consistency.md) or [Accessible interaction](accessible-interaction.md). The workspace spec continues to own workflow behavior, placement, labels, and information hierarchy. The accessibility spec continues to own interaction semantics, focus, validation, keyboard behavior, and touch requirements.
+This spec owns broad GUI consistency beyond the completed [Workspace cross-workflow consistency](archive/workspace-cross-workflow-consistency.md) pass and the active [Accessible interaction](accessible-interaction.md) contract. The archived workspace spec records the implemented workflow behavior, placement, labels, and information hierarchy. The accessibility spec continues to own interaction semantics, focus, validation, keyboard behavior, and touch requirements.
 
 ## Principles
 

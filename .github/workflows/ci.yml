@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, beta]
 
 permissions:
   contents: read
@@ -16,6 +16,11 @@ jobs:
   quality:
     name: Quality
     runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: ${{ github.event_name == 'push' && github.ref_name == 'main' && 'current' || github.event_name == 'push' && github.ref_name == 'beta' && 'beta' || 'sandbox' }}
+      NODEDENT_DEPLOYMENT_BRANCH: ${{ github.head_ref || github.ref_name }}
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ github.event_name == 'push' && github.ref_name == 'main' && vars.NODEDENT_CURRENT_ORIGIN || github.event_name == 'push' && github.ref_name == 'beta' && vars.NODEDENT_BETA_ORIGIN || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -44,5 +49,18 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Check deployment identity
+        run: npm run deployment:check
+
       - name: Check clinical security boundary
         run: npm run security:check
+
+      - name: Upload deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-evidence-${{ github.sha }}
+          path: |
+            dist/deployment.json
+            dist/index.html
+            dist/_headers
+          if-no-files-found: ignore

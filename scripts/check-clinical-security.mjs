@@ -5,7 +5,11 @@ import path from "node:path";
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = path.join(ROOT, "src", "nodedent");
-const BUILD_INDEX = path.join(ROOT, "dist", "index.html");
+const directoryArgumentIndex = process.argv.indexOf("--dir");
+const buildDirectory = directoryArgumentIndex >= 0
+  ? path.resolve(process.argv[directoryArgumentIndex + 1] || "")
+  : path.join(ROOT, "dist");
+const BUILD_INDEX = path.join(buildDirectory, "index.html");
 const errors = [];
 
 function sourceFiles(directory) {

@@ -94,10 +94,13 @@ npm run test
 npm run typecheck
 npm run build
 npm run docs:check
-npm run release
 ```
 
-`npm run version` consumes pending Changesets and updates package versions and the changelog. Changesets does not reliably synchronize the root version metadata in `package-lock.json` for this private single-package application, so refresh the lockfile metadata and run the invariant check before validation. Commit and review the generated version, lockfile, and changelog changes before tagging. `npm run release` creates Git tags only and should run only from the reviewed release commit. NodeDent is private and nothing in this release flow publishes it to npm.
+`npm run version` consumes pending Changesets and updates package versions and the changelog. Changesets does not reliably synchronize the root version metadata in `package-lock.json` for this private single-package application, so refresh the lockfile metadata and run the invariant check before validation. Commit and review the generated version, lockfile, and changelog changes before merging the version pull request.
+
+After a `Version Packages` pull request merges into `main`, the Version workflow creates and pushes `vM.m.p` for that exact released commit. It refuses to reuse a version tag that points to another commit, and fast-forwards `beta` only after tagging succeeds. `npm run release` remains the underlying local Changesets command used by that workflow; contributors should not normally run it manually. NodeDent is private and this release flow does not publish it to npm.
+
+The Current, Beta, and Sandbox branch classifications, including the synthetic-only boundary for historical archive deployments, are defined in [ADR 0012](adr/0012-define-current-beta-and-sandbox-deployment-modes.md).
 
 ## Ongoing versioning validation
 
