@@ -71,7 +71,7 @@ export function AnesthesiaEventForm({
   const administrationAction = form.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered;
   const recordActionLabel = mode === "administration"
     ? getAnesthesiaAdministrationRecordLabel(form.route, administrationAction)
-    : "Record anesthesia assessment";
+    : "Add anesthesia assessment";
   const nextStepLabel = mode === "administration"
     ? "Assess anesthesia adequacy"
     : form.response === "adequate"
@@ -272,10 +272,15 @@ export function AnesthesiaEventForm({
           data-clinical-record-action="anesthesia"
           onClick={submitEvent}
           disabled={!canSubmit}
-          className={cx(workflowDecisionButton, canSubmit && "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}
+          className={cx(workflowDecisionButton, canSubmit && "border-brand-mint/50 bg-brand-light-slate text-brand-navy shadow-md hover:border-brand-mint hover:bg-brand-mint/10")}
         >
-          {recordActionLabel}
-          <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {nextStepLabel}</span>
+          <span className="flex items-start gap-3">
+            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-mint/20 text-lg leading-none text-brand-navy">+</span>
+            <span>
+              <span className="block">{recordActionLabel}</span>
+              <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {nextStepLabel}</span>
+            </span>
+          </span>
         </button>
       </div>
       {mode === "administration" && (onSaveCatalogItems || onManageShortcuts) ? (

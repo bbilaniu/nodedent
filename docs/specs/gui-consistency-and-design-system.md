@@ -11,6 +11,11 @@ Define and apply a coherent NodeDent visual system across workflow launchers, sh
 
 This spec owns broad GUI consistency beyond the completed [Workspace cross-workflow consistency](archive/workspace-cross-workflow-consistency.md) pass and the active [Accessible interaction](accessible-interaction.md) contract. The archived workspace spec records the implemented workflow behavior, placement, labels, and information hierarchy. The accessibility spec continues to own interaction semantics, focus, validation, keyboard behavior, and touch requirements.
 
+[ADR 0013](../adr/0013-separate-action-selection-and-clinical-state-color-semantics.md)
+proposes the semantic separation of action prominence, control selection,
+clinical status, and workflow category. Once accepted, this spec owns the
+component/state matrix and incremental implementation of that decision.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.
