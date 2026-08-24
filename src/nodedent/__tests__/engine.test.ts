@@ -1232,6 +1232,52 @@ test("shared readiness uses review labels when shared module status already exis
   assert.equal(markup.includes("Open isolation workflow"), false);
 });
 
+test("shared readiness distinguishes administered anesthesia that still needs assessment", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_anesthesia_assessment_pending",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: anesthesiaEventTypes.administered,
+        tooth: "36",
+        scope: { kind: "tooth", tooth: "36" },
+        details: { route: "injection", agentLabel: "Documented anesthetic", tooth: "36" },
+      },
+    ],
+  });
+  const anesthesiaEntries: Array<string | undefined> = [];
+  const noop = () => {};
+  const summary = getCaseCapabilitySummary(caseData);
+  const actions = getSharedReadinessActions({
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  });
+  const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
+    caseData,
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.equal(summary.anesthesia.satisfied, false);
+  assert.equal(summary.anesthesia.needsReassessment, false);
+  assert.equal(summary.anesthesia.pendingAssessment, true);
+  assert.equal(summary.anesthesia.source, "event");
+  assert.equal(sharedCapabilityStatusLabel(summary.anesthesia), "Awaiting assessment");
+  assert.match(summary.anesthesia.summary, /administered.*awaiting adequacy assessment/i);
+  assert.equal(actions.find((action) => action.label === "Anesthesia")?.actionLabel, "Assess anesthesia");
+  actions.find((action) => action.label === "Anesthesia")?.onClick();
+  assert.deepEqual(anesthesiaEntries, ["anesthesia-assess"]);
+  assert.match(markup, /Anesthesia[\s\S]*Awaiting assessment[\s\S]*Assess anesthesia/);
+  assert.equal(markup.includes("Open anesthesia workflow"), false);
+});
+
 test("shared readiness forms require an explicit target scope", () => {
   const anesthesiaWithoutScope = { ...defaultAnesthesiaFormState(""), response: "adequate" as const };
   assert.equal(canSubmitAnesthesiaForm("assessment", anesthesiaWithoutScope), false);
@@ -4271,12 +4317,51 @@ test("shared anesthesia workflow records explicit adequacy without inferring it 
   });
 
   assert.equal(sharedAnesthesiaWorkflow.entryNodeIds[0], "anesthesia-record");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-record"].options[0].nextNodeId, "anesthesia-assess");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-assess"].title, "Assess anesthesia adequacy");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-needs-reassessment"].options[0].nextNodeId, "anesthesia-assess");
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administeredEvent), undefined);
   assert.equal(getAnesthesiaAdequateCapabilityOutput(adequacyEvent)?.name, "anesthesia.adequate");
   assert.equal(isCapabilitySatisfied(administeredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
   assert.equal(isCapabilitySatisfied(adequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), true);
   assert.match(eventFragment(administeredEvent), /Anesthesia administered/);
   assert.match(buildFullNote(adequateCase), /Anesthesia adequacy confirmed/);
+});
+
+test("shared anesthesia assessment entry opens directly in assessment mode", () => {
+  const administeredEvent = {
+    id: "evt_anesthesia_admin_for_assessment",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    workflowId: sharedAnesthesiaWorkflowId,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { route: "injection", agentLabel: "Documented anesthetic", tooth: "36" },
+  };
+  const caseData = baseCase({ tooth: "36", globalEvents: [administeredEvent] });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-assess",
+      workflowRunId: "run_shared_anesthesia_assessment",
+      targetTooth: "36",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_assessment",
+    latestAnesthesiaEvent: administeredEvent,
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+
+  assert.equal(markup.includes("Assess anesthesia adequacy"), true);
+  assert.equal(markup.includes("Administration is recorded."), true);
+  assert.equal(markup.includes("Assessment"), true);
+  assert.equal(markup.includes("Local anesthesia route"), false);
+  assert.match(markup, /Record anesthesia assessment[^>]*class="[^"]*bg-brand-navy/);
 });
 
 test("shared anesthesia capability fallback requires explicit top-up adequacy and reassessment invalidates it", () => {

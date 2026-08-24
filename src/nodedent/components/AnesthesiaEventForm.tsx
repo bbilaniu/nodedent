@@ -28,6 +28,7 @@ import { SelectInput, TextInput } from "./FormControls";
 export function AnesthesiaEventForm({
   tooth,
   latestEvent,
+  initialMode = "administration",
   defaultAction = anesthesiaEventTypes.administered,
   userCatalogItems = [],
   onSaveCatalogItems,
@@ -36,14 +37,17 @@ export function AnesthesiaEventForm({
 }: {
   tooth: string;
   latestEvent?: ClinicalEvent;
+  initialMode?: AnesthesiaMode;
   defaultAction?: AnesthesiaAdministrationAction;
   userCatalogItems?: CatalogItem[];
   onSaveCatalogItems?: (items: CatalogItem[]) => void;
   onManageShortcuts?: () => void;
   onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
-  const [mode, setMode] = useState<AnesthesiaMode>("administration");
-  const [form, setForm] = useState<AnesthesiaFormState>(() => defaultAnesthesiaFormState(tooth, defaultAction));
+  const [mode, setMode] = useState<AnesthesiaMode>(initialMode);
+  const [form, setForm] = useState<AnesthesiaFormState>(() => initialMode === "assessment"
+    ? { ...buildAnesthesiaFormState(tooth, anesthesiaEventTypes.adequacyConfirmed, latestEvent), response: "notAssessed", note: "" }
+    : defaultAnesthesiaFormState(tooth, defaultAction));
   const previousToothRef = useRef(tooth);
   const modeIsAssessment = mode === "assessment";
   const assessmentNeedsReassessment = isAnesthesiaAssessmentReassessment(mode, form);
