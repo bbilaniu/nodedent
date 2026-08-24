@@ -40,6 +40,7 @@ export const blankCanal = (name: string): CanalRecord => ({
   finalShape: "",
   obturationGauge: "",
   masterCone: "",
+  sealerLabel: "",
   coneFitRadiograph: "",
   dryingStatus: "",
   events: [],

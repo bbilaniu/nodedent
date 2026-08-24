@@ -22,6 +22,7 @@ export function AnesthesiaWorkflowRunner({
   onUserCatalogItemsChange,
   onClose,
   onRecordAnesthesiaEvent,
+  onOpenCatalogue,
 }: {
   launch: EmbeddedWorkflowLaunch;
   caseData: EndoCase;
@@ -29,6 +30,7 @@ export function AnesthesiaWorkflowRunner({
   latestAnesthesiaEvent?: ClinicalEvent;
   userCatalogItems?: CatalogItem[];
   onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
+  onOpenCatalogue?: () => void;
   onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
@@ -128,6 +130,7 @@ export function AnesthesiaWorkflowRunner({
             defaultAction={defaultAction}
             userCatalogItems={userCatalogItems}
             onSaveCatalogItems={onUserCatalogItemsChange ? saveCatalogItems : undefined}
+            onManageShortcuts={onOpenCatalogue}
             onRecordEvent={recordEvent}
           />
         </div>

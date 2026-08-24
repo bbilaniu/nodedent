@@ -97,6 +97,9 @@ export function applyDecision(input: ApplyDecisionInput): ApplyDecisionOutput {
   if (generatedEvent && input.workflowInstanceId) {
     generatedEvent.details = { ...generatedEvent.details, workflowInstanceId: input.workflowInstanceId };
   }
+  if (generatedEvent && ["sealer.applied", "sealer.reapplied"].includes(generatedEvent.type)) {
+    generatedEvent.details = { ...generatedEvent.details, sealerLabel: activeCanal?.sealerLabel?.trim() };
+  }
 
   const appliesToAllCanals = generatedEvent && node.id === "close-access" && generatedEvent.canal === "All";
 

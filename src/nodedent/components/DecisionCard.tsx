@@ -53,6 +53,9 @@ export function DecisionCard({
   onApplyEalDerivedLengths,
   onOpenAnesthesiaWorkflow,
   onOpenRadiologyWorkflow,
+  sealerSuggestions = [],
+  onAddSealerToCatalogue,
+  onOpenCatalogue,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -71,6 +74,9 @@ export function DecisionCard({
   onApplyEalDerivedLengths: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
+  sealerSuggestions?: string[];
+  onAddSealerToCatalogue?: (label: string) => boolean;
+  onOpenCatalogue?: () => void;
 }) {
   const showRequiredInputsSummary = Boolean(currentNode.requiredInputs?.length && !currentNode.contextualFieldIds?.length);
   const supportBlockCount = [currentNode.instruments?.length, currentNode.materials?.length, showRequiredInputsSummary].filter(Boolean).length;
@@ -118,6 +124,9 @@ export function DecisionCard({
         onApplyEalDerivedLengths={onApplyEalDerivedLengths}
         onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
         onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
+        sealerSuggestions={sealerSuggestions}
+        onAddSealerToCatalogue={onAddSealerToCatalogue}
+        onOpenCatalogue={onOpenCatalogue}
       />
       {currentNode.id === "preop" ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">

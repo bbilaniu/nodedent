@@ -36,6 +36,7 @@ export function SharedWorkflowRunnerModal({
   onRecordAnesthesiaEvent,
   onRecordIsolationEvent,
   onRecordRadiologyEvent,
+  onOpenCatalogue,
 }: {
   launch: EmbeddedWorkflowLaunch;
   caseData: EndoCase;
@@ -49,6 +50,7 @@ export function SharedWorkflowRunnerModal({
   userIsolationCatalogItems?: CatalogItem[];
   onUserIsolationCatalogItemsChange?: (items: CatalogItem[]) => void;
   onClose: () => void;
+  onOpenCatalogue?: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
@@ -93,6 +95,7 @@ export function SharedWorkflowRunnerModal({
               onUserCatalogItemsChange={onUserIsolationCatalogItemsChange}
               onClose={onClose}
               onRecordIsolationEvent={onRecordIsolationEvent}
+              onOpenCatalogue={onOpenCatalogue}
             />
           ) : launch.workflowId === sharedAnesthesiaWorkflowId ? (
             <AnesthesiaWorkflowRunner
@@ -104,6 +107,7 @@ export function SharedWorkflowRunnerModal({
               onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
               onClose={onClose}
               onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
+              onOpenCatalogue={onOpenCatalogue}
             />
           ) : launch.workflowId === sharedRadiologyWorkflowId ? (
             <RadiologyWorkflowRunner

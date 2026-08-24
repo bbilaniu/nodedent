@@ -11,6 +11,7 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { BackupRecoveryPanel, canAutoPreviewEncryptedBackup } from "../components/BackupRecoveryPanel";
 import { CatalogAdministrationPanel } from "../components/CatalogAdministrationPanel";
+import { CataloguePage } from "../components/CataloguePage";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
@@ -55,6 +56,7 @@ import {
   previewUserCatalogImport,
   saveUserCatalogItems,
   USER_CATALOG_STORAGE_KEY,
+  LEGACY_USER_CATALOG_STORAGE_KEY,
 } from "../state/catalogPersistence";
 import { getOtherMeaningfulSavedCases, isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
@@ -78,6 +80,7 @@ import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesi
 import { formatLocalTime24, formatTime24Value, getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
+import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions, seedEndodonticCatalogItems } from "../workflow/endodonticCatalog";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
@@ -662,6 +665,7 @@ function coneFitReadyCase(overrides: Partial<EndoCase> = {}): EndoCase {
         finalShape: "30/.04",
         obturationGauge: "30",
         masterCone: "30/.04",
+        sealerLabel: "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)",
         coneFitRadiograph: "acceptable",
         dryingStatus: "dry",
         events: [
@@ -1080,12 +1084,37 @@ test("contextual endodontic inputs expose only the active step's canal fields", 
   assert.equal(markup.includes("Chamber depth"), false);
 });
 
+test("sealer contextual input keeps clinical recording separate from catalogue actions", () => {
+  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), sealerLabel: "Custom documented sealer" }] });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes["apply-sealer"],
+    caseData,
+    activeCanal: caseData.canals[0],
+    sealerSuggestions: seedEndodonticCatalogItems.map((item) => item.label),
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+    onAddSealerToCatalogue: () => true,
+    onOpenCatalogue: () => {},
+  }));
+
+  assert.match(markup, /Sealer used/);
+  assert.match(markup, /Kerr® Sealapex™/);
+  assert.match(markup, /Add entered value to Catalogue/);
+  assert.match(markup, /Manage Catalogue/);
+  assert.match(markup, /does not record sealer application or add a clinical event/);
+});
+
 test("protocol nodes declare structured contextual fields for guarded chairside inputs", () => {
   assert.deepEqual(protocolNodes["advance-10c"].contextualFieldIds, ["estimatedWorkingLength", "fileTerminalLength"]);
   assert.deepEqual(protocolNodes["establish-eal0"].contextualFieldIds, ["eal0", "patencyLength", "shapingLength", "referencePoint", "wlRadiographStatus"]);
   assert.deepEqual(protocolNodes["create-final-shape"].contextualFieldIds, ["finalShape"]);
   assert.deepEqual(protocolNodes["cone-fit-radiograph"].contextualFieldIds, ["coneFitRadiograph"]);
   assert.deepEqual(protocolNodes["dry-for-obturation"].contextualFieldIds, ["shapingLength", "dryingStatus"]);
+  assert.deepEqual(protocolNodes["apply-sealer"].contextualFieldIds, ["sealerLabel"]);
+  assert.deepEqual(protocolNodes["reapply-sealer"].contextualFieldIds, ["sealerLabel"]);
 });
 
 test("shared readiness actions open reusable setup and module paths for operative context", () => {
@@ -1609,7 +1638,7 @@ test("shared workflow modal uses close labels instead of return labels for dismi
   assert.equal(activeIsolationMarkup.includes("Record placement"), true);
   assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
   assert.equal(activeIsolationMarkup.includes("Record rubber dam placed"), true);
-  assert.equal(activeIsolationMarkup.includes("Save shortcuts"), true);
+  assert.equal(activeIsolationMarkup.includes("Add entered values to Catalogue"), true);
   assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
   assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
 });
@@ -2125,9 +2154,42 @@ test("sealer and cone seating happy path reaches orifice gap evaluation", () => 
 
   const fullNote = buildFullNote(caseData);
   assert.match(fullNote, /Canal dried to dry\/slightly damp paper point/);
-  assert.match(fullNote, /Bioceramic sealer applied/);
+  assert.match(fullNote, /Kerr® Sealapex™ \(Calcium Hydroxide Root Canal Sealer\) applied/);
   assert.match(fullNote, /Paper point passed through sealer/);
   assert.match(fullNote, /Pre-fit GP cone seated to shaping length/);
+});
+
+test("sealer application requires a documented sealer and snapshots its label", () => {
+  const withoutSealer = coneFitReadyCase({
+    canals: [{ ...coneFitReadyCase().canals[0], sealerLabel: "" }],
+  });
+  const appliedOption = protocolNodes["apply-sealer"].options[0];
+  const blocked = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: appliedOption.label,
+    caseData: withoutSealer,
+    activeCanalName: "MB",
+  });
+  assert.deepEqual(blocked.errors, ["Sealer used"]);
+
+  const unsafeOption = protocolNodes["apply-sealer"].options[1];
+  const unsafe = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: unsafeOption.label,
+    caseData: withoutSealer,
+    activeCanalName: "MB",
+  });
+  assert.deepEqual(unsafe.errors, []);
+
+  const recorded = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: appliedOption.label,
+    caseData: coneFitReadyCase(),
+    activeCanalName: "MB",
+  });
+  assert.equal(recorded.generatedEvent?.details?.sealerLabel, "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)");
+  assert.match(eventFragment(recorded.generatedEvent!), /Kerr® Sealapex™/);
+  assert.match(buildCompactNote(recorded.updatedCaseData), /Kerr® Sealapex™/);
 });
 
 test("drying and sealer troubleshooting branches route safely", () => {
@@ -3967,6 +4029,57 @@ test("unified catalogue persistence migrates legacy module preferences and impor
     () => parseUserCatalogExport(JSON.stringify({ ...exported, state: { ...exported.state, items: [...exported.state.items, exported.state.items[0]] } })),
     /duplicate item identifiers/
   );
+});
+
+test("catalogue v2 migrates the unified v1 store without deleting accepted preferences", () => {
+  const anesthesiaItem = createUserAnesthesiaCatalogItem({ route: "injection", field: "agents", label: "Legacy agent" });
+  const isolationItem = createUserIsolationCatalogItem({ field: "notes", label: "Legacy isolation note" });
+  const storage = memoryStorage({
+    [LEGACY_USER_CATALOG_STORAGE_KEY]: JSON.stringify({ schemaVersion: 1, items: [anesthesiaItem, isolationItem] }),
+  });
+
+  const migrated = loadUserCatalogItems(storage);
+  assert.deepEqual(migrated.map((item) => item.label), ["Legacy agent", "Legacy isolation note"]);
+  assert.ok(storage.getItem(LEGACY_USER_CATALOG_STORAGE_KEY));
+  assert.deepEqual(JSON.parse(storage.getItem(USER_CATALOG_STORAGE_KEY) || "{}").schemaVersion, 2);
+});
+
+test("global catalogue page exposes registry sections, endodontic sealers, and administration", () => {
+  const markup = renderToStaticMarkup(React.createElement(CataloguePage, {
+    items: [],
+    onChange: () => {},
+    onClose: () => {},
+  }));
+
+  assert.match(markup, /Clinical Catalogue/);
+  assert.match(markup, /Shared modules/);
+  assert.match(markup, /Endodontics/);
+  assert.match(markup, /Catalogue preferences/);
+  assert.doesNotMatch(markup, /patient chart|patient number/i);
+});
+
+test("endodontic sealer catalogue includes clinician-supplied seeds and user preferences", () => {
+  assert.deepEqual(seedEndodonticCatalogItems.map((item) => item.id), [
+    "endodontic.sealers.kerr-sealapex",
+    "endodontic.sealers.kerr-pulp-canal-sealer",
+    "endodontic.sealers.angelus-mta-fillapex",
+  ]);
+  assert.deepEqual(seedEndodonticCatalogItems.map((item) => item.label), [
+    "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)",
+    "Kerr® Pulp Canal Sealer (Zinc Oxide Eugenol Root Canal Sealer)",
+    "Angelus® MTA Fillapex® (Mineral Trioxide Aggregate Root Canal Sealer)",
+  ]);
+  const custom = createUserEndodonticCatalogItem({ label: "Locally documented sealer", favorite: true, sortOrder: 1 });
+  const hiddenSeed = { ...seedEndodonticCatalogItems[0], owner: "user" as const, active: false };
+  const options = getEndodonticSealerCatalogOptions([custom, hiddenSeed]);
+  assert.equal(options[0], "Locally documented sealer");
+  assert.equal(options.includes(seedEndodonticCatalogItems[0].label), false);
+
+  const exported = buildUserCatalogExport([custom], new Date("2026-08-23T12:00:00.000Z"));
+  const parsed = parseUserCatalogExport(JSON.stringify(exported));
+  assert.equal(exported.formatVersion, 2);
+  assert.deepEqual(previewUserCatalogImport([], parsed.state.items).itemsByCategory, { endodontic: 1 });
+  assert.equal(getEndodonticSealerCatalogOptions(parsed.state.items)[0], "Locally documented sealer");
 });
 
 test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {

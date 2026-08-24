@@ -14,7 +14,6 @@ This folder separates clinical source material, active product specs, architectu
 - [Accessible interaction](specs/accessible-interaction.md)
 - [Automated assurance](specs/automated-assurance.md)
 - [Case target and status model](specs/case-target-and-status-model.md)
-- [Clinical catalogue management](specs/clinical-catalogue-management.md)
 - [GUI consistency and design system](specs/gui-consistency-and-design-system.md)
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
@@ -68,6 +67,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Archived Implemented Specs
 
+- [Clinical catalogue management](specs/archive/clinical-catalogue-management.md)
 - [Workspace cross-workflow consistency](specs/archive/workspace-cross-workflow-consistency.md)
 - [Encrypted backup revision conflict resolution](specs/archive/encrypted-backup-revision-conflict-resolution.md)
 - [Issue 20 chairside and recovery improvements](specs/archive/issue-20-chairside-and-recovery-improvements.md)

@@ -1,6 +1,7 @@
 ---
-status: active
+status: implemented
 created_on: 2026-08-23
+completed_on: 2026-08-23
 ---
 
 # Clinical Catalogue Management
@@ -17,9 +18,9 @@ restore, and delete values where ownership permits; and import or export local
 catalogue preferences without confusing preference management with recording
 clinical care.
 
-This spec turns the catalogue direction in [ADR 0005](../adr/0005-support-seeded-customizable-documentation-catalogs.md)
-and the remaining catalogue work in the [NodeDent long-term product roadmap](nodedent-long-term-product-roadmap.md)
-into an active implementation plan. It also responds to the shared-module
+This spec turned the catalogue direction in [ADR 0005](../../adr/0005-support-seeded-customizable-documentation-catalogs.md)
+and the remaining catalogue work in the [NodeDent long-term product roadmap](../nodedent-long-term-product-roadmap.md)
+into an implementation plan. It also responds to the shared-module
 usability feedback in issue 88: a clinical `Record ...` action and a
 patient-independent catalogue action must not look like alternative ways to
 save the same entry.
@@ -113,8 +114,8 @@ NodeDent's existing `CatalogItem` model and event ledger remain authoritative.
   them through user-owned overrides.
 - The same action and ownership language should be used across modules.
 - Catalogue interactions must meet the active
-  [Accessible interaction](accessible-interaction.md) and
-  [GUI consistency](gui-consistency-and-design-system.md) specs.
+  [Accessible interaction](../accessible-interaction.md) and
+  [GUI consistency](../gui-consistency-and-design-system.md) specs.
 
 ## Goals
 

@@ -5,9 +5,7 @@ import { blankCanal, makeDefaultNewCanalName } from "../state/persistence";
 import type { SavedCaseSummary } from "../state/clinicalVault";
 import { SelectInput, TextInput } from "./FormControls";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
-import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
 import { FilePickerControl } from "./FilePickerControl";
-import type { CatalogItem } from "../workflow/catalogs";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
 import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
 import { SandboxDataWarning } from "./SandboxDataWarning";
@@ -33,8 +31,6 @@ export function SavedCasesModal({
   activeEncounterId,
   onRestoreRecoveryHistoryEntry,
   onLockForRestore,
-  userCatalogItems,
-  onUserCatalogItemsChange,
 }: {
   savedCases: SavedCaseSummary[];
   importText: string;
@@ -54,8 +50,6 @@ export function SavedCasesModal({
   activeEncounterId: string;
   onRestoreRecoveryHistoryEntry: (id: string) => Promise<void>;
   onLockForRestore: () => void;
-  userCatalogItems: CatalogItem[];
-  onUserCatalogItemsChange: (items: CatalogItem[]) => void;
 }) {
   const [importFileName, setImportFileName] = useState("");
   const [importFileError, setImportFileError] = useState("");
@@ -139,8 +133,6 @@ export function SavedCasesModal({
           onRestoreRecoveryHistoryEntry={onRestoreRecoveryHistoryEntry}
           onLockForRestore={onLockForRestore}
         />
-
-        <CatalogAdministrationPanel items={userCatalogItems} onChange={onUserCatalogItemsChange} />
 
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Recent autosaves</p>

@@ -6,6 +6,7 @@ import { EndodonticEndVisitDialog, endVisitActionConfig, type EndVisitActionId }
 import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { CaseSetupPage } from "./components/CaseSetupPage";
 import { CaseEntryGate } from "./components/CaseEntryGate";
+import { CataloguePage } from "./components/CataloguePage";
 import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
 import { ClinicalVaultGate, type ClinicalVaultAccess } from "./components/ClinicalVaultGate";
 import { AppFooter, PRIVACY_POLICY_HASH } from "./components/AppFooter";
@@ -52,6 +53,8 @@ import {
 import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName, normalizeImportedEndoCase } from "./state/persistence";
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
+import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions } from "./workflow/endodonticCatalog";
+import { updateUserCatalogItem } from "./workflow/userCatalogItems";
 import { noTreatmentSelectedProcedure } from "./workflow/procedures";
 import { deploymentIdentity, deploymentOriginMatches } from "./deploymentMode";
 import {
@@ -273,6 +276,8 @@ function ClinicalWorkspace({
   const [userCatalogItems, setUserCatalogItems] = useState(() => loadUserCatalogItems());
   const userAnesthesiaCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "anesthesia"), [userCatalogItems]);
   const userIsolationCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "isolation"), [userCatalogItems]);
+  const userEndodonticCatalogItems = useMemo(() => userCatalogItems.filter((item) => item.category === "endodontic"), [userCatalogItems]);
+  const sealerCatalogOptions = useMemo(() => getEndodonticSealerCatalogOptions(userEndodonticCatalogItems), [userEndodonticCatalogItems]);
   const [currentNodeId, setCurrentNodeId] = useState("preop");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [newCanalName, setNewCanalName] = useState("");
@@ -290,6 +295,7 @@ function ClinicalWorkspace({
   const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
   const [rootWorkflowRunId, setRootWorkflowRunId] = useState(() => makeWorkflowRunId("endo_root"));
   const [isWorkflowLauncherOpen, setIsWorkflowLauncherOpen] = useState(false);
+  const [isCatalogueOpen, setIsCatalogueOpen] = useState(false);
   const [isSavedCasesOpen, setIsSavedCasesOpen] = useState(false);
   const [isPriorVisitOpen, setIsPriorVisitOpen] = useState(false);
   const [isNewCaseConfirmOpen, setIsNewCaseConfirmOpen] = useState(false);
@@ -548,8 +554,27 @@ function ClinicalWorkspace({
   }
 
   function updateAllUserCatalogItems(items: typeof userCatalogItems) {
-    setUserCatalogItems(items);
     saveUserCatalogItems(items);
+    setUserCatalogItems(items);
+  }
+
+  function openCatalogue() {
+    setIsWorkflowLauncherOpen(false);
+    setIsSavedCasesOpen(false);
+    setEmbeddedWorkflowLaunch(null);
+    setIsCatalogueOpen(true);
+  }
+
+  function addSealerToCatalogue(label: string) {
+    const trimmed = label.trim();
+    if (!trimmed || sealerCatalogOptions.some((option) => option.localeCompare(trimmed, undefined, { sensitivity: "accent" }) === 0)) return false;
+    const nextItem = createUserEndodonticCatalogItem({ label: trimmed, favorite: true, sortOrder: 1 });
+    setUserCatalogItems((current) => {
+      const nextItems = updateUserCatalogItem(current, nextItem);
+      saveUserCatalogItems(nextItems);
+      return nextItems;
+    });
+    return true;
   }
 
   function updatePreOp(field: string, value: string | boolean) {
@@ -1474,6 +1499,16 @@ function ClinicalWorkspace({
     );
   }
 
+  if (isCatalogueOpen) {
+    return (
+      <CataloguePage
+        items={userCatalogItems}
+        onChange={updateAllUserCatalogItems}
+        onClose={() => setIsCatalogueOpen(false)}
+      />
+    );
+  }
+
   if (isCaseEntryOpen) {
     return (
       <>
@@ -1510,8 +1545,6 @@ function ClinicalWorkspace({
             activeEncounterId={caseData.encounterId}
             onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
             onLockForRestore={() => void lockVaultForRecovery()}
-            userCatalogItems={userCatalogItems}
-            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
       </>
@@ -1574,6 +1607,13 @@ function ClinicalWorkspace({
               </button>
               <button
                 type="button"
+                onClick={openCatalogue}
+                className={headerActionButton.secondary}
+              >
+                Catalogue
+              </button>
+              <button
+                type="button"
                 onClick={() => openCasePanel()}
                 className={headerActionButton.primary}
               >
@@ -1632,6 +1672,7 @@ function ClinicalWorkspace({
               onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
               onOpenIsolationWorkflow={() => openIsolationWorkflow()}
               onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
+              onOpenCatalogue={openCatalogue}
             />
           </main>
         ) : (
@@ -1708,6 +1749,9 @@ function ClinicalWorkspace({
                       onApplyEalDerivedLengths={applyEalDerivedLengths}
                       onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
                       onOpenRadiologyWorkflow={openRadiologyWorkflow}
+                      sealerSuggestions={sealerCatalogOptions}
+                      onAddSealerToCatalogue={addSealerToCatalogue}
+                      onOpenCatalogue={openCatalogue}
                     />
                   </section>
 
@@ -1787,6 +1831,7 @@ function ClinicalWorkspace({
             onOpenAnesthesiaWorkflow={() => openAnesthesiaWorkflow()}
             onOpenIsolationWorkflow={() => openIsolationWorkflow()}
             onOpenRadiologyWorkflow={() => openRadiologyWorkflow()}
+            onOpenCatalogue={openCatalogue}
           />
         ) : null}
 
@@ -1840,6 +1885,7 @@ function ClinicalWorkspace({
             onRecordAnesthesiaEvent={recordAnesthesiaEvent}
             onRecordIsolationEvent={recordIsolationEvent}
             onRecordRadiologyEvent={recordRadiologyEvent}
+            onOpenCatalogue={openCatalogue}
           />
         ) : null}
 
@@ -1863,8 +1909,6 @@ function ClinicalWorkspace({
             activeEncounterId={caseData.encounterId}
             onRestoreRecoveryHistoryEntry={restoreRecoveryHistoryEntry}
             onLockForRestore={() => void lockVaultForRecovery()}
-            userCatalogItems={userCatalogItems}
-            onUserCatalogItemsChange={updateAllUserCatalogItems}
           />
         ) : null}
 

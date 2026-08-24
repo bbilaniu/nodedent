@@ -83,6 +83,7 @@ export const ProtocolNodeSchema = z.object({
   instruments: z.array(z.string()).optional(),
   materials: z.array(z.string()).optional(),
   requiredInputs: z.array(z.string()).optional(),
+  contextualFieldIds: z.array(z.string()).optional(),
   safetyNotes: z.array(z.string()).optional(),
   options: z.array(DecisionOptionSchema),
   workflowId: z.string().optional(),
