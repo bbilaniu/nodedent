@@ -93,7 +93,6 @@ export function SharedWorkflowRunnerModal({
               latestIsolationEvent={latestIsolationEvent}
               userCatalogItems={userIsolationCatalogItems}
               onUserCatalogItemsChange={onUserIsolationCatalogItemsChange}
-              onClose={onClose}
               onRecordIsolationEvent={onRecordIsolationEvent}
               onOpenCatalogue={onOpenCatalogue}
             />
@@ -105,7 +104,6 @@ export function SharedWorkflowRunnerModal({
               latestAnesthesiaEvent={latestAnesthesiaEvent}
               userCatalogItems={userAnesthesiaCatalogItems}
               onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
-              onClose={onClose}
               onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
               onOpenCatalogue={onOpenCatalogue}
             />
@@ -115,7 +113,6 @@ export function SharedWorkflowRunnerModal({
               caseData={caseData}
               parentWorkflowRunId={parentWorkflowRunId}
               latestRadiologyEvent={latestRadiologyEvent}
-              onClose={onClose}
               onRecordRadiologyEvent={onRecordRadiologyEvent}
             />
           ) : (

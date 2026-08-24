@@ -20,7 +20,6 @@ export function AnesthesiaWorkflowRunner({
   latestAnesthesiaEvent,
   userCatalogItems = [],
   onUserCatalogItemsChange,
-  onClose,
   onRecordAnesthesiaEvent,
   onOpenCatalogue,
 }: {
@@ -31,7 +30,6 @@ export function AnesthesiaWorkflowRunner({
   userCatalogItems?: CatalogItem[];
   onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
   onOpenCatalogue?: () => void;
-  onClose: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
@@ -138,16 +136,6 @@ export function AnesthesiaWorkflowRunner({
           />
         </div>
       ) : null}
-
-      <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
-        >
-          Close shared workflow
-        </button>
-      </div>
     </>
   );
 }

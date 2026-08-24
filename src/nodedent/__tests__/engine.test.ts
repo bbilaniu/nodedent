@@ -1602,7 +1602,7 @@ test("operative runner renders setup record and completion states without readin
   assert.equal(markup.includes("Decision"), false);
 });
 
-test("shared workflow modal uses close labels instead of return labels for dismiss actions", () => {
+test("shared workflow modal separates mode, clinical record, catalogue, and close actions", () => {
   const caseData = baseCase();
   const noop = () => {};
   const anesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
@@ -1670,23 +1670,47 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onRecordRadiologyEvent: noop,
     onUserIsolationCatalogItemsChange: noop,
   }));
+  const activeAnesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-record",
+      workflowRunId: "run_shared_anesthesia_active_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+    onUserAnesthesiaCatalogItemsChange: noop,
+  }));
 
-  assert.equal(anesthesiaMarkup.includes("Close"), true);
-  assert.equal(anesthesiaMarkup.includes("Close shared workflow"), true);
+  assert.equal((anesthesiaMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.equal(anesthesiaMarkup.includes("Close shared workflow"), false);
   assert.equal(anesthesiaMarkup.includes("Return to parent workflow"), false);
-  assert.equal(isolationMarkup.includes("Close"), true);
-  assert.equal(isolationMarkup.includes("Close shared workflow"), true);
+  assert.equal((isolationMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.equal(isolationMarkup.includes("Close shared workflow"), false);
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
   assert.equal(radiologyMarkup.includes("Radiology"), true);
   assert.equal(radiologyMarkup.includes("Record radiograph review"), true);
   assert.equal(radiologyMarkup.includes("Radiograph entries"), true);
-  assert.equal(radiologyMarkup.includes("Close shared workflow"), true);
-  assert.equal(activeIsolationMarkup.includes("Record placement"), true);
-  assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
-  assert.equal(activeIsolationMarkup.includes("Record rubber dam placed"), true);
+  assert.equal(radiologyMarkup.includes('data-clinical-record-action="radiology"'), true);
+  assert.match(radiologyMarkup, /data-clinical-record-action="radiology"[^>]*class="[^"]*w-full[^"]*rounded-2xl[^"]*p-4/);
+  assert.equal(radiologyMarkup.includes("Close shared workflow"), false);
+  assert.match(activeIsolationMarkup, /aria-label="Isolation entry type"[\s\S]*>Placement<[\s\S]*>Reassessment</);
+  assert.equal(activeIsolationMarkup.includes("Record rubber dam placement"), true);
+  assert.equal(activeIsolationMarkup.includes('data-clinical-record-action="isolation"'), true);
   assert.equal(activeIsolationMarkup.includes("Add entered values to Catalogue"), true);
-  assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
-  assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
+  assert.equal(activeIsolationMarkup.includes("They do not record a clinical entry."), true);
+  assert.equal(activeIsolationMarkup.includes("Close shared workflow"), false);
+  assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placement") < activeIsolationMarkup.indexOf("Add entered values to Catalogue"));
+  assert.match(activeAnesthesiaMarkup, /aria-label="Anesthesia entry type"[\s\S]*>Administration<[\s\S]*>Assessment</);
+  assert.equal(activeAnesthesiaMarkup.includes("Record anesthesia injection"), true);
+  assert.equal(activeAnesthesiaMarkup.includes("Next: Assess anesthesia adequacy"), true);
+  assert.equal(activeAnesthesiaMarkup.includes('data-clinical-record-action="anesthesia"'), true);
+  assert.equal(activeAnesthesiaMarkup.includes("Add entered values to Catalogue"), true);
+  assert.ok(activeAnesthesiaMarkup.indexOf("Record anesthesia injection") < activeAnesthesiaMarkup.indexOf("Add entered values to Catalogue"));
 });
 
 test("shared anesthesia and radiology runners keep repeatable events visible as separate entries", () => {
@@ -4361,7 +4385,9 @@ test("shared anesthesia assessment entry opens directly in assessment mode", () 
   assert.equal(markup.includes("Administration is recorded."), true);
   assert.equal(markup.includes("Assessment"), true);
   assert.equal(markup.includes("Local anesthesia route"), false);
-  assert.match(markup, /Record anesthesia assessment[^>]*class="[^"]*bg-brand-navy/);
+  assert.match(markup, /data-clinical-record-action="anesthesia"[^>]*class="[^"]*w-full[^"]*rounded-2xl[^"]*p-4/);
+  assert.equal(markup.includes("Record to current visit"), true);
+  assert.equal(markup.includes("Next: Select an assessment result"), true);
 });
 
 test("shared anesthesia capability fallback requires explicit top-up adequacy and reassessment invalidates it", () => {

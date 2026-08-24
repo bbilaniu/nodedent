@@ -5,6 +5,7 @@ import { getIsolationEventDetails, isolationEventTypes, isolationMethods, isolat
 import { buildUserIsolationCatalogItemsFromForm, getIsolationCatalogOptions } from "../workflow/isolationCatalog";
 import type { CatalogItem } from "../workflow/catalogs";
 import { SelectInput, TextInput } from "./FormControls";
+import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
 
 const isolationActionLabels = {
   [isolationEventTypes.rubberDamPlaced]: "Rubber dam placed",
@@ -75,6 +76,14 @@ function shouldShowClamp(eventType: IsolationEventType, method: IsolationMethod)
   return eventType === isolationEventTypes.rubberDamPlaced || (eventType === isolationEventTypes.replaced && method === "rubberDam");
 }
 
+function getIsolationRecordActionLabel(eventType: IsolationEventType) {
+  if (eventType === isolationEventTypes.rubberDamPlaced) return "Record rubber dam placement";
+  if (eventType === isolationEventTypes.alternativeIsolationUsed) return "Record alternative isolation";
+  if (eventType === isolationEventTypes.compromised) return "Record isolation compromise";
+  if (eventType === isolationEventTypes.removed) return "Record isolation removal";
+  return "Record isolation replacement";
+}
+
 function buildIsolationDetails(form: IsolationFormState, eventType: IsolationEventType): IsolationEventDetails {
   const teeth = form.exposedTeeth.split(/[,\s]+/).map((tooth) => tooth.trim()).filter(Boolean);
   const reassessment = eventType === isolationEventTypes.compromised || eventType === isolationEventTypes.removed;
@@ -138,7 +147,6 @@ export function IsolationWorkflowRunner({
   latestIsolationEvent,
   userCatalogItems = [],
   onUserCatalogItemsChange,
-  onClose,
   onRecordIsolationEvent,
   onOpenCatalogue,
 }: {
@@ -149,7 +157,6 @@ export function IsolationWorkflowRunner({
   userCatalogItems?: CatalogItem[];
   onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
   onOpenCatalogue?: () => void;
-  onClose: () => void;
   onRecordIsolationEvent: (
     eventType: IsolationEventType,
     details: IsolationEventDetails,
@@ -278,23 +285,28 @@ export function IsolationWorkflowRunner({
 
       {!completion ? (
         <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
-          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <button
-              type="button"
-              onClick={() => updateActionMode("placement")}
-              disabled={!canSelectPlacement}
-              className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "placement" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
-            >
-              Record placement
-            </button>
-            <button
-              type="button"
-              onClick={() => updateActionMode("reassessment")}
-              disabled={!canSelectReassessment}
-              className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "reassessment" ? "border-brand-mint bg-brand-mint/20 text-brand-navy hover:bg-brand-mint/30" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
-            >
-              Record reassessment
-            </button>
+          <div className="mb-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Entry type</p>
+            <div role="group" aria-label="Isolation entry type" className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                aria-pressed={actionMode === "placement"}
+                onClick={() => updateActionMode("placement")}
+                disabled={!canSelectPlacement}
+                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "placement" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+              >
+                Placement
+              </button>
+              <button
+                type="button"
+                aria-pressed={actionMode === "reassessment"}
+                onClick={() => updateActionMode("reassessment")}
+                disabled={!canSelectReassessment}
+                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "reassessment" ? "border-brand-mint bg-brand-mint/20 text-brand-navy hover:bg-brand-mint/30" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+              >
+                Reassessment
+              </button>
+            </div>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <SelectInput
@@ -349,46 +361,46 @@ export function IsolationWorkflowRunner({
           </div>
           {selectedOption ? (
             <>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-start">
+              <div className="mt-5 border-t border-brand-light-node pt-4">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Record to current visit</p>
                 <button
                   type="button"
+                  data-clinical-record-action="isolation"
                   onClick={applySelectedOption}
-                  className="w-full max-w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-left text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto sm:max-w-sm"
+                  className={cx(workflowDecisionButton, "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}
                 >
-                  Record {selectedOption.label.toLowerCase()}
-                  <span className="mt-1 block text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
+                  {getIsolationRecordActionLabel(selectedEventType)}
+                  <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
                 </button>
-                {onUserCatalogItemsChange ? (
-                  <button
-                    type="button"
-                    onClick={saveCatalogItems}
-                    disabled={!canSaveShortcuts}
-                    className={`rounded-xl border px-4 py-3 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
-                  >
-                    Add entered values to Catalogue
-                  </button>
-                ) : null}
-                {onOpenCatalogue ? (
-                  <button type="button" onClick={onOpenCatalogue} className="rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate">
-                    Manage Catalogue
-                  </button>
-                ) : null}
               </div>
-              {onUserCatalogItemsChange ? <p className="mt-2 text-xs leading-5 text-amber-900">Reusable shortcuts are patient-independent preferences stored outside the vault. Do not save chart numbers, patient facts, or identifiers in a shortcut.</p> : null}
+              {onUserCatalogItemsChange || onOpenCatalogue ? (
+                <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Reusable Catalogue</p>
+                  <p className="mt-1 text-xs leading-5 text-brand-slate">These actions save patient-independent preferences only. They do not record a clinical entry.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {onUserCatalogItemsChange ? (
+                      <button
+                        type="button"
+                        onClick={saveCatalogItems}
+                        disabled={!canSaveShortcuts}
+                        className={cx(panelActionButton.info, "disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate")}
+                      >
+                        Add entered values to Catalogue
+                      </button>
+                    ) : null}
+                    {onOpenCatalogue ? (
+                      <button type="button" onClick={onOpenCatalogue} className={panelActionButton.secondary}>
+                        Manage Catalogue
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="mt-2 text-xs leading-5 text-amber-900">Do not save chart numbers, patient facts, or identifiers in a Catalogue entry.</p>
+                </div>
+              ) : null}
             </>
           ) : null}
         </div>
       ) : null}
-
-      <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
-        >
-          Close shared workflow
-        </button>
-      </div>
     </>
   );
 }

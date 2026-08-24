@@ -6,7 +6,7 @@ import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { getCapabilityStatus } from "../workflow/selectors";
-import { cx, panelActionButton } from "./uiStyles";
+import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
 import { ContextualEndodonticInputs } from "./ContextualEndodonticInputs";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
@@ -182,7 +182,7 @@ export function DecisionCard({
           const displayOption = { ...option, id: option.id || option.label, label: displayLabel };
           const missing = getMissingRequirements(currentNode.id, displayOption, caseData, activeCanal);
           return (
-            <button key={option.label} onClick={() => onApplyDecision(displayOption)} className={`rounded-2xl border bg-white p-4 text-left text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${missing.length ? "border-red-200 text-brand-navy hover:bg-red-50" : "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate"}`}>
+            <button key={option.label} onClick={() => onApplyDecision(displayOption)} className={cx(workflowDecisionButton, missing.length ? "border-red-200 text-brand-navy hover:bg-red-50" : "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}>
               {displayLabel}
               <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {protocolNodes[option.nextNodeId]?.title || option.nextNodeId}</span>
               {missing.length ? <span className="mt-2 block rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Missing: {missing.join(", ")}</span> : null}
