@@ -229,6 +229,26 @@ function CaseVisitStatusSection({
   );
 }
 
+function ReadinessCardHeader({
+  title,
+  status,
+}: {
+  title: string;
+  status: CapabilityStatus;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div>
+        <h3 className={sectionText.titleSmall}>{title}</h3>
+        <p className={sectionText.descriptionSmall}>{status.summary}</p>
+      </div>
+      <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedCapabilityStatusClass(status)}`}>
+        {sharedCapabilityStatusLabel(status)}
+      </span>
+    </div>
+  );
+}
+
 function DiagnosisReadinessSection({
   caseData,
   status,
@@ -241,47 +261,42 @@ function DiagnosisReadinessSection({
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
-    <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className={sectionText.titleSmall}>Diagnosis</h3>
-          <p className={sectionText.descriptionSmall}>{status.summary}</p>
-        </div>
-        <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedCapabilityStatusClass(status)}`}>
-          {sharedCapabilityStatusLabel(status)}
-        </span>
-      </div>
+    <section ref={sectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "flex h-full flex-col")}>
+      <ReadinessCardHeader title="Diagnosis" status={status} />
       <p className="mt-3 text-xs leading-5 text-brand-slate">
         Endodontics · {getDiagnosisSectionSummary(caseData, "endodontic")} · {caseData.tooth.trim() ? `Tooth ${caseData.tooth.trim()}` : "Default tooth not set"}
       </p>
-      <button type="button" onClick={onOpenDiagnosis} className={cx(panelActionButton.primary, "mt-3")}>
-        Review diagnosis
-      </button>
+      <div className="mt-auto pt-3">
+        <button type="button" onClick={onOpenDiagnosis} className={panelActionButton.primary}>
+          Review diagnosis
+        </button>
+      </div>
     </section>
   );
 }
 
 function RadiographReadinessSection({
   caseData,
-  paReviewed,
-  bwReviewed,
-  onUpdatePreOp,
+  status,
   onOpenRadiologyWorkflow,
   sectionRef,
 }: {
   caseData: EndoCase;
-  paReviewed: boolean;
-  bwReviewed: boolean;
-  onUpdatePreOp: (field: string, value: string | boolean) => void;
+  status: CapabilityStatus;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   const latestRadiologyEvent = (caseData.globalEvents || []).filter(isRadiologyReviewedEvent).at(-1);
   const latestRadiologyEventTime = formatEventTimestamp(latestRadiologyEvent?.timestamp);
+  const reviewedModalities = [
+    caseData.preOp?.paReviewed || caseData.preOp?.radiographsReviewed ? "PA" : null,
+    caseData.preOp?.bwReviewed ? "BW" : null,
+    caseData.preOp?.cbctReviewed ? "CBCT" : null,
+  ].filter(Boolean);
 
   return (
-    <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
-      <h3 className={sectionText.titleSmall}>Radiograph readiness</h3>
+    <section ref={sectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "flex h-full flex-col")}>
+      <ReadinessCardHeader title="Radiographs" status={status} />
       {latestRadiologyEvent ? (
         <div className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2">
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest shared radiology event</p>
@@ -297,29 +312,18 @@ function RadiographReadinessSection({
           </p>
         </div>
       ) : null}
-      <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Pre-op radiographs reviewed</p>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-            <input type="checkbox" checked={paReviewed} onChange={(event) => onUpdatePreOp("paReviewed", event.target.checked)} />
-            PA
-          </label>
-          <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-            <input type="checkbox" checked={bwReviewed} onChange={(event) => onUpdatePreOp("bwReviewed", event.target.checked)} />
-            BW
-          </label>
-          <label className="flex min-h-10 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-sm font-semibold text-brand-navy">
-            <input type="checkbox" checked={Boolean(caseData.preOp?.cbctReviewed)} onChange={(event) => onUpdatePreOp("cbctReviewed", event.target.checked)} />
-            CBCT
-          </label>
+      {reviewedModalities.length ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Current case record</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">Reviewed modalities: {reviewedModalities.join(", ")}</p>
         </div>
-      </div>
-      <div className="mt-3">
+      ) : null}
+      <div className="mt-auto pt-3">
         <button
           type="button"
           aria-label="Open embedded radiology workflow"
           onClick={() => onOpenRadiologyWorkflow(latestRadiologyEvent ? "radiology-review" : undefined)}
-          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${latestRadiologyEvent ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+          className={panelActionButton.primary}
         >
           {latestRadiologyEvent ? "Review radiology" : "Open radiology workflow"}
         </button>
@@ -328,27 +332,101 @@ function RadiographReadinessSection({
   );
 }
 
-function SharedClinicalReadinessSection({
-  statusItems,
+function AnesthesiaReadinessSection({
+  caseData,
+  status,
+  onOpenAnesthesiaWorkflow,
+  sectionRef,
 }: {
-  statusItems: Array<{ label: string; status: CapabilityStatus }>;
+  caseData: EndoCase;
+  status: CapabilityStatus;
+  onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
+  sectionRef: React.RefObject<HTMLElement | null>;
 }) {
+  const anesthesiaEvents = (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType));
+  const latestAnesthesiaEvent = anesthesiaEvents.at(-1);
+  const latestAnesthesiaEventTime = formatEventTimestamp(latestAnesthesiaEvent?.timestamp);
+  const established = status.satisfied && !status.needsReassessment;
+  const workflowEntryNodeId = established || status.needsReassessment
+    ? "anesthesia-needs-reassessment"
+    : undefined;
+
   return (
-    <section className={cx(panelSurface.muted, "lg:col-span-2")}>
-      <h3 className={sectionText.titleSmall}>Shared clinical readiness</h3>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {statusItems.map(({ label, status }) => (
-          <div key={label} className={`rounded-xl border px-3 py-2 ${sharedCapabilityStatusClass(status)}`}>
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-xs font-bold uppercase tracking-wide">{label}</span>
-              <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-semibold">
-                {sharedCapabilityStatusLabel(status)}
-              </span>
-            </div>
-            <p className="mt-2 text-sm font-semibold leading-5">{status.summary}</p>
-            {status.reason ? <p className="mt-1 text-xs leading-5 opacity-80">{status.reason}</p> : null}
+    <section ref={sectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "flex h-full flex-col")}>
+      <ReadinessCardHeader title="Anesthesia" status={status} />
+      {latestAnesthesiaEvent ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest event</p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatAnesthesiaEventFragment(latestAnesthesiaEvent)}</p>
+          {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
+        </div>
+      ) : null}
+      <div className="mt-auto pt-3">
+        <button
+          type="button"
+          aria-label="Open embedded anesthesia workflow"
+          onClick={() => onOpenAnesthesiaWorkflow(workflowEntryNodeId)}
+          className={panelActionButton.primary}
+        >
+          {established || status.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function IsolationReadinessSection({
+  status,
+  onOpenIsolationWorkflow,
+  sectionRef,
+}: {
+  status: CapabilityStatus;
+  onOpenIsolationWorkflow: (entryNodeId?: string) => void;
+  sectionRef: React.RefObject<HTMLElement | null>;
+}) {
+  const latestIsolationEvent = status.sourceEvent;
+  const latestIsolationEventTime = formatEventTimestamp(latestIsolationEvent?.timestamp);
+  const isolationCoverage = getIsolationCoverageSummary(latestIsolationEvent);
+  const isolationCoverageItems = [
+    { label: "Exposed teeth", value: isolationCoverage.exposedTeeth },
+    { label: "Region", value: isolationCoverage.region },
+    { label: "Clamp tooth", value: isolationCoverage.clampTooth },
+    { label: "Clamp code", value: isolationCoverage.clampCode },
+  ];
+  const established = status.satisfied && !status.needsReassessment;
+
+  return (
+    <section ref={sectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "flex h-full flex-col")}>
+      <ReadinessCardHeader title="Isolation" status={status} />
+      {latestIsolationEvent ? (
+        <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_1.85fr]">
+          <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest event</p>
+            <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatIsolationEventFragment(latestIsolationEvent)}</p>
+            {latestIsolationEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestIsolationEventTime}</p> : null}
           </div>
-        ))}
+          <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+            <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Current coverage</p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              {isolationCoverageItems.map((item) => (
+                <div key={item.label} className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{item.label}</p>
+                  <p className="truncate text-sm font-semibold text-brand-navy">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+      <div className="mt-auto pt-3">
+        <button
+          type="button"
+          aria-label="Open embedded isolation workflow"
+          onClick={() => onOpenIsolationWorkflow(established ? "isolation-needs-reassessment" : undefined)}
+          className={panelActionButton.primary}
+        >
+          {established ? "Review isolation" : "Open isolation workflow"}
+        </button>
       </div>
     </section>
   );
@@ -438,8 +516,6 @@ export function CaseSetupStatusPanel({
   onOpenPrimaryWorkflow: (workflowId: string) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
-  const paReviewed = caseData.preOp?.paReviewed ?? caseData.preOp?.radiographsReviewed ?? false;
-  const bwReviewed = caseData.preOp?.bwReviewed ?? false;
   const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
   const selectedWorkflowInstances = normalizeWorkflowInstances(caseData, currentNodeId);
   const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic" ||
@@ -459,29 +535,6 @@ export function CaseSetupStatusPanel({
     isolation: isolationSectionRef,
   };
   const capabilitySummary = getCaseCapabilitySummary(caseData);
-  const anesthesiaEvents = (caseData.globalEvents || []).filter((event) => Object.values(anesthesiaEventTypes).includes(event.type as AnesthesiaEventType));
-  const latestAnesthesiaEvent = anesthesiaEvents.at(-1);
-  const latestAnesthesiaEventTime = formatEventTimestamp(latestAnesthesiaEvent?.timestamp);
-  const latestIsolationEvent = capabilitySummary.isolation.sourceEvent;
-  const latestIsolationEventTime = formatEventTimestamp(latestIsolationEvent?.timestamp);
-  const isolationCoverage = getIsolationCoverageSummary(latestIsolationEvent);
-  const isolationCoverageItems = [
-    { label: "Exposed teeth", value: isolationCoverage.exposedTeeth },
-    { label: "Region", value: isolationCoverage.region },
-    { label: "Clamp tooth", value: isolationCoverage.clampTooth },
-    { label: "Clamp code", value: isolationCoverage.clampCode },
-  ];
-  const statusItems = [
-    { label: "Diagnosis", status: capabilitySummary.diagnosis },
-    { label: "Radiographs", status: capabilitySummary.radiographs },
-    { label: "Anesthesia", status: capabilitySummary.anesthesia },
-    { label: "Isolation", status: capabilitySummary.isolation },
-  ];
-  const anesthesiaIsEstablished = capabilitySummary.anesthesia.satisfied && !capabilitySummary.anesthesia.needsReassessment;
-  const anesthesiaWorkflowEntryNodeId = anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment
-    ? "anesthesia-needs-reassessment"
-    : undefined;
-  const isolationIsEstablished = capabilitySummary.isolation.satisfied && !capabilitySummary.isolation.needsReassessment;
 
   useEffect(() => {
     focusCaseSetupSection(initialFocusSection, focusRefs);
@@ -518,13 +571,21 @@ export function CaseSetupStatusPanel({
         />
         <RadiographReadinessSection
           caseData={caseData}
-          paReviewed={paReviewed}
-          bwReviewed={bwReviewed}
-          onUpdatePreOp={onUpdatePreOp}
+          status={capabilitySummary.radiographs}
           onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
           sectionRef={radiographsSectionRef}
         />
-        <SharedClinicalReadinessSection statusItems={statusItems} />
+        <AnesthesiaReadinessSection
+          caseData={caseData}
+          status={capabilitySummary.anesthesia}
+          onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
+          sectionRef={anesthesiaSectionRef}
+        />
+        <IsolationReadinessSection
+          status={capabilitySummary.isolation}
+          onOpenIsolationWorkflow={onOpenIsolationWorkflow}
+          sectionRef={isolationSectionRef}
+        />
       </CaseSetupGroup>
 
       {showEndodonticWorkflowSetup ? (
@@ -542,90 +603,6 @@ export function CaseSetupStatusPanel({
           />
         </CaseSetupGroup>
       ) : null}
-
-      <section ref={anesthesiaSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className={sectionText.titleSmall}>Anesthesia</h3>
-            <p className={sectionText.description}>{capabilitySummary.anesthesia.summary}</p>
-          </div>
-          <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedCapabilityStatusClass(capabilitySummary.anesthesia)}`}>
-            {sharedCapabilityStatusLabel(capabilitySummary.anesthesia)}
-          </span>
-        </div>
-        {latestAnesthesiaEvent ? (
-          <div className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest event</p>
-            <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatAnesthesiaEventFragment(latestAnesthesiaEvent)}</p>
-            {latestAnesthesiaEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestAnesthesiaEventTime}</p> : null}
-          </div>
-        ) : null}
-        <div className="mt-3">
-          <button
-            type="button"
-            aria-label="Open embedded anesthesia workflow"
-            onClick={() => onOpenAnesthesiaWorkflow(anesthesiaWorkflowEntryNodeId)}
-            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${anesthesiaIsEstablished ? "border-brand-blue-light bg-brand-blue-light/20 text-brand-navy hover:bg-brand-blue-light/30" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
-          >
-            {anesthesiaIsEstablished || capabilitySummary.anesthesia.needsReassessment ? "Review anesthesia" : "Open anesthesia workflow"}
-          </button>
-        </div>
-      </section>
-
-      <section ref={isolationSectionRef} tabIndex={-1} className={cx(panelSurface.mutedFocusable, "lg:col-span-2")}>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className={sectionText.titleSmall}>Isolation</h3>
-            <p className={sectionText.description}>{capabilitySummary.isolation.summary}</p>
-          </div>
-          <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedCapabilityStatusClass(capabilitySummary.isolation)}`}>
-            {sharedCapabilityStatusLabel(capabilitySummary.isolation)}
-          </span>
-        </div>
-        {latestIsolationEvent ? (
-          <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_1.85fr]">
-            <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Latest event</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-brand-navy">{formatIsolationEventFragment(latestIsolationEvent)}</p>
-              {latestIsolationEventTime ? <p className="mt-1 text-xs leading-5 text-brand-slate">{latestIsolationEventTime}</p> : null}
-            </div>
-            <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Current coverage</p>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                {isolationCoverageItems.map((item) => (
-                  <div key={item.label} className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{item.label}</p>
-                    <p className="truncate text-sm font-semibold text-brand-navy">{item.value}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null}
-        {isolationIsEstablished ? (
-          <div className="mt-3">
-            <button
-              type="button"
-              aria-label="Open embedded isolation workflow"
-              onClick={() => onOpenIsolationWorkflow("isolation-needs-reassessment")}
-              className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/30"
-            >
-              Review isolation
-            </button>
-          </div>
-        ) : (
-          <div className="mt-3">
-            <button
-              type="button"
-              aria-label="Open embedded isolation workflow"
-              onClick={() => onOpenIsolationWorkflow()}
-              className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
-            >
-              Open isolation workflow
-            </button>
-          </div>
-        )}
-      </section>
     </div>
   );
 }

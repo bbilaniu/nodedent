@@ -850,6 +850,7 @@ test("full-page case setup shows every selected discipline without merging their
   };
   const caseData = addPrimaryWorkflow(baseCase({
     tooth: "36",
+    preOp: { ...initialCase.preOp, paReviewed: true },
     globalEvents: [
       {
         ...radiologyEvent,
@@ -903,12 +904,17 @@ test("full-page case setup shows every selected discipline without merging their
   assert.equal(markup.includes("Review diagnosis"), true);
   assert.equal(markup.includes("Pulpal diagnosis"), false);
   assert.equal(markup.includes("Apical diagnosis"), false);
-  assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Radiograph readiness"), false);
+  assert.match(markup, /<h3[^>]*>Radiographs<\/h3>/);
+  assert.equal(markup.includes("Shared clinical readiness"), false);
+  assert.equal(markup.includes("Pre-op radiographs reviewed"), false);
+  assert.equal(markup.includes('type="checkbox"'), false);
   assert.equal(markup.includes("Shared radiology event"), false);
   assert.equal(markup.includes("Record radiograph review"), false);
   assert.equal(markup.includes("Review radiology"), true);
   assert.equal(markup.includes("Latest shared radiology event"), true);
   assert.equal(markup.includes("Radiograph review recorded"), true);
+  assert.equal(markup.includes("Reviewed modalities: PA"), true);
   assert.equal(markup.includes("Endodontic setup"), true);
   assert.equal(markup.includes("Endodontic workflow setup"), true);
   assert.equal(markup.includes("Estimated WL for"), true);
@@ -1025,6 +1031,14 @@ test("case setup keeps shared modules as summaries instead of inline event forms
   assert.equal(markup.includes("Open anesthesia workflow"), true);
   assert.equal(markup.includes("Open isolation workflow"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
+  assert.equal(markup.includes("Shared clinical readiness"), false);
+  assert.equal(markup.includes("Pre-op radiographs reviewed"), false);
+  assert.equal(markup.includes('type="checkbox"'), false);
+  assert.match(markup, /<h3[^>]*>Diagnosis<\/h3>[\s\S]*<h3[^>]*>Radiographs<\/h3>[\s\S]*<h3[^>]*>Anesthesia<\/h3>[\s\S]*<h3[^>]*>Isolation<\/h3>/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Review diagnosis/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open radiology workflow/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open anesthesia workflow/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open isolation workflow/);
   assert.equal(markup.includes("Save shortcuts"), false);
   assert.equal(markup.includes("Manage shortcuts"), false);
   assert.equal(markup.includes("Favorites appear first in the selected field"), false);

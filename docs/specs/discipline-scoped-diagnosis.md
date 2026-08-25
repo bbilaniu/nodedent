@@ -43,6 +43,8 @@ When opened from Case Setup, closing the panel returns to Case Setup. When opene
 
 Case Setup does not render the editable diagnosis fields. It shows a compact diagnosis status, target summary, and **Review diagnosis** action. Diagnosis therefore remains discoverable in Case Setup without making that page the owner of discipline-specific clinical forms.
 
+Diagnosis, Radiographs, Anesthesia, and Isolation are presented as one responsive two-column readiness grid. Each card uses the same title, status, summary, and primary-action hierarchy. Case Setup does not repeat those statuses in a second aggregate panel. Radiograph modality controls belong to the radiology workflow; Case Setup may display legacy field values and event summaries but does not edit them inline.
+
 ### Shared readiness and NodeDent Home
 
 The Diagnosis item opens the Diagnosis panel directly. An item must not route through Case Setup merely because the legacy fields were once rendered there.
