@@ -9,8 +9,17 @@ if (!rootElement) {
   throw new Error("Root element #root was not found");
 }
 
-createRoot(rootElement).render(
-  <React.StrictMode>
-    <NodeDentApp />
-  </React.StrictMode>
-);
+const root = createRoot(rootElement);
+
+async function renderApp() {
+  let app: React.ReactNode = <NodeDentApp />;
+
+  if (import.meta.env.DEV && window.location.hash === "#/dev/semantic-ui") {
+    const { SemanticStateGallery } = await import("./nodedent/components/SemanticStateGallery");
+    app = <SemanticStateGallery />;
+  }
+
+  root.render(<React.StrictMode>{app}</React.StrictMode>);
+}
+
+void renderApp();

@@ -232,7 +232,7 @@ export function DecisionCard({
             <button
               type="button"
               onClick={onCreateNewCanal}
-              className={cx(panelActionButton.infoLarge, "w-full")}
+              className={cx(panelActionButton.secondaryLarge, "w-full border-dashed border-brand-blue font-bold")}
             >
               Add new canal
             </button>

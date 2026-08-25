@@ -153,7 +153,7 @@ export function WorkflowLauncher({
                 <button
                   type="button"
                   onClick={onOpenSavedCases}
-                  className={panelActionButton.info}
+                  className={panelActionButton.secondary}
                 >
                   Saved cases ({savedCaseCount})
                 </button>
@@ -222,7 +222,7 @@ export function WorkflowLauncher({
                     <button
                       type="button"
                       onClick={isEndo ? onContinueEndodonticWorkflow : () => onOpenPrimaryWorkflowSetup(entry.workflowId)}
-                      className={cx(panelActionButton.primary, "mt-3 disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate")}
+                      className={cx(panelActionButton.primary, "mt-3")}
                     >
                       {launchLabel}
                     </button>
@@ -267,7 +267,7 @@ export function WorkflowLauncher({
                       type="button"
                       onClick={canLaunch ? onLaunch : undefined}
                       disabled={!canLaunch}
-                      className={cx(panelActionButton.info, "mt-3 disabled:cursor-not-allowed disabled:opacity-50")}
+                      className={cx(panelActionButton.primary, "mt-3")}
                     >
                       {launchLabel}
                     </button>

@@ -1591,7 +1591,7 @@ function ClinicalWorkspace({
                 <button
                   type="button"
                   onClick={() => setIsWorkflowLauncherOpen(true)}
-                  className={headerActionButton.mint}
+                  className={headerActionButton.secondary}
                 >
                   NodeDent Home
                 </button>
@@ -1602,7 +1602,7 @@ function ClinicalWorkspace({
                 onClick={onToggleTheme}
                 className={cx(headerActionButton.secondaryCompact, "gap-2")}
               >
-                <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
+                <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-blue bg-brand-blue" : "border-brand-slate bg-brand-light-slate"}`} />
                 {themeMode === "dark" ? "Dark" : "Light"} mode
               </button>
               <button
@@ -1622,7 +1622,7 @@ function ClinicalWorkspace({
               <button
                 type="button"
                 onClick={openSavedCases}
-                className={headerActionButton.info}
+                className={headerActionButton.secondary}
               >
                 Resume saved workflow
               </button>

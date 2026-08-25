@@ -1,0 +1,178 @@
+import React, { useEffect, useState } from "react";
+import {
+  cx,
+  semanticActionButton,
+  semanticChoiceControl,
+  semanticInteraction,
+  semanticStatusTone,
+  statusBadge,
+} from "./uiStyles";
+
+type GalleryTheme = "light" | "dark";
+
+function getInitialGalleryTheme(): GalleryTheme {
+  if (typeof window === "undefined") return "light";
+  const value = new URLSearchParams(window.location.search).get("theme");
+  return value === "dark" ? "dark" : "light";
+}
+
+function ChoiceExample({
+  selected,
+  disabled = false,
+  onClick,
+  children,
+}: {
+  selected: boolean;
+  disabled?: boolean;
+  onClick?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      disabled={disabled}
+      onClick={onClick}
+      className={selected ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
+    >
+      <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, selected ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
+      {children}
+    </button>
+  );
+}
+
+function StateCell({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 rounded-xl border border-brand-light-node bg-brand-light-slate p-3">
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-brand-slate">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+export function SemanticStateGallery() {
+  const [theme, setTheme] = useState<GalleryTheme>(getInitialGalleryTheme);
+
+  useEffect(() => {
+    const previousTheme = document.documentElement.dataset.theme;
+    document.documentElement.dataset.theme = theme;
+    return () => {
+      if (previousTheme) document.documentElement.dataset.theme = previousTheme;
+      else delete document.documentElement.dataset.theme;
+    };
+  }, [theme]);
+
+  return (
+    <main data-testid="semantic-state-gallery" className="min-h-screen bg-brand-light-slate p-4 text-brand-navy sm:p-6">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <header className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Development-only fixture</p>
+              <h1 className="mt-1 text-2xl font-bold">Semantic UI state gallery</h1>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-brand-slate">
+                Stable examples for action prominence, selected controls, clinical status, focus, disabled, and loading treatments. This route contains synthetic UI states only.
+              </p>
+            </div>
+            <div role="group" aria-label="Gallery theme" className="flex gap-2">
+              <ChoiceExample selected={theme === "light"} onClick={() => setTheme("light")}>Light</ChoiceExample>
+              <button
+                type="button"
+                aria-pressed={theme === "dark"}
+                onClick={() => setTheme("dark")}
+                className={theme === "dark" ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
+              >
+                <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, theme === "dark" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
+                Dark
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <section aria-labelledby="gallery-action-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-action-heading" className="text-lg font-bold">Action roles and interaction states</h2>
+          <p className="mt-1 text-sm text-brand-slate">Action appearance describes prominence or consequence, never workflow category or selection.</p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StateCell label="Primary"><button type="button" className={semanticActionButton.primary}>Record entry</button></StateCell>
+            <StateCell label="Secondary"><button type="button" className={semanticActionButton.secondary}>Manage catalogue</button></StateCell>
+            <StateCell label="Warning"><button type="button" className={semanticActionButton.warning}>Continue with caution</button></StateCell>
+            <StateCell label="Destructive"><button type="button" className={semanticActionButton.destructive}>Delete entry</button></StateCell>
+            <StateCell label="Focus visible">
+              <button type="button" className={cx(semanticActionButton.secondary, "outline-2 outline-solid outline-offset-2 outline-brand-blue")}>Keyboard focus</button>
+            </StateCell>
+            <StateCell label="Disabled">
+              <button type="button" disabled aria-describedby="gallery-disabled-reason" className={semanticActionButton.primary}>Record entry</button>
+              <p id="gallery-disabled-reason" className="mt-2 text-xs leading-5 text-brand-slate">Complete the required fields first.</p>
+            </StateCell>
+            <StateCell label="Loading">
+              <button type="button" aria-busy="true" aria-disabled="true" className={cx(semanticActionButton.primary, semanticInteraction.loading)}>
+                <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                Recording…
+              </button>
+            </StateCell>
+            <StateCell label="Large primary"><button type="button" className={semanticActionButton.primaryLarge}>Start workflow</button></StateCell>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-choice-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-choice-heading" className="text-lg font-bold">Choice controls</h2>
+          <p className="mt-1 text-sm text-brand-slate">Selection uses a tinted surface, strong border, programmatic state, and a visible check—not a primary-action fill or mint status color.</p>
+          <div role="group" aria-label="Synthetic choice examples" className="mt-4 flex flex-wrap gap-3">
+            <ChoiceExample selected>Selected choice</ChoiceExample>
+            <ChoiceExample selected={false}>Unselected choice</ChoiceExample>
+            <ChoiceExample selected={false} disabled>Unavailable choice</ChoiceExample>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-launcher-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-launcher-heading" className="text-lg font-bold">Equivalent launcher actions</h2>
+          <p className="mt-1 text-sm text-brand-slate">Headings and descriptions retain category; both principal launch actions share one interaction contract.</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <article className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Primary workflow</p>
+              <h3 className="mt-1 font-bold">Example workflow</h3>
+              <p className="mt-1 text-sm text-brand-slate">Synthetic primary-workflow description.</p>
+              <button type="button" className={cx(semanticActionButton.primary, "mt-4")}>Start workflow</button>
+            </article>
+            <article className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Shared module</p>
+              <h3 className="mt-1 font-bold">Example shared module</h3>
+              <p className="mt-1 text-sm text-brand-slate">Synthetic shared-module description.</p>
+              <button type="button" className={cx(semanticActionButton.primary, "mt-4")}>Open module</button>
+            </article>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-record-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-record-heading" className="text-lg font-bold">Record action and resulting status</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-[1.25fr_0.75fr]">
+            <button type="button" className={semanticActionButton.primaryDecision}>
+              <span className="flex items-start gap-3">
+                <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-lg">+</span>
+                <span>
+                  <span className="block">Record example entry</span>
+                  <span className="mt-1 block text-xs font-normal text-white/80">Next: example status becomes recorded</span>
+                </span>
+              </span>
+            </button>
+            <div role="status" className={cx("rounded-2xl border p-4 text-sm", semanticStatusTone.positive)}>
+              <strong>Recorded</strong>
+              <span className="mt-1 block text-xs">Mint communicates the resulting positive state.</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-status-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-status-heading" className="text-lg font-bold">Status roles</h2>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <span className={cx(statusBadge.base, semanticStatusTone.positive)}>Positive · Ready</span>
+            <span className={cx(statusBadge.base, semanticStatusTone.attention)}>Attention · Review</span>
+            <span className={cx(statusBadge.base, semanticStatusTone.neutral)}>Neutral · Pending</span>
+            <span className={cx(statusBadge.base, semanticStatusTone.difficulty)}>Difficulty · High</span>
+            <span className={cx(statusBadge.base, semanticStatusTone.danger)}>Danger · Error</span>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

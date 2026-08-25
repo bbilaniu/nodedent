@@ -76,7 +76,7 @@ export function EndodonticTargetPanel({
       <button
         type="button"
         onClick={onOpenPhaseMap}
-        className={cx(panelActionButton.info, "mb-3 w-full")}
+        className={cx(panelActionButton.secondary, "mb-3 w-full")}
       >
         Open phase/canal map
       </button>
@@ -167,7 +167,7 @@ export function EndodonticTargetPanel({
             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
           </div>
           <div className="grid gap-2 text-sm">
-            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.success}>Mark {activeCanalName} complete</button>
+            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.primary}>Mark {activeCanalName} complete</button>
             <button onClick={onResetManualStatus} className={panelActionButton.secondary}>Return {activeCanalName} to automatic status</button>
           </div>
           <p className="mt-3 text-xs leading-5 text-brand-slate">Use the always-visible <strong>Pause / end visit</strong> action to pause, medicate and temporize, or enter the referral pathway.</p>

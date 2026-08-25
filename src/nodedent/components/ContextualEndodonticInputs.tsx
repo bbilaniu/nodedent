@@ -122,7 +122,7 @@ export function ContextualEndodonticInputs({
         <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
           <p className="text-xs font-semibold text-brand-navy">Radiograph review</p>
           <p className="mt-1 text-xs leading-5 text-brand-slate">{radiographStatus?.summary || "Record a tooth-scoped radiograph review for this step."}</p>
-          <button type="button" onClick={() => onOpenRadiologyWorkflow()} className={`${panelActionButton.info} mt-2`}>
+          <button type="button" onClick={() => onOpenRadiologyWorkflow()} className={`${panelActionButton.secondary} mt-2`}>
             {radiographStatus?.satisfied ? "Review radiograph record" : "Record radiograph review"}
           </button>
         </div>
@@ -135,7 +135,7 @@ export function ContextualEndodonticInputs({
           <button
             type="button"
             onClick={() => onOpenAnesthesiaWorkflow(sharedModuleEntryNodeId("anesthesia", anesthesiaStatus))}
-            className={`${panelActionButton.info} mt-2`}
+            className={`${panelActionButton.secondary} mt-2`}
           >
             Review anesthesia record
           </button>
@@ -219,7 +219,7 @@ export function ContextualEndodonticInputs({
       ) : null}
 
       {fieldIds.includes("eal0") ? (
-        <button type="button" onClick={onApplyEalDerivedLengths} className={`${panelActionButton.info} mt-3 w-full`}>
+        <button type="button" onClick={onApplyEalDerivedLengths} className={`${panelActionButton.secondary} mt-3 w-full`}>
           Use EAL ±1 {suggestedLengths.patency && suggestedLengths.shaping ? `(patency ${suggestedLengths.patency}, shaping ${suggestedLengths.shaping})` : ""}
         </button>
       ) : null}
