@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { RadiologyEventDetails, RadiologyModality, RadiologyRegionKind } from "../workflow/radiology";
 import { radiologyModalities, radiologyRegionKinds } from "../workflow/radiology";
 import { TextInput } from "./FormControls";
-import { cx, panelActionButton } from "./uiStyles";
+import { cx, workflowDecisionButton } from "./uiStyles";
 
 export type RadiologyReviewFormState = {
   modalities: RadiologyModality[];
@@ -110,19 +110,9 @@ export function RadiologyEventForm({
 
   return (
     <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-slate">Shared radiology event</p>
-          <p className="mt-1 text-xs leading-5 text-brand-slate">Record explicit image review without implying diagnostic adequacy.</p>
-        </div>
-        <button
-          type="button"
-          onClick={recordReview}
-          disabled={!canRecordReview}
-          className={cx(panelActionButton.primary, "disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate")}
-        >
-          Record radiograph review
-        </button>
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-slate">Shared radiology event</p>
+        <p className="mt-1 text-xs leading-5 text-brand-slate">Record explicit image review without implying diagnostic adequacy.</p>
       </div>
       <div className="mt-3 grid gap-3">
         <div>
@@ -177,6 +167,19 @@ export function RadiologyEventForm({
           <TextInput label="Limitations" value={form.limitations} onChange={(value) => updateForm({ limitations: value })} placeholder="optional" />
           <TextInput label="Notes" value={form.notes} onChange={(value) => updateForm({ notes: value })} placeholder="optional" />
         </div>
+      </div>
+      <div className="mt-5 border-t border-brand-light-node pt-4">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Record to current visit</p>
+        <button
+          type="button"
+          data-clinical-record-action="radiology"
+          onClick={recordReview}
+          disabled={!canRecordReview}
+          className={cx(workflowDecisionButton, canRecordReview && "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}
+        >
+          Record radiograph review
+          <span className="mt-1 block text-xs font-normal text-brand-slate">Next: Radiograph review recorded</span>
+        </button>
       </div>
     </div>
   );

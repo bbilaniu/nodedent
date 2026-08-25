@@ -64,9 +64,11 @@ This folder separates clinical source material, active product specs, architectu
 - [ADR 0010: Configure Clinical Vault Lock Policy Within Guardrails](adr/0010-configure-clinical-vault-lock-policy.md)
 - [ADR 0011: Define Isolated Local Vault Profiles](adr/0011-define-isolated-local-vault-profiles.md)
 - [ADR 0012: Define Current, Beta, And Sandbox Deployment Modes](adr/0012-define-current-beta-and-sandbox-deployment-modes.md)
+- [ADR 0013: Separate Action, Selection, And Clinical-State Color Semantics](adr/0013-separate-action-selection-and-clinical-state-color-semantics.md)
 
 ## Archived Implemented Specs
 
+- [Clinical catalogue management](specs/archive/clinical-catalogue-management.md)
 - [Workspace cross-workflow consistency](specs/archive/workspace-cross-workflow-consistency.md)
 - [Encrypted backup revision conflict resolution](specs/archive/encrypted-backup-revision-conflict-resolution.md)
 - [Issue 20 chairside and recovery improvements](specs/archive/issue-20-chairside-and-recovery-improvements.md)

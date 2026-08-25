@@ -36,6 +36,8 @@ export const panelActionButton = {
 
 export const formControlActionButton = "inline-flex min-h-10 shrink-0 items-center justify-center rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold leading-5 text-brand-navy hover:bg-brand-blue-light/20";
 
+export const workflowDecisionButton = "w-full rounded-2xl border bg-white p-4 text-left text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate disabled:hover:translate-y-0 disabled:hover:shadow-sm";
+
 export const panelSurface = {
   card: "rounded-2xl border border-brand-light-node bg-white shadow-sm",
   cardPadded: "rounded-2xl border border-brand-light-node bg-white p-4 shadow-sm",

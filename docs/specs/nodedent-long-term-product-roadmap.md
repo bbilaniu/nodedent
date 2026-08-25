@@ -49,14 +49,13 @@ Radiology should remain documentation-oriented unless a future source-backed spe
 
 ### Clinical Documentation Catalogs
 
-NodeDent now has a unified user-catalog persistence layer for anesthesia and isolation shortcuts, legacy preference migration, and patient-independent catalog export/import with additive conflict-safe merging.
+NodeDent now has a registry-driven Clinical Catalogue workspace for anesthesia, isolation, and endodontic sealer documentation suggestions. It includes unified v2 user-catalog persistence, migration from earlier stores, seed and user lifecycle controls, and patient-independent export/import with additive conflict-safe merging. Endodontic sealer events snapshot the entered product label so later preference edits do not rewrite clinical history.
 
 Remaining catalog work includes:
 
 - clinic and template catalog storage
 - catalog sync across devices or clinic workspaces
-- a broader global settings or catalog management workspace
-- seeded/customizable catalogs for isolation methods, burs, endodontic file systems, filling materials, brands, shades, cements, bonding systems, and other reusable documentation vocabularies
+- broader seeded/customizable catalogs for burs, endodontic file systems, filling materials, brands, shades, restorative cements, bonding systems, and other reusable documentation vocabularies, added only when their workflow fields and documentation boundaries are specified
 
 Catalogs should remain documentation shortcuts unless a separate source-backed decision explicitly adds rule behavior. Product or shortcut selections should not infer adequacy, dose, timing, expiry, safety, or treatment recommendations.
 

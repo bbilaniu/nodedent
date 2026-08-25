@@ -15,7 +15,7 @@ import {
   buildAnesthesiaFormState,
   canSubmitAnesthesiaForm,
   defaultAnesthesiaFormState,
-  getAnesthesiaRouteActionLabel,
+  getAnesthesiaAdministrationRecordLabel,
   getAnesthesiaRouteSelectionLabel,
   hasAnesthesiaTargetScope,
   isAnesthesiaAssessmentReassessment,
@@ -24,10 +24,12 @@ import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMod
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import { SelectInput, TextInput } from "./FormControls";
+import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
 
 export function AnesthesiaEventForm({
   tooth,
   latestEvent,
+  initialMode = "administration",
   defaultAction = anesthesiaEventTypes.administered,
   userCatalogItems = [],
   onSaveCatalogItems,
@@ -36,14 +38,17 @@ export function AnesthesiaEventForm({
 }: {
   tooth: string;
   latestEvent?: ClinicalEvent;
+  initialMode?: AnesthesiaMode;
   defaultAction?: AnesthesiaAdministrationAction;
   userCatalogItems?: CatalogItem[];
   onSaveCatalogItems?: (items: CatalogItem[]) => void;
   onManageShortcuts?: () => void;
   onRecordEvent: (eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) => void;
 }) {
-  const [mode, setMode] = useState<AnesthesiaMode>("administration");
-  const [form, setForm] = useState<AnesthesiaFormState>(() => defaultAnesthesiaFormState(tooth, defaultAction));
+  const [mode, setMode] = useState<AnesthesiaMode>(initialMode);
+  const [form, setForm] = useState<AnesthesiaFormState>(() => initialMode === "assessment"
+    ? { ...buildAnesthesiaFormState(tooth, anesthesiaEventTypes.adequacyConfirmed, latestEvent), response: "notAssessed", note: "" }
+    : defaultAnesthesiaFormState(tooth, defaultAction));
   const previousToothRef = useRef(tooth);
   const modeIsAssessment = mode === "assessment";
   const assessmentNeedsReassessment = isAnesthesiaAssessmentReassessment(mode, form);
@@ -63,6 +68,17 @@ export function AnesthesiaEventForm({
   const shortcutItems = mode === "administration" ? buildUserAnesthesiaCatalogItemsFromForm(form) : [];
   const canSaveShortcuts = Boolean(onSaveCatalogItems && shortcutItems.length);
   const administeredAtInvalid = Boolean(form.administeredAt && !isCompleteTime24(form.administeredAt));
+  const administrationAction = form.action === anesthesiaEventTypes.topUpGiven ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered;
+  const recordActionLabel = mode === "administration"
+    ? getAnesthesiaAdministrationRecordLabel(form.route, administrationAction)
+    : "Add anesthesia assessment";
+  const nextStepLabel = mode === "administration"
+    ? "Assess anesthesia adequacy"
+    : form.response === "adequate"
+      ? "Anesthesia status recorded"
+      : form.response === "notAdequate"
+        ? "Anesthesia needs reassessment"
+        : "Select an assessment result";
 
   useEffect(() => {
     const previousTooth = previousToothRef.current;
@@ -135,23 +151,26 @@ export function AnesthesiaEventForm({
 
   return (
     <>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          aria-label="Record anesthesia administration"
-          onClick={() => prepareMode("administration")}
-          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "administration" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
-        >
-          Record administration
-        </button>
-        <button
-          type="button"
-          aria-label="Record anesthesia assessment"
-          onClick={() => prepareMode("assessment")}
-          className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "assessment" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy hover:bg-brand-mint/20"}`}
-        >
-          Record assessment
-        </button>
+      <div className="mt-3">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Entry type</p>
+        <div role="group" aria-label="Anesthesia entry type" className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            aria-pressed={mode === "administration"}
+            onClick={() => prepareMode("administration")}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "administration" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+          >
+            Administration
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === "assessment"}
+            onClick={() => prepareMode("assessment")}
+            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "assessment" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy hover:bg-brand-mint/20"}`}
+          >
+            Assessment
+          </button>
+        </div>
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         {mode === "administration" ? (
@@ -246,36 +265,52 @@ export function AnesthesiaEventForm({
         ) : null}
       </div>
       {!hasTargetScope ? <p role="status" className="mt-2 text-xs leading-5 text-amber-900">Enter at least one target tooth or a region label before recording anesthesia.</p> : null}
-      {mode === "administration" && onSaveCatalogItems ? <p className="mt-2 text-xs leading-5 text-amber-900">Reusable shortcuts are patient-independent preferences stored outside the vault. Do not save chart numbers, patient facts, or identifiers in a shortcut.</p> : null}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-5 border-t border-brand-light-node pt-4">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Record to current visit</p>
         <button
           type="button"
+          data-clinical-record-action="anesthesia"
           onClick={submitEvent}
           disabled={!canSubmit}
-          className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
+          className={cx(workflowDecisionButton, canSubmit && "border-brand-mint/50 bg-brand-light-slate text-brand-navy shadow-md hover:border-brand-mint hover:bg-brand-mint/10")}
         >
-          {mode === "administration" ? getAnesthesiaRouteActionLabel(form.route) : "Record assessment"}
+          <span className="flex items-start gap-3">
+            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-mint/20 text-lg leading-none text-brand-navy">+</span>
+            <span>
+              <span className="block">{recordActionLabel}</span>
+              <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {nextStepLabel}</span>
+            </span>
+          </span>
         </button>
-        {mode === "administration" && onSaveCatalogItems ? (
-          <button
-            type="button"
-            onClick={saveShortcuts}
-            disabled={!canSaveShortcuts}
-            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
-          >
-            Save shortcuts
-          </button>
-        ) : null}
-        {mode === "administration" && onManageShortcuts ? (
-          <button
-            type="button"
-            onClick={onManageShortcuts}
-            className="rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
-          >
-            Manage shortcuts
-          </button>
-        ) : null}
       </div>
+      {mode === "administration" && (onSaveCatalogItems || onManageShortcuts) ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Reusable Catalogue</p>
+          <p className="mt-1 text-xs leading-5 text-brand-slate">These actions save patient-independent preferences only. They do not record a clinical entry.</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {onSaveCatalogItems ? (
+              <button
+                type="button"
+                onClick={saveShortcuts}
+                disabled={!canSaveShortcuts}
+                className={cx(panelActionButton.info, "disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate")}
+              >
+                Add entered values to Catalogue
+              </button>
+            ) : null}
+            {onManageShortcuts ? (
+              <button
+                type="button"
+                onClick={onManageShortcuts}
+                className={panelActionButton.secondary}
+              >
+                Manage Catalogue
+              </button>
+            ) : null}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-amber-900">Do not save chart numbers, patient facts, or identifiers in a Catalogue entry.</p>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -55,6 +55,7 @@ export function WorkflowLauncher({
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
+  onOpenCatalogue,
 }: {
   caseData: EndoCase;
   capabilitySummary?: CaseCapabilitySummary;
@@ -72,6 +73,7 @@ export function WorkflowLauncher({
   onOpenAnesthesiaWorkflow: () => void;
   onOpenIsolationWorkflow: () => void;
   onOpenRadiologyWorkflow: () => void;
+  onOpenCatalogue?: () => void;
 }) {
   const primaryEntries = getPrimaryWorkflowLauncherEntries(workflowLauncherEntries);
   const sharedModuleEntries = getSharedModuleLauncherEntries(workflowLauncherEntries);
@@ -275,6 +277,18 @@ export function WorkflowLauncher({
             </div>
           </section>
         </div>
+
+        {onOpenCatalogue ? (
+          <section className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className={sectionText.titleSmall}>Clinical catalogue</h3>
+                <p className="mt-1 text-xs leading-5 text-brand-slate">Manage patient-independent suggestions for anesthesia, isolation, and endodontic sealers.</p>
+              </div>
+              <button type="button" onClick={onOpenCatalogue} className={panelActionButton.secondary}>Manage catalogue</button>
+            </div>
+          </section>
+        ) : null}
       </section>
   );
 

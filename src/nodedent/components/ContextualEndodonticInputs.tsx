@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { CanalRecord, EndoCase, EndodonticFieldId, ProtocolNode } from "../types";
 import { getSuggestedLengths, isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { getCapabilityStatus } from "../workflow/selectors";
@@ -30,6 +30,7 @@ const fieldLabels: Record<EndodonticFieldId, string> = {
   finalShape: "Final shaping file",
   obturationGauge: "Obturation gauge",
   masterCone: "Master cone",
+  sealerLabel: "Sealer used",
   coneFitRadiograph: "Cone fit PA",
   dryingStatus: "Drying status",
 };
@@ -46,6 +47,7 @@ const fieldPlaceholders: Partial<Record<EndodonticFieldId, string>> = {
   finalShape: "e.g., 30/.04 or PTN X2 25/.06",
   obturationGauge: "e.g., 30",
   masterCone: "e.g., 30/.04",
+  sealerLabel: "Select or enter the sealer used",
 };
 
 function getFieldValue(fieldId: EndodonticFieldId, caseData: EndoCase, activeCanal?: CanalRecord | null) {
@@ -70,6 +72,9 @@ export function ContextualEndodonticInputs({
   onApplyEalDerivedLengths,
   onOpenAnesthesiaWorkflow,
   onOpenRadiologyWorkflow,
+  sealerSuggestions = [],
+  onAddSealerToCatalogue,
+  onOpenCatalogue,
 }: {
   currentNode: ProtocolNode;
   caseData: EndoCase;
@@ -79,7 +84,11 @@ export function ContextualEndodonticInputs({
   onApplyEalDerivedLengths: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
+  sealerSuggestions?: string[];
+  onAddSealerToCatalogue?: (label: string) => boolean;
+  onOpenCatalogue?: () => void;
 }) {
+  const [catalogueMessage, setCatalogueMessage] = useState("");
   const fieldIds = currentNode.contextualFieldIds || [];
   const hasRadiologyCall = currentNode.moduleCalls?.some((call) => call.workflowId === sharedRadiologyWorkflowId);
   const hasAnesthesiaCall = currentNode.moduleCalls?.some((call) => call.workflowId === sharedAnesthesiaWorkflowId);
@@ -174,6 +183,7 @@ export function ContextualEndodonticInputs({
                 placeholder={fieldPlaceholders[fieldId]}
                 inputMode={positiveMeasurementFields.has(fieldId) || fieldId === "fileTerminalLength" || fieldId === "obturationGauge" ? "decimal" : undefined}
                 invalid={invalid}
+                suggestions={fieldId === "sealerLabel" ? sealerSuggestions : []}
                 rightLabel={fieldId === "patencyLength" && suggestedLengths.patency
                   ? `Suggested: ${suggestedLengths.patency} mm`
                   : fieldId === "shapingLength" && suggestedLengths.shaping
@@ -182,6 +192,29 @@ export function ContextualEndodonticInputs({
               />
             );
           })}
+        </div>
+      ) : null}
+
+      {fieldIds.includes("sealerLabel") && activeCanal ? (
+        <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
+          <p className="text-xs leading-5 text-brand-slate">Catalogue entries are patient-independent preferences. Adding this value does not record sealer application or add a clinical event.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {onAddSealerToCatalogue ? (
+              <button
+                type="button"
+                disabled={!activeCanal.sealerLabel?.trim()}
+                onClick={() => {
+                  const added = onAddSealerToCatalogue(activeCanal.sealerLabel || "");
+                  setCatalogueMessage(added ? "Added to the local Catalogue." : "That value is already available in the Catalogue.");
+                }}
+                className={`${panelActionButton.secondary} disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                Add entered value to Catalogue
+              </button>
+            ) : null}
+            {onOpenCatalogue ? <button type="button" onClick={onOpenCatalogue} className={panelActionButton.secondary}>Manage Catalogue</button> : null}
+          </div>
+          {catalogueMessage ? <p role="status" className="mt-2 text-xs font-semibold text-brand-navy">{catalogueMessage}</p> : null}
         </div>
       ) : null}
 

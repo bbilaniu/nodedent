@@ -29,7 +29,7 @@ export function CatalogAdministrationPanel({
   onChange,
 }: {
   items: CatalogItem[];
-  onChange: (items: CatalogItem[]) => void;
+  onChange: (items: CatalogItem[]) => void | boolean;
 }) {
   const [selectedFilename, setSelectedFilename] = useState("");
   const [catalogExport, setCatalogExport] = useState<UserCatalogExport | null>(null);
@@ -57,7 +57,11 @@ export function CatalogAdministrationPanel({
   function importNewItems() {
     if (!catalogExport || !preview) return;
     const nextItems = mergeNewUserCatalogItems(items, catalogExport.state.items);
-    onChange(nextItems);
+    if (onChange(nextItems) === false) {
+      setError("Catalogue preferences could not be saved. The current preferences were left unchanged.");
+      return;
+    }
+    setError("");
     setMessage(`Imported ${preview.additions} new catalogue item${preview.additions === 1 ? "" : "s"}. Existing and conflicting item IDs were left unchanged.`);
     setPreview(previewUserCatalogImport(nextItems, catalogExport.state.items));
   }
@@ -66,7 +70,7 @@ export function CatalogAdministrationPanel({
     <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
       <h3 className="text-sm font-semibold text-brand-navy">Catalogue preferences</h3>
       <p className="mt-1 text-xs leading-5 text-brand-slate">
-        Export or import patient-independent anesthesia and isolation shortcuts. Clinical events and case data are not included.
+        Export or import all patient-independent clinical catalogue preferences. Clinical events and case data are not included.
       </p>
       <ImportDisclosure
         id="catalogue-preferences-import"
@@ -97,7 +101,7 @@ export function CatalogAdministrationPanel({
               {preview.additions} new · {preview.equivalentItems} already identical · {preview.idConflicts} ID conflict{preview.idConflicts === 1 ? "" : "s"}
             </p>
             <p className="mt-1 text-xs leading-5 text-brand-slate">
-              {preview.itemsByCategory.anesthesia || 0} anesthesia · {preview.itemsByCategory.isolation || 0} isolation
+              {Object.entries(preview.itemsByCategory).map(([category, count]) => `${count} ${category}`).join(" · ") || "No catalogue items"}
             </p>
             <button
               type="button"
