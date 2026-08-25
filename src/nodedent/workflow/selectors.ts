@@ -1,4 +1,5 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
+import { hasDiagnosisSectionRecord } from "./diagnosis";
 import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
 import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent, isAnesthesiaAdministrationEvent, isAnesthesiaEvent } from "./anesthesia";
@@ -162,9 +163,11 @@ function eventTime(event?: ClinicalEvent) {
 }
 
 function diagnosisStatus(caseData: EndoCase, queryScope?: WorkflowScope): CapabilityStatus {
-  const hasDiagnosis = !isBlank(caseData.diagnosis?.pulpal) || !isBlank(caseData.diagnosis?.apical);
-  const caseScope: WorkflowScope | undefined = caseData.tooth ? { kind: "tooth", tooth: caseData.tooth } : undefined;
-  const scopeMatched = scopeMatches(caseScope, queryScope, "diagnosis.recorded");
+  const hasDiagnosis = hasDiagnosisSectionRecord(caseData, "endodontic");
+  const diagnosisTooth = caseData.tooth.trim();
+  const caseScope: WorkflowScope | undefined = diagnosisTooth ? { kind: "tooth", tooth: diagnosisTooth } : undefined;
+  const hasTarget = Boolean(caseScope);
+  const scopeMatched = hasTarget && scopeMatches(caseScope, queryScope, "diagnosis.recorded");
   const satisfied = hasDiagnosis && scopeMatched;
   return {
     name: "diagnosis.recorded",
@@ -172,8 +175,20 @@ function diagnosisStatus(caseData: EndoCase, queryScope?: WorkflowScope): Capabi
     needsReassessment: false,
     source: satisfied ? "caseField" : "none",
     scope: satisfied ? caseScope : queryScope || caseScope,
-    summary: satisfied ? "Diagnosis recorded" : hasDiagnosis ? "Diagnosis recorded for another tooth" : "Diagnosis not recorded",
-    reason: hasDiagnosis && !scopeMatched ? "Recorded diagnosis is for a different tooth." : hasDiagnosis ? undefined : "No pulpal or apical diagnosis is recorded.",
+    summary: satisfied
+      ? "Diagnosis recorded"
+      : hasDiagnosis && !hasTarget
+        ? "Diagnosis recorded; target tooth needed"
+        : hasDiagnosis
+          ? "Diagnosis recorded for another tooth"
+          : "Diagnosis not recorded",
+    reason: hasDiagnosis && !hasTarget
+      ? "Set the default tooth to establish diagnosis readiness."
+      : hasDiagnosis && !scopeMatched
+        ? "Recorded diagnosis is for a different tooth."
+        : hasDiagnosis
+          ? undefined
+          : "No pulpal or apical diagnosis is recorded.",
     recordedOutsideScope: hasDiagnosis && !scopeMatched,
   };
 }

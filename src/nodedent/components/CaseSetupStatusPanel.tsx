@@ -17,6 +17,7 @@ import {
   type OperativeWorkflowSetupState,
 } from "../workflow/operative";
 import { endodonticProcedureOptions } from "../workflow/procedures";
+import { getDiagnosisSectionSummary } from "../workflow/diagnosis";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
 import { endodonticRootWorkflowId } from "../workflow/registry";
 import type { CapabilityStatus } from "../workflow/selectors";
@@ -230,20 +231,32 @@ function CaseVisitStatusSection({
 
 function DiagnosisReadinessSection({
   caseData,
-  onUpdateDiagnosis,
+  status,
+  onOpenDiagnosis,
   sectionRef,
 }: {
   caseData: EndoCase;
-  onUpdateDiagnosis: (field: string, value: string) => void;
+  status: CapabilityStatus;
+  onOpenDiagnosis: () => void;
   sectionRef: React.RefObject<HTMLElement | null>;
 }) {
   return (
     <section ref={sectionRef} tabIndex={-1} className={panelSurface.mutedFocusable}>
-      <h3 className={sectionText.titleSmall}>Diagnosis readiness</h3>
-      <div className="mt-3 grid gap-3">
-        <TextInput label="Pulpal diagnosis" value={caseData.diagnosis?.pulpal || ""} onChange={(value) => onUpdateDiagnosis("pulpal", value)} placeholder="optional" />
-        <TextInput label="Apical diagnosis" value={caseData.diagnosis?.apical || ""} onChange={(value) => onUpdateDiagnosis("apical", value)} placeholder="optional" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className={sectionText.titleSmall}>Diagnosis</h3>
+          <p className={sectionText.descriptionSmall}>{status.summary}</p>
+        </div>
+        <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${sharedCapabilityStatusClass(status)}`}>
+          {sharedCapabilityStatusLabel(status)}
+        </span>
       </div>
+      <p className="mt-3 text-xs leading-5 text-brand-slate">
+        Endodontics · {getDiagnosisSectionSummary(caseData, "endodontic")} · {caseData.tooth.trim() ? `Tooth ${caseData.tooth.trim()}` : "Default tooth not set"}
+      </p>
+      <button type="button" onClick={onOpenDiagnosis} className={cx(panelActionButton.primary, "mt-3")}>
+        Review diagnosis
+      </button>
     </section>
   );
 }
@@ -393,13 +406,13 @@ export function CaseSetupStatusPanel({
   currentNodeId,
   operativeSetup,
   onUpdateCase,
-  onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
+  onOpenDiagnosis,
   onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
@@ -412,13 +425,13 @@ export function CaseSetupStatusPanel({
   currentNodeId: string;
   operativeSetup?: OperativeWorkflowSetupState;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
+  onOpenDiagnosis: () => void;
   onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
@@ -497,7 +510,12 @@ export function CaseSetupStatusPanel({
       </CaseSetupGroup>
 
       <CaseSetupGroup title="Shared readiness" description="Reusable diagnosis, radiograph, anesthesia, and isolation context for the current workflow.">
-        <DiagnosisReadinessSection caseData={caseData} onUpdateDiagnosis={onUpdateDiagnosis} sectionRef={diagnosisSectionRef} />
+        <DiagnosisReadinessSection
+          caseData={caseData}
+          status={capabilitySummary.diagnosis}
+          onOpenDiagnosis={onOpenDiagnosis}
+          sectionRef={diagnosisSectionRef}
+        />
         <RadiographReadinessSection
           caseData={caseData}
           paReviewed={paReviewed}

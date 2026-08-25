@@ -18,13 +18,13 @@ export function CaseSetupPage({
   operativeSetup,
   onClose,
   onUpdateCase,
-  onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
+  onOpenDiagnosis,
   onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
@@ -39,13 +39,13 @@ export function CaseSetupPage({
   operativeSetup?: OperativeWorkflowSetupState;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
+  onOpenDiagnosis: () => void;
   onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
@@ -118,13 +118,13 @@ export function CaseSetupPage({
             currentNodeId={currentNodeId}
             operativeSetup={operativeSetup}
             onUpdateCase={onUpdateCase}
-            onUpdateDiagnosis={onUpdateDiagnosis}
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
+            onOpenDiagnosis={onOpenDiagnosis}
             onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
             onPrimaryWorkflowSelectionChange={onPrimaryWorkflowSelectionChange}
             onPrimaryWorkflowProcedureChange={onPrimaryWorkflowProcedureChange}

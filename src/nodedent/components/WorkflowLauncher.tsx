@@ -48,6 +48,7 @@ export function WorkflowLauncher({
   onClose,
   onContinueEndodonticWorkflow,
   onOpenCaseSetupStatus,
+  onOpenDiagnosis,
   onOpenSavedCases,
   onOpenPriorVisit,
   onOpenNewCaseConfirm,
@@ -66,6 +67,7 @@ export function WorkflowLauncher({
   onClose: () => void;
   onContinueEndodonticWorkflow: () => void;
   onOpenCaseSetupStatus: () => void;
+  onOpenDiagnosis?: () => void;
   onOpenSavedCases: () => void;
   onOpenPriorVisit: () => void;
   onOpenNewCaseConfirm: () => void;
@@ -176,12 +178,18 @@ export function WorkflowLauncher({
           ) : null}
 
           <section className={panelSurface.muted}>
-            <h3 className={sectionText.titleSmall}>Shared module status</h3>
+            <h3 className={sectionText.titleSmall}>Shared readiness status</h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.diagnosis))}>
+              <button
+                type="button"
+                onClick={onOpenDiagnosis}
+                disabled={!onOpenDiagnosis}
+                className={cx(workspaceSurface.statusTile, "text-left transition hover:-translate-y-0.5 hover:shadow-sm disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none", sharedCapabilityStatusClass(capabilitySummary.diagnosis))}
+              >
                 <p className="text-xs font-bold uppercase tracking-wide">Diagnosis</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.diagnosis.summary}</p>
-              </div>
+                {onOpenDiagnosis ? <p className="mt-2 text-xs font-semibold">Review diagnosis</p> : null}
+              </button>
               <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.radiographs))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Radiographs</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.radiographs.summary}</p>

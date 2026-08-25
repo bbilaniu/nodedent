@@ -5,6 +5,7 @@ import { DecisionCard } from "./components/DecisionCard";
 import { EndodonticEndVisitDialog, endVisitActionConfig, type EndVisitActionId } from "./components/EndodonticEndVisitDialog";
 import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
 import { CaseSetupPage } from "./components/CaseSetupPage";
+import { DiagnosisPage } from "./components/DiagnosisPage";
 import { CaseEntryGate } from "./components/CaseEntryGate";
 import { CataloguePage } from "./components/CataloguePage";
 import { ClinicalDataNotice } from "./components/ClinicalDataNotice";
@@ -54,6 +55,7 @@ import { blankCanal, createEncounterId, createFreshCase, makeDefaultNewCanalName
 import { EndoCaseSchema } from "./schemas/EndoCase.schema";
 import { endodonticRootWorkflowId } from "./workflow/registry";
 import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions } from "./workflow/endodonticCatalog";
+import { type DiagnosisFieldId, type DiagnosisSectionId, updateDiagnosisField } from "./workflow/diagnosis";
 import { updateUserCatalogItem } from "./workflow/userCatalogItems";
 import { noTreatmentSelectedProcedure } from "./workflow/procedures";
 import { deploymentIdentity, deploymentOriginMatches } from "./deploymentMode";
@@ -290,6 +292,7 @@ function ClinicalWorkspace({
   const [isProgressDetailOpen, setIsProgressDetailOpen] = useState(false);
   const [activePrimaryWorkflowId, setActivePrimaryWorkflowId] = useState<PrimaryWorkflowId | null>(null);
   const [isCasePanelOpen, setIsCasePanelOpen] = useState(false);
+  const [isDiagnosisOpen, setIsDiagnosisOpen] = useState(false);
   const [casePanelFocusTarget, setCasePanelFocusTarget] = useState<CaseSetupFocusTarget | null>(null);
   const [casePanelWorkflowId, setCasePanelWorkflowId] = useState("");
   const [embeddedWorkflowLaunch, setEmbeddedWorkflowLaunch] = useState<EmbeddedWorkflowLaunch | null>(null);
@@ -582,8 +585,8 @@ function ClinicalWorkspace({
     setValidationMessage(null);
   }
 
-  function updateDiagnosis(field: string, value: string) {
-    setCaseData((prev) => ({ ...prev, diagnosis: { ...(prev.diagnosis || {}), [field]: value } }));
+  function updateDiagnosis(sectionId: DiagnosisSectionId, fieldId: DiagnosisFieldId, value: string) {
+    setCaseData((prev) => updateDiagnosisField(prev, sectionId, fieldId, value));
     setValidationMessage(null);
   }
 
@@ -744,6 +747,7 @@ function ClinicalWorkspace({
     setCopied(false);
     setIsNewCaseConfirmOpen(false);
     setIsCasePanelOpen(openCaseSetup);
+    setIsDiagnosisOpen(false);
     setCasePanelFocusTarget(null);
     setCasePanelWorkflowId("");
     setActivePrimaryWorkflowId(null);
@@ -765,9 +769,15 @@ function ClinicalWorkspace({
 
   function openCasePanel(focusTarget?: CaseSetupFocusTarget, workflowId = activePrimaryWorkflowId || "") {
     setIsWorkflowLauncherOpen(false);
+    setIsDiagnosisOpen(false);
     setCasePanelFocusTarget(focusTarget || null);
     setCasePanelWorkflowId(workflowId);
     setIsCasePanelOpen(true);
+  }
+
+  function openDiagnosis() {
+    setIsWorkflowLauncherOpen(false);
+    setIsDiagnosisOpen(true);
   }
 
   function activatePrimaryWorkflow(workflowId: string) {
@@ -907,6 +917,7 @@ function ClinicalWorkspace({
 
   function openIsolationWorkflow(entryNodeId?: string) {
     setIsWorkflowLauncherOpen(false);
+    setIsDiagnosisOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
     setEmbeddedWorkflowLaunch({
@@ -919,6 +930,7 @@ function ClinicalWorkspace({
 
   function openAnesthesiaWorkflow(entryNodeId?: string) {
     setIsWorkflowLauncherOpen(false);
+    setIsDiagnosisOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
     setEmbeddedWorkflowLaunch({
@@ -931,6 +943,7 @@ function ClinicalWorkspace({
 
   function openRadiologyWorkflow(entryNodeId?: string) {
     setIsWorkflowLauncherOpen(false);
+    setIsDiagnosisOpen(false);
     setIsCasePanelOpen(false);
     setCasePanelFocusTarget(null);
     setEmbeddedWorkflowLaunch({
@@ -1509,6 +1522,17 @@ function ClinicalWorkspace({
     );
   }
 
+  if (isDiagnosisOpen) {
+    return (
+      <DiagnosisPage
+        caseData={caseData}
+        onUpdateDiagnosis={updateDiagnosis}
+        onClose={() => setIsDiagnosisOpen(false)}
+        returnLabel={isCasePanelOpen ? "Return to Case Setup" : "Return to workspace"}
+      />
+    );
+  }
+
   if (isCaseEntryOpen) {
     return (
       <>
@@ -1665,6 +1689,7 @@ function ClinicalWorkspace({
               onClose={() => undefined}
               onContinueEndodonticWorkflow={() => activatePrimaryWorkflow(endodonticRootWorkflowId)}
               onOpenCaseSetupStatus={() => openCasePanel()}
+              onOpenDiagnosis={openDiagnosis}
               onOpenSavedCases={openSavedCases}
               onOpenPriorVisit={openPriorVisit}
               onOpenNewCaseConfirm={openNewCaseConfirm}
@@ -1680,7 +1705,7 @@ function ClinicalWorkspace({
             <SharedReadinessCard
               caseData={caseData}
               capabilitySummary={activeReadinessSummary}
-              onOpenCaseSetupStatus={openCasePanel}
+              onOpenDiagnosis={openDiagnosis}
               onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
               onOpenIsolationWorkflow={openIsolationWorkflow}
               onOpenRadiologyWorkflow={openRadiologyWorkflow}
@@ -1825,6 +1850,7 @@ function ClinicalWorkspace({
             onClose={() => setIsWorkflowLauncherOpen(false)}
             onContinueEndodonticWorkflow={() => activatePrimaryWorkflow(endodonticRootWorkflowId)}
             onOpenCaseSetupStatus={() => openCasePanel()}
+            onOpenDiagnosis={openDiagnosis}
             onOpenSavedCases={openSavedCases}
             onOpenPriorVisit={openPriorVisit}
             onOpenNewCaseConfirm={openNewCaseConfirm}
@@ -1849,13 +1875,13 @@ function ClinicalWorkspace({
               setCasePanelWorkflowId(activePrimaryWorkflowId || "");
             }}
             onUpdateCase={updateCase}
-            onUpdateDiagnosis={updateDiagnosis}
             onUpdatePreOp={updatePreOp}
             onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             onOpenRadiologyWorkflow={openRadiologyWorkflow}
+            onOpenDiagnosis={openDiagnosis}
             onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
             onPrimaryWorkflowSelectionChange={setPrimaryWorkflowSelected}
             onPrimaryWorkflowProcedureChange={setPrimaryWorkflowProcedure}

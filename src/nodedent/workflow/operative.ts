@@ -5,7 +5,9 @@ import { sharedRadiologyWorkflowId } from "./radiology";
 import type { CaseCapabilitySummary } from "./selectors";
 import { getCapabilityStatus } from "./selectors";
 
-export const sharedDiagnosisWorkflowId = "shared.diagnosis";
+export const sharedDiagnosisPanelId = "shared.diagnosis";
+/** @deprecated Diagnosis is a panel-based context surface, not an executable workflow. */
+export const sharedDiagnosisWorkflowId = sharedDiagnosisPanelId;
 export const operativeDirectRestorationWorkflowId = "operative.direct-restoration";
 export const operativeDirectRestorationWorkflowVersion = "0.1.0";
 export const operativeScopeRecordedEventType = "operative.scope.recorded";
@@ -68,7 +70,7 @@ export const operativeReadinessCapabilityRequirements: CapabilityRequirement[] =
 
 export const operativeReadinessModuleCalls: WorkflowModuleCall[] = [
   {
-    workflowId: sharedDiagnosisWorkflowId,
+    workflowId: sharedDiagnosisPanelId,
     title: "Diagnosis",
     reason: "Provides reusable diagnosis context for the operative workflow when that context is not already available.",
     returnedCapabilities: ["diagnosis.recorded"],
