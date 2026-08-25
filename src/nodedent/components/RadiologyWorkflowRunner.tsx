@@ -9,14 +9,12 @@ export function RadiologyWorkflowRunner({
   caseData,
   parentWorkflowRunId,
   latestRadiologyEvent,
-  onClose,
   onRecordRadiologyEvent,
 }: {
   launch: EmbeddedWorkflowLaunch;
   caseData: EndoCase;
   parentWorkflowRunId: string;
   latestRadiologyEvent?: ClinicalEvent;
-  onClose: () => void;
   onRecordRadiologyEvent: (
     details: RadiologyEventDetails,
     context: { nodeId: string; label: string; workflowRunId: string; parentWorkflowRunId: string }
@@ -100,16 +98,6 @@ export function RadiologyWorkflowRunner({
           Add another radiograph entry
         </button>
       ) : null}
-
-      <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
-        >
-          Close shared workflow
-        </button>
-      </div>
     </>
   );
 }

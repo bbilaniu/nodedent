@@ -15,6 +15,10 @@ export function buildCompactNote(caseData: EndoCase) {
   const located = canals.map((canal) => canal.name).filter(Boolean);
   const measurements = canals.map(formatCanalMeasurements).filter(Boolean);
   const events = (caseData.globalEvents || []).map((event) => event.type);
+  const sealerLabels = [...new Set((caseData.globalEvents || [])
+    .filter((event) => event.type === "sealer.applied" || event.type === "sealer.reapplied")
+    .map((event) => String(event.details?.sealerLabel || event.details?.canalSnapshot?.sealerLabel || "").trim())
+    .filter(Boolean))];
   const latestOperativeSetupEvent = (caseData.globalEvents || []).filter(isOperativeScopeRecordedEvent).at(-1);
   const operativeRestorationEvents = getOperativeRestorationEvents(caseData);
   const note = [];
@@ -31,7 +35,7 @@ export function buildCompactNote(caseData: EndoCase) {
   if (events.includes("smearLayer.edtaPlaced") || events.includes("smearLayer.edtaAgitated")) note.push("17% EDTA smear layer removal performed.");
   if (events.includes("disinfection.finalNaOClCompleted") || events.includes("disinfection.readyForObturation")) note.push("Final NaOCl disinfection completed.");
   if (events.includes("coneFit.radiographAcceptable")) note.push("Master cone fit confirmed radiographically.");
-  if (events.includes("sealer.applied") || events.includes("sealer.reapplied")) note.push("Bioceramic sealer placed.");
+  if (events.includes("sealer.applied") || events.includes("sealer.reapplied")) note.push(`${sealerLabels.length ? sealerLabels.join(" / ") : "Bioceramic sealer"} placed.`);
   if (events.includes("gpSeating.coneSeated")) note.push("Pre-fit GP cone seated to shaping length.");
   if (events.includes("backfill.completed") || events.includes("backfill.compactedStable")) note.push("Thermoplastic GP backfill completed and compacted.");
   if (events.includes("medication.calciumHydroxidePlaced")) note.push("Calcium hydroxide placed.");

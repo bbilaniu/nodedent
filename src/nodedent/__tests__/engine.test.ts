@@ -11,6 +11,7 @@ import { ActiveWorkflowTargetPanel } from "../components/ActiveWorkflowTargetPan
 import { AppFooter, PRIVACY_POLICY_HASH } from "../components/AppFooter";
 import { BackupRecoveryPanel, canAutoPreviewEncryptedBackup } from "../components/BackupRecoveryPanel";
 import { CatalogAdministrationPanel } from "../components/CatalogAdministrationPanel";
+import { CataloguePage } from "../components/CataloguePage";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
@@ -55,6 +56,7 @@ import {
   previewUserCatalogImport,
   saveUserCatalogItems,
   USER_CATALOG_STORAGE_KEY,
+  LEGACY_USER_CATALOG_STORAGE_KEY,
 } from "../state/catalogPersistence";
 import { getOtherMeaningfulSavedCases, isMeaningfulCase, isMeaningfulSavedCaseSummary } from "../state/caseEntry";
 import { loadUserIsolationCatalogItems, saveUserIsolationCatalogItems, USER_ISOLATION_CATALOG_STORAGE_KEY } from "../state/isolationCatalogPersistence";
@@ -78,6 +80,7 @@ import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesi
 import { formatLocalTime24, formatTime24Value, getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
+import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions, seedEndodonticCatalogItems } from "../workflow/endodonticCatalog";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
 import { buildUserIsolationCatalogItemsFromForm, createUserIsolationCatalogItem, createUserIsolationCatalogOverride, getIsolationCatalogOptions, isolationCatalogOwnership, seedIsolationCatalogItems } from "../workflow/isolationCatalog";
@@ -662,6 +665,7 @@ function coneFitReadyCase(overrides: Partial<EndoCase> = {}): EndoCase {
         finalShape: "30/.04",
         obturationGauge: "30",
         masterCone: "30/.04",
+        sealerLabel: "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)",
         coneFitRadiograph: "acceptable",
         dryingStatus: "dry",
         events: [
@@ -1080,12 +1084,37 @@ test("contextual endodontic inputs expose only the active step's canal fields", 
   assert.equal(markup.includes("Chamber depth"), false);
 });
 
+test("sealer contextual input keeps clinical recording separate from catalogue actions", () => {
+  const caseData = baseCase({ canals: [{ ...blankCanal("MB"), sealerLabel: "Custom documented sealer" }] });
+  const markup = renderToStaticMarkup(React.createElement(ContextualEndodonticInputs, {
+    currentNode: protocolNodes["apply-sealer"],
+    caseData,
+    activeCanal: caseData.canals[0],
+    sealerSuggestions: seedEndodonticCatalogItems.map((item) => item.label),
+    onUpdatePreOp: () => {},
+    onUpdateActiveCanal: () => {},
+    onApplyEalDerivedLengths: () => {},
+    onOpenAnesthesiaWorkflow: () => {},
+    onOpenRadiologyWorkflow: () => {},
+    onAddSealerToCatalogue: () => true,
+    onOpenCatalogue: () => {},
+  }));
+
+  assert.match(markup, /Sealer used/);
+  assert.match(markup, /Kerr® Sealapex™/);
+  assert.match(markup, /Add entered value to Catalogue/);
+  assert.match(markup, /Manage Catalogue/);
+  assert.match(markup, /does not record sealer application or add a clinical event/);
+});
+
 test("protocol nodes declare structured contextual fields for guarded chairside inputs", () => {
   assert.deepEqual(protocolNodes["advance-10c"].contextualFieldIds, ["estimatedWorkingLength", "fileTerminalLength"]);
   assert.deepEqual(protocolNodes["establish-eal0"].contextualFieldIds, ["eal0", "patencyLength", "shapingLength", "referencePoint", "wlRadiographStatus"]);
   assert.deepEqual(protocolNodes["create-final-shape"].contextualFieldIds, ["finalShape"]);
   assert.deepEqual(protocolNodes["cone-fit-radiograph"].contextualFieldIds, ["coneFitRadiograph"]);
   assert.deepEqual(protocolNodes["dry-for-obturation"].contextualFieldIds, ["shapingLength", "dryingStatus"]);
+  assert.deepEqual(protocolNodes["apply-sealer"].contextualFieldIds, ["sealerLabel"]);
+  assert.deepEqual(protocolNodes["reapply-sealer"].contextualFieldIds, ["sealerLabel"]);
 });
 
 test("shared readiness actions open reusable setup and module paths for operative context", () => {
@@ -1201,6 +1230,52 @@ test("shared readiness uses review labels when shared module status already exis
   assert.equal(markup.includes("Review isolation"), true);
   assert.equal(markup.includes("Open anesthesia workflow"), false);
   assert.equal(markup.includes("Open isolation workflow"), false);
+});
+
+test("shared readiness distinguishes administered anesthesia that still needs assessment", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    globalEvents: [
+      {
+        id: "evt_anesthesia_assessment_pending",
+        timestamp: "2026-01-01T10:00:00.000Z",
+        type: anesthesiaEventTypes.administered,
+        tooth: "36",
+        scope: { kind: "tooth", tooth: "36" },
+        details: { route: "injection", agentLabel: "Documented anesthetic", tooth: "36" },
+      },
+    ],
+  });
+  const anesthesiaEntries: Array<string | undefined> = [];
+  const noop = () => {};
+  const summary = getCaseCapabilitySummary(caseData);
+  const actions = getSharedReadinessActions({
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  });
+  const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
+    caseData,
+    capabilitySummary: summary,
+    onOpenCaseSetupStatus: noop,
+    onOpenAnesthesiaWorkflow: noop,
+    onOpenIsolationWorkflow: noop,
+    onOpenRadiologyWorkflow: noop,
+  }));
+
+  assert.equal(summary.anesthesia.satisfied, false);
+  assert.equal(summary.anesthesia.needsReassessment, false);
+  assert.equal(summary.anesthesia.pendingAssessment, true);
+  assert.equal(summary.anesthesia.source, "event");
+  assert.equal(sharedCapabilityStatusLabel(summary.anesthesia), "Awaiting assessment");
+  assert.match(summary.anesthesia.summary, /administered.*awaiting adequacy assessment/i);
+  assert.equal(actions.find((action) => action.label === "Anesthesia")?.actionLabel, "Assess anesthesia");
+  actions.find((action) => action.label === "Anesthesia")?.onClick();
+  assert.deepEqual(anesthesiaEntries, ["anesthesia-assess"]);
+  assert.match(markup, /Anesthesia[\s\S]*Awaiting assessment[\s\S]*Assess anesthesia/);
+  assert.equal(markup.includes("Open anesthesia workflow"), false);
 });
 
 test("shared readiness forms require an explicit target scope", () => {
@@ -1527,7 +1602,7 @@ test("operative runner renders setup record and completion states without readin
   assert.equal(markup.includes("Decision"), false);
 });
 
-test("shared workflow modal uses close labels instead of return labels for dismiss actions", () => {
+test("shared workflow modal separates mode, clinical record, catalogue, and close actions", () => {
   const caseData = baseCase();
   const noop = () => {};
   const anesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
@@ -1595,23 +1670,47 @@ test("shared workflow modal uses close labels instead of return labels for dismi
     onRecordRadiologyEvent: noop,
     onUserIsolationCatalogItemsChange: noop,
   }));
+  const activeAnesthesiaMarkup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-record",
+      workflowRunId: "run_shared_anesthesia_active_test",
+    },
+    caseData,
+    parentNodeTitle: "Direct restoration",
+    parentWorkflowRunId: "run_parent_test",
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+    onUserAnesthesiaCatalogItemsChange: noop,
+  }));
 
-  assert.equal(anesthesiaMarkup.includes("Close"), true);
-  assert.equal(anesthesiaMarkup.includes("Close shared workflow"), true);
+  assert.equal((anesthesiaMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.equal(anesthesiaMarkup.includes("Close shared workflow"), false);
   assert.equal(anesthesiaMarkup.includes("Return to parent workflow"), false);
-  assert.equal(isolationMarkup.includes("Close"), true);
-  assert.equal(isolationMarkup.includes("Close shared workflow"), true);
+  assert.equal((isolationMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.equal(isolationMarkup.includes("Close shared workflow"), false);
   assert.equal(isolationMarkup.includes("Return to parent workflow"), false);
   assert.equal(radiologyMarkup.includes("Radiology"), true);
   assert.equal(radiologyMarkup.includes("Record radiograph review"), true);
   assert.equal(radiologyMarkup.includes("Radiograph entries"), true);
-  assert.equal(radiologyMarkup.includes("Close shared workflow"), true);
-  assert.equal(activeIsolationMarkup.includes("Record placement"), true);
-  assert.equal(activeIsolationMarkup.includes("Record reassessment"), true);
-  assert.equal(activeIsolationMarkup.includes("Record rubber dam placed"), true);
-  assert.equal(activeIsolationMarkup.includes("Save shortcuts"), true);
-  assert.equal(activeIsolationMarkup.includes("Close shared workflow"), true);
-  assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placed") < activeIsolationMarkup.indexOf("Close shared workflow"));
+  assert.equal(radiologyMarkup.includes('data-clinical-record-action="radiology"'), true);
+  assert.match(radiologyMarkup, /data-clinical-record-action="radiology"[^>]*class="[^"]*w-full[^"]*rounded-2xl[^"]*p-4/);
+  assert.equal(radiologyMarkup.includes("Close shared workflow"), false);
+  assert.match(activeIsolationMarkup, /aria-label="Isolation entry type"[\s\S]*>Placement<[\s\S]*>Reassessment</);
+  assert.equal(activeIsolationMarkup.includes("Record rubber dam placement"), true);
+  assert.equal(activeIsolationMarkup.includes('data-clinical-record-action="isolation"'), true);
+  assert.equal(activeIsolationMarkup.includes("Add entered values to Catalogue"), true);
+  assert.equal(activeIsolationMarkup.includes("They do not record a clinical entry."), true);
+  assert.equal(activeIsolationMarkup.includes("Close shared workflow"), false);
+  assert.ok(activeIsolationMarkup.indexOf("Record rubber dam placement") < activeIsolationMarkup.indexOf("Add entered values to Catalogue"));
+  assert.match(activeAnesthesiaMarkup, /aria-label="Anesthesia entry type"[\s\S]*>Administration<[\s\S]*>Assessment</);
+  assert.equal(activeAnesthesiaMarkup.includes("Record anesthesia injection"), true);
+  assert.equal(activeAnesthesiaMarkup.includes("Next: Assess anesthesia adequacy"), true);
+  assert.equal(activeAnesthesiaMarkup.includes('data-clinical-record-action="anesthesia"'), true);
+  assert.equal(activeAnesthesiaMarkup.includes("Add entered values to Catalogue"), true);
+  assert.ok(activeAnesthesiaMarkup.indexOf("Record anesthesia injection") < activeAnesthesiaMarkup.indexOf("Add entered values to Catalogue"));
 });
 
 test("shared anesthesia and radiology runners keep repeatable events visible as separate entries", () => {
@@ -2125,9 +2224,42 @@ test("sealer and cone seating happy path reaches orifice gap evaluation", () => 
 
   const fullNote = buildFullNote(caseData);
   assert.match(fullNote, /Canal dried to dry\/slightly damp paper point/);
-  assert.match(fullNote, /Bioceramic sealer applied/);
+  assert.match(fullNote, /Kerr® Sealapex™ \(Calcium Hydroxide Root Canal Sealer\) applied/);
   assert.match(fullNote, /Paper point passed through sealer/);
   assert.match(fullNote, /Pre-fit GP cone seated to shaping length/);
+});
+
+test("sealer application requires a documented sealer and snapshots its label", () => {
+  const withoutSealer = coneFitReadyCase({
+    canals: [{ ...coneFitReadyCase().canals[0], sealerLabel: "" }],
+  });
+  const appliedOption = protocolNodes["apply-sealer"].options[0];
+  const blocked = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: appliedOption.label,
+    caseData: withoutSealer,
+    activeCanalName: "MB",
+  });
+  assert.deepEqual(blocked.errors, ["Sealer used"]);
+
+  const unsafeOption = protocolNodes["apply-sealer"].options[1];
+  const unsafe = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: unsafeOption.label,
+    caseData: withoutSealer,
+    activeCanalName: "MB",
+  });
+  assert.deepEqual(unsafe.errors, []);
+
+  const recorded = applyDecision({
+    currentNodeId: "apply-sealer",
+    selectedOptionLabel: appliedOption.label,
+    caseData: coneFitReadyCase(),
+    activeCanalName: "MB",
+  });
+  assert.equal(recorded.generatedEvent?.details?.sealerLabel, "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)");
+  assert.match(eventFragment(recorded.generatedEvent!), /Kerr® Sealapex™/);
+  assert.match(buildCompactNote(recorded.updatedCaseData), /Kerr® Sealapex™/);
 });
 
 test("drying and sealer troubleshooting branches route safely", () => {
@@ -3969,6 +4101,57 @@ test("unified catalogue persistence migrates legacy module preferences and impor
   );
 });
 
+test("catalogue v2 migrates the unified v1 store without deleting accepted preferences", () => {
+  const anesthesiaItem = createUserAnesthesiaCatalogItem({ route: "injection", field: "agents", label: "Legacy agent" });
+  const isolationItem = createUserIsolationCatalogItem({ field: "notes", label: "Legacy isolation note" });
+  const storage = memoryStorage({
+    [LEGACY_USER_CATALOG_STORAGE_KEY]: JSON.stringify({ schemaVersion: 1, items: [anesthesiaItem, isolationItem] }),
+  });
+
+  const migrated = loadUserCatalogItems(storage);
+  assert.deepEqual(migrated.map((item) => item.label), ["Legacy agent", "Legacy isolation note"]);
+  assert.ok(storage.getItem(LEGACY_USER_CATALOG_STORAGE_KEY));
+  assert.deepEqual(JSON.parse(storage.getItem(USER_CATALOG_STORAGE_KEY) || "{}").schemaVersion, 2);
+});
+
+test("global catalogue page exposes registry sections, endodontic sealers, and administration", () => {
+  const markup = renderToStaticMarkup(React.createElement(CataloguePage, {
+    items: [],
+    onChange: () => {},
+    onClose: () => {},
+  }));
+
+  assert.match(markup, /Clinical Catalogue/);
+  assert.match(markup, /Shared modules/);
+  assert.match(markup, /Endodontics/);
+  assert.match(markup, /Catalogue preferences/);
+  assert.doesNotMatch(markup, /patient chart|patient number/i);
+});
+
+test("endodontic sealer catalogue includes clinician-supplied seeds and user preferences", () => {
+  assert.deepEqual(seedEndodonticCatalogItems.map((item) => item.id), [
+    "endodontic.sealers.kerr-sealapex",
+    "endodontic.sealers.kerr-pulp-canal-sealer",
+    "endodontic.sealers.angelus-mta-fillapex",
+  ]);
+  assert.deepEqual(seedEndodonticCatalogItems.map((item) => item.label), [
+    "Kerr® Sealapex™ (Calcium Hydroxide Root Canal Sealer)",
+    "Kerr® Pulp Canal Sealer (Zinc Oxide Eugenol Root Canal Sealer)",
+    "Angelus® MTA Fillapex® (Mineral Trioxide Aggregate Root Canal Sealer)",
+  ]);
+  const custom = createUserEndodonticCatalogItem({ label: "Locally documented sealer", favorite: true, sortOrder: 1 });
+  const hiddenSeed = { ...seedEndodonticCatalogItems[0], owner: "user" as const, active: false };
+  const options = getEndodonticSealerCatalogOptions([custom, hiddenSeed]);
+  assert.equal(options[0], "Locally documented sealer");
+  assert.equal(options.includes(seedEndodonticCatalogItems[0].label), false);
+
+  const exported = buildUserCatalogExport([custom], new Date("2026-08-23T12:00:00.000Z"));
+  const parsed = parseUserCatalogExport(JSON.stringify(exported));
+  assert.equal(exported.formatVersion, 2);
+  assert.deepEqual(previewUserCatalogImport([], parsed.state.items).itemsByCategory, { endodontic: 1 });
+  assert.equal(getEndodonticSealerCatalogOptions(parsed.state.items)[0], "Locally documented sealer");
+});
+
 test("anesthesia catalog management helpers create user shortcuts and seed overrides", () => {
   const userDoseShortcut = createUserAnesthesiaCatalogItem({
     route: "injection",
@@ -4158,12 +4341,53 @@ test("shared anesthesia workflow records explicit adequacy without inferring it 
   });
 
   assert.equal(sharedAnesthesiaWorkflow.entryNodeIds[0], "anesthesia-record");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-record"].options[0].nextNodeId, "anesthesia-assess");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-assess"].title, "Assess anesthesia adequacy");
+  assert.equal(sharedAnesthesiaWorkflow.nodes["anesthesia-needs-reassessment"].options[0].nextNodeId, "anesthesia-assess");
   assert.equal(getAnesthesiaAdequateCapabilityOutput(administeredEvent), undefined);
   assert.equal(getAnesthesiaAdequateCapabilityOutput(adequacyEvent)?.name, "anesthesia.adequate");
   assert.equal(isCapabilitySatisfied(administeredCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), false);
   assert.equal(isCapabilitySatisfied(adequateCase, "anesthesia.adequate", { kind: "tooth", tooth: "36" }), true);
   assert.match(eventFragment(administeredEvent), /Anesthesia administered/);
   assert.match(buildFullNote(adequateCase), /Anesthesia adequacy confirmed/);
+});
+
+test("shared anesthesia assessment entry opens directly in assessment mode", () => {
+  const administeredEvent = {
+    id: "evt_anesthesia_admin_for_assessment",
+    timestamp: "2026-01-01T10:00:00.000Z",
+    type: anesthesiaEventTypes.administered,
+    workflowId: sharedAnesthesiaWorkflowId,
+    tooth: "36",
+    scope: { kind: "tooth" as const, tooth: "36" },
+    details: { route: "injection", agentLabel: "Documented anesthetic", tooth: "36" },
+  };
+  const caseData = baseCase({ tooth: "36", globalEvents: [administeredEvent] });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(SharedWorkflowRunnerModal, {
+    launch: {
+      workflowId: sharedAnesthesiaWorkflowId,
+      entryNodeId: "anesthesia-assess",
+      workflowRunId: "run_shared_anesthesia_assessment",
+      targetTooth: "36",
+    },
+    caseData,
+    parentNodeTitle: "Pre-operative review",
+    parentWorkflowRunId: "run_parent_assessment",
+    latestAnesthesiaEvent: administeredEvent,
+    onClose: noop,
+    onRecordAnesthesiaEvent: noop,
+    onRecordIsolationEvent: noop,
+    onRecordRadiologyEvent: noop,
+  }));
+
+  assert.equal(markup.includes("Assess anesthesia adequacy"), true);
+  assert.equal(markup.includes("Administration is recorded."), true);
+  assert.equal(markup.includes("Assessment"), true);
+  assert.equal(markup.includes("Local anesthesia route"), false);
+  assert.match(markup, /data-clinical-record-action="anesthesia"[^>]*class="[^"]*w-full[^"]*rounded-2xl[^"]*p-4/);
+  assert.equal(markup.includes("Record to current visit"), true);
+  assert.equal(markup.includes("Next: Select an assessment result"), true);
 });
 
 test("shared anesthesia capability fallback requires explicit top-up adequacy and reassessment invalidates it", () => {

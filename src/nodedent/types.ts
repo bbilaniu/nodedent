@@ -164,6 +164,7 @@ export type CanalRecord = {
   finalShape?: string;
   obturationGauge?: string;
   masterCone?: string;
+  sealerLabel?: string;
   coneFitRadiograph?: RadiographStatus;
   dryingStatus?: "" | "dry" | "slightly damp" | "wet" | "persistent wet";
   events?: ClinicalEvent[];
@@ -261,6 +262,7 @@ export type EndodonticFieldId =
   | "finalShape"
   | "obturationGauge"
   | "masterCone"
+  | "sealerLabel"
   | "coneFitRadiograph"
   | "dryingStatus";
 

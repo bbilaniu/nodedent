@@ -4,6 +4,13 @@
 
 Accepted
 
+## Related Decision
+
+[ADR 0013](0013-separate-action-selection-and-clinical-state-color-semantics.md)
+proposes a semantic refinement that separates action prominence, control
+selection, clinical status, and workflow category without changing this ADR's
+adopted brand palette.
+
 ## Context
 
 The endodontic chairside app originally used generic Tailwind color utilities such as slate, blue, emerald, green, amber, orange, and red. Some of those colors were purely visual, while others carried clinical meaning.

@@ -10,7 +10,7 @@ import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
 function getNextAnesthesiaNodeId(eventType: AnesthesiaEventType) {
   if (eventType === anesthesiaEventTypes.adequacyConfirmed) return "anesthesia-complete";
   if (eventType === anesthesiaEventTypes.needsReassessment) return "anesthesia-needs-reassessment";
-  return "anesthesia-record";
+  return "anesthesia-assess";
 }
 
 export function AnesthesiaWorkflowRunner({
@@ -20,8 +20,8 @@ export function AnesthesiaWorkflowRunner({
   latestAnesthesiaEvent,
   userCatalogItems = [],
   onUserCatalogItemsChange,
-  onClose,
   onRecordAnesthesiaEvent,
+  onOpenCatalogue,
 }: {
   launch: EmbeddedWorkflowLaunch;
   caseData: EndoCase;
@@ -29,7 +29,7 @@ export function AnesthesiaWorkflowRunner({
   latestAnesthesiaEvent?: ClinicalEvent;
   userCatalogItems?: CatalogItem[];
   onUserCatalogItemsChange?: (items: CatalogItem[]) => void;
-  onClose: () => void;
+  onOpenCatalogue?: () => void;
   onRecordAnesthesiaEvent: (
     eventType: AnesthesiaEventType,
     details: AnesthesiaEventDetails,
@@ -40,12 +40,14 @@ export function AnesthesiaWorkflowRunner({
   const [moduleNodeId, setModuleNodeId] = useState(launch.entryNodeId || workflow.entryNodeIds[0]);
   const [recordedLabel, setRecordedLabel] = useState("");
   const currentNode = workflow.nodes[moduleNodeId] || workflow.nodes[workflow.entryNodeIds[0]];
-  const completion = workflow.completionNodeIds.includes(currentNode.id);
+  const hasRecordableOptions = currentNode.options.some((option) => option.noteEvent?.type);
+  const completion = workflow.completionNodeIds.includes(currentNode.id) && !hasRecordableOptions;
   const defaultAction = currentNode.id === "anesthesia-needs-reassessment" ? anesthesiaEventTypes.topUpGiven : anesthesiaEventTypes.administered;
   const targetTooth = launch.targetTooth || caseData.tooth;
   const anesthesiaEvents = (caseData.globalEvents || []).filter(isAnesthesiaEvent);
   const administrationEvents = anesthesiaEvents.filter(isAnesthesiaAdministrationEvent);
   const assessmentEvents = anesthesiaEvents.filter((event) => !isAnesthesiaAdministrationEvent(event));
+  const assessmentPending = currentNode.id === "anesthesia-assess";
 
   function recordEvent(eventType: AnesthesiaEventType, details: AnesthesiaEventDetails, options?: AnesthesiaEventOptions) {
     const label = getAnesthesiaEventLabel(eventType);
@@ -82,8 +84,8 @@ export function AnesthesiaWorkflowRunner({
       </div>
 
       {recordedLabel ? (
-        <div className="mt-4 rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy">
-          <strong>{recordedLabel}</strong> was appended to the current visit. The parent workflow remains at its current step.
+        <div className={`mt-4 rounded-2xl border p-4 text-sm leading-6 ${assessmentPending ? "border-amber-200 bg-amber-50 text-amber-900" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
+          <strong>{recordedLabel}</strong> was appended to the current visit. {assessmentPending ? "Record the adequacy assessment next; the parent workflow remains blocked until adequacy is confirmed." : "The parent workflow remains at its current step."}
         </div>
       ) : null}
 
@@ -125,23 +127,15 @@ export function AnesthesiaWorkflowRunner({
             key={moduleNodeId}
             tooth={targetTooth}
             latestEvent={latestAnesthesiaEvent}
+            initialMode={assessmentPending ? "assessment" : "administration"}
             defaultAction={defaultAction}
             userCatalogItems={userCatalogItems}
             onSaveCatalogItems={onUserCatalogItemsChange ? saveCatalogItems : undefined}
+            onManageShortcuts={onOpenCatalogue}
             onRecordEvent={recordEvent}
           />
         </div>
       ) : null}
-
-      <div className="mt-4 flex flex-col items-stretch gap-2 sm:items-start">
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-xl border border-brand-navy bg-brand-navy px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-navy-deep sm:w-auto"
-        >
-          Close shared workflow
-        </button>
-      </div>
     </>
   );
 }

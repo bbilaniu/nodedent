@@ -1,13 +1,12 @@
-import { isAnesthesiaRoute } from "../workflow/anesthesia";
-import { anesthesiaCatalogFields } from "../workflow/anesthesiaCatalog";
 import type { CatalogItem } from "../workflow/catalogs";
-import { isolationCatalogFields } from "../workflow/isolationCatalog";
+import { isRegisteredCatalogueApplicability } from "../workflow/catalogueDefinitions";
 import { loadUserAnesthesiaCatalogItems } from "./anesthesiaCatalogPersistence";
 import { loadUserIsolationCatalogItems } from "./isolationCatalogPersistence";
 
-export const USER_CATALOG_STORAGE_KEY = "nodedent.userCatalogs.v1";
+export const USER_CATALOG_STORAGE_KEY = "nodedent.userCatalogs.v2";
+export const LEGACY_USER_CATALOG_STORAGE_KEY = "nodedent.userCatalogs.v1";
 export const USER_CATALOG_EXPORT_KIND = "nodedent-user-catalogues";
-export const USER_CATALOG_EXPORT_VERSION = 1;
+export const USER_CATALOG_EXPORT_VERSION = 2;
 export const MAX_USER_CATALOG_IMPORT_BYTES = 1024 * 1024;
 
 type CatalogStorage = {
@@ -16,7 +15,7 @@ type CatalogStorage = {
 };
 
 export type StoredUserCatalogState = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   items: CatalogItem[];
 };
 
@@ -50,12 +49,6 @@ function normalizeAliases(value: unknown) {
   return aliases.length ? aliases : undefined;
 }
 
-function isKnownCatalogField(category: string, field: string) {
-  if (category === "anesthesia") return (anesthesiaCatalogFields as readonly string[]).includes(field);
-  if (category === "isolation") return (isolationCatalogFields as readonly string[]).includes(field);
-  return false;
-}
-
 export function normalizeUserCatalogItem(value: unknown): CatalogItem | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
@@ -69,10 +62,7 @@ export function normalizeUserCatalogItem(value: unknown): CatalogItem | undefine
   const field = normalizeString(applicability?.field, 80);
 
   if (!id || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(id) || !label || !category) return undefined;
-  if (record.owner !== "user" || !["anesthesia", "isolation"].includes(category)) return undefined;
-  if (field && !isKnownCatalogField(category, field)) return undefined;
-  if (category === "anesthesia" && route && !isAnesthesiaRoute(route)) return undefined;
-  if (category === "isolation" && route) return undefined;
+  if (record.owner !== "user" || !isRegisteredCatalogueApplicability(category, route, field)) return undefined;
 
   const sortOrder = typeof record.sortOrder === "number" && Number.isFinite(record.sortOrder) && record.sortOrder >= 0
     ? record.sortOrder
@@ -96,10 +86,10 @@ export function normalizeUserCatalogItem(value: unknown): CatalogItem | undefine
 function normalizeStoredUserCatalogState(value: unknown, rejectInvalidItems = false): StoredUserCatalogState | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
   const record = value as Record<string, unknown>;
-  if (record.schemaVersion !== 1 || !Array.isArray(record.items)) return undefined;
+  if (![1, 2].includes(record.schemaVersion as number) || !Array.isArray(record.items)) return undefined;
   const items = record.items.map(normalizeUserCatalogItem);
   if (rejectInvalidItems && items.some((item) => !item)) return undefined;
-  return { schemaVersion: 1, items: items.filter(Boolean) as CatalogItem[] };
+  return { schemaVersion: 2, items: items.filter(Boolean) as CatalogItem[] };
 }
 
 function deduplicateCatalogItems(items: CatalogItem[]) {
@@ -108,11 +98,22 @@ function deduplicateCatalogItems(items: CatalogItem[]) {
   return [...byId.values()];
 }
 
+function loadStoredState(storage: CatalogStorage, key: string) {
+  const stored = storage.getItem(key);
+  return stored ? normalizeStoredUserCatalogState(JSON.parse(stored)) : undefined;
+}
+
 export function loadUserCatalogItems(storage = getDefaultCatalogStorage()): CatalogItem[] {
   if (!storage) return [];
   try {
-    const stored = storage.getItem(USER_CATALOG_STORAGE_KEY);
-    if (stored) return normalizeStoredUserCatalogState(JSON.parse(stored))?.items || [];
+    const current = loadStoredState(storage, USER_CATALOG_STORAGE_KEY);
+    if (current) return current.items;
+
+    const priorUnified = loadStoredState(storage, LEGACY_USER_CATALOG_STORAGE_KEY);
+    if (priorUnified) {
+      saveUserCatalogItems(priorUnified.items, storage);
+      return priorUnified.items;
+    }
   } catch {
     return [];
   }
@@ -128,7 +129,7 @@ export function loadUserCatalogItems(storage = getDefaultCatalogStorage()): Cata
 export function saveUserCatalogItems(items: CatalogItem[], storage = getDefaultCatalogStorage()) {
   if (!storage) return;
   const state: StoredUserCatalogState = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     items: deduplicateCatalogItems(items.map(normalizeUserCatalogItem).filter(Boolean) as CatalogItem[]),
   };
   storage.setItem(USER_CATALOG_STORAGE_KEY, JSON.stringify(state));
@@ -140,7 +141,7 @@ export function buildUserCatalogExport(items: CatalogItem[], now: Date = new Dat
     formatVersion: USER_CATALOG_EXPORT_VERSION,
     exportedAt: now.toISOString(),
     state: {
-      schemaVersion: 1,
+      schemaVersion: 2,
       items: deduplicateCatalogItems(items.map(normalizeUserCatalogItem).filter(Boolean) as CatalogItem[]),
     },
   };
@@ -168,10 +169,16 @@ export function parseUserCatalogExport(input: string | unknown): UserCatalogExpo
   }
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Catalogue import is malformed.");
   const record = value as Record<string, unknown>;
+  const rawState = record.state && typeof record.state === "object" && !Array.isArray(record.state)
+    ? record.state as Record<string, unknown>
+    : undefined;
   const state = normalizeStoredUserCatalogState(record.state, true);
+  const versionPairSupported =
+    (record.formatVersion === 1 && rawState?.schemaVersion === 1) ||
+    (record.formatVersion === USER_CATALOG_EXPORT_VERSION && rawState?.schemaVersion === 2);
   if (
     record.exportKind !== USER_CATALOG_EXPORT_KIND ||
-    record.formatVersion !== USER_CATALOG_EXPORT_VERSION ||
+    !versionPairSupported ||
     typeof record.exportedAt !== "string" ||
     !Number.isFinite(new Date(record.exportedAt).getTime()) ||
     !state
@@ -183,7 +190,12 @@ export function parseUserCatalogExport(input: string | unknown): UserCatalogExpo
     if (ids.has(item.id)) throw new Error("Catalogue import contains duplicate item identifiers.");
     ids.add(item.id);
   }
-  return { exportKind: USER_CATALOG_EXPORT_KIND, formatVersion: 1, exportedAt: record.exportedAt, state };
+  return {
+    exportKind: USER_CATALOG_EXPORT_KIND,
+    formatVersion: USER_CATALOG_EXPORT_VERSION,
+    exportedAt: record.exportedAt,
+    state,
+  };
 }
 
 function comparableItem(item: CatalogItem) {

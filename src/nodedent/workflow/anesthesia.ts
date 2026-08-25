@@ -1,7 +1,7 @@
 import type { CapabilitySatisfaction, ClinicalEvent, WorkflowDefinition, WorkflowScope } from "../types";
 
 export const sharedAnesthesiaWorkflowId = "shared.anesthesia";
-export const sharedAnesthesiaWorkflowVersion = "0.1.0";
+export const sharedAnesthesiaWorkflowVersion = "0.2.0";
 
 export const anesthesiaEventTypes = {
   administered: "anesthesia.administered",
@@ -211,9 +211,21 @@ export const sharedAnesthesiaWorkflow: WorkflowDefinition = {
       phase: "Anesthesia",
       title: "Record anesthesia status",
       chairsideInstruction: "Record anesthesia documentation and explicitly confirm adequacy only when the clinician has assessed it.",
+      requiredInputs: ["Scope", "Administration details"],
+      options: [
+        { label: "Anesthesia administered", nextNodeId: "anesthesia-assess", noteEvent: { type: anesthesiaEventTypes.administered } },
+        { label: "Adequacy confirmed", nextNodeId: "anesthesia-complete", noteEvent: { type: anesthesiaEventTypes.adequacyConfirmed } },
+        { label: "Needs reassessment", nextNodeId: "anesthesia-needs-reassessment", noteEvent: { type: anesthesiaEventTypes.needsReassessment } },
+      ],
+    },
+    "anesthesia-assess": {
+      id: "anesthesia-assess",
+      workflowId: sharedAnesthesiaWorkflowId,
+      phase: "Anesthesia",
+      title: "Assess anesthesia adequacy",
+      chairsideInstruction: "Administration is recorded. Record the clinician's adequacy assessment before the parent workflow proceeds.",
       requiredInputs: ["Scope", "Adequacy response"],
       options: [
-        { label: "Anesthesia administered", nextNodeId: "anesthesia-record", noteEvent: { type: anesthesiaEventTypes.administered } },
         { label: "Adequacy confirmed", nextNodeId: "anesthesia-complete", noteEvent: { type: anesthesiaEventTypes.adequacyConfirmed } },
         { label: "Needs reassessment", nextNodeId: "anesthesia-needs-reassessment", noteEvent: { type: anesthesiaEventTypes.needsReassessment } },
       ],
@@ -233,7 +245,7 @@ export const sharedAnesthesiaWorkflow: WorkflowDefinition = {
       title: "Anesthesia needs reassessment",
       chairsideInstruction: "Record a top-up or other reassessment event before a parent workflow relies on anesthesia adequacy.",
       options: [
-        { label: "Top-up recorded", nextNodeId: "anesthesia-complete", noteEvent: { type: anesthesiaEventTypes.topUpGiven } },
+        { label: "Top-up recorded", nextNodeId: "anesthesia-assess", noteEvent: { type: anesthesiaEventTypes.topUpGiven } },
         { label: "Still needs reassessment", nextNodeId: "anesthesia-needs-reassessment", noteEvent: { type: anesthesiaEventTypes.needsReassessment } },
       ],
     },

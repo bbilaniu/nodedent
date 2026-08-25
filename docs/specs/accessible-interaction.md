@@ -11,6 +11,11 @@ Give NodeDent dialogs, validation, feedback, keyboard interaction, focus states,
 
 This spec owns A11Y-01 through A11Y-03 and TOUCH-01 from the [2026-07-11 website review](../reviews/2026-07-11-website-review.md). Static review identified the gaps; browser and assistive-technology testing must confirm runtime behavior.
 
+[ADR 0013](../adr/0013-separate-action-selection-and-clinical-state-color-semantics.md)
+proposes separate visual roles for actions, selected controls, and status. This
+spec owns the corresponding programmatic state, non-color cues, focus behavior,
+and assistive-technology requirements.
+
 ## Required Outcomes
 
 ### Dialog contract

@@ -1,7 +1,7 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
 import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
-import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent } from "./anesthesia";
+import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent, isAnesthesiaAdministrationEvent, isAnesthesiaEvent } from "./anesthesia";
 import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";
 import { getRadiographsReviewedCapabilityOutput, getRadiologyScopeFromEvent, radiologyEventTypes } from "./radiology";
 
@@ -17,6 +17,7 @@ export type CapabilityStatus = {
   summary: string;
   reason?: string;
   recordedOutsideScope?: boolean;
+  pendingAssessment?: boolean;
 };
 
 export type CaseCapabilitySummary = {
@@ -246,29 +247,36 @@ function fallbackStatusFromEvents(name: KnownCapabilityName, events: ClinicalEve
     const satisfiesCapability = name === "anesthesia.adequate"
       ? Boolean(getAnesthesiaAdequateCapabilityOutput(event))
       : isolationEstablishedEvents.has(event.type);
-    return (satisfiesCapability || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope, name);
+    const startsAssessmentSequence = name === "anesthesia.adequate" && isAnesthesiaAdministrationEvent(event);
+    return (satisfiesCapability || startsAssessmentSequence || invalidatingEvents.has(event.type)) && scopeMatches(eventScope, queryScope, name);
   });
   const latest = matchingEvents.at(-1);
   if (!latest) return undefined;
 
   const invalidated = invalidatingEvents.has(latest.type);
+  const pendingAssessment = name === "anesthesia.adequate" && isAnesthesiaAdministrationEvent(latest) && !getAnesthesiaAdequateCapabilityOutput(latest);
   const fallbackCapability = !invalidated && name === "anesthesia.adequate" ? getAnesthesiaAdequateCapabilityOutput(latest) : undefined;
   const expired = fallbackCapability ? isExpired(fallbackCapability.expiresAt || latest.expiresAt, now) : false;
   const summary = name === "anesthesia.adequate"
-    ? invalidated || expired ? "Anesthesia needs reassessment" : "Anesthesia adequate"
+    ? pendingAssessment
+      ? "Anesthesia administered — awaiting adequacy assessment"
+      : invalidated || expired ? "Anesthesia needs reassessment" : "Anesthesia adequate"
     : invalidated ? "Isolation needs reassessment" : "Isolation established";
   const reason = name === "anesthesia.adequate"
-    ? expired ? "Recorded anesthesia adequacy has expired." : "The latest matching anesthesia event indicates reassessment is needed."
+    ? pendingAssessment
+      ? "Record an explicit adequacy assessment before the parent workflow proceeds."
+      : expired ? "Recorded anesthesia adequacy has expired." : "The latest matching anesthesia event indicates reassessment is needed."
     : "The latest matching isolation event indicates compromised or removed isolation.";
   return {
     name,
-    satisfied: !invalidated && !expired,
+    satisfied: !invalidated && !expired && !pendingAssessment,
     needsReassessment: invalidated || expired,
+    pendingAssessment,
     source: "event",
     sourceEvent: latest,
     scope: getEventScope(latest),
     summary,
-    reason: invalidated || expired ? reason : undefined,
+    reason: invalidated || expired || pendingAssessment ? reason : undefined,
   };
 }
 
@@ -294,7 +302,7 @@ export function getCapabilityStatus(caseData: EndoCase, name: KnownCapabilityNam
 
   const recordedOutsideScope = events
     .filter((event) => name === "anesthesia.adequate"
-      ? Boolean(getAnesthesiaAdequateCapabilityOutput(event))
+      ? isAnesthesiaEvent(event) || Boolean(getAnesthesiaAdequateCapabilityOutput(event))
       : name === "isolation.established"
         ? isolationEstablishedEvents.has(event.type) || Boolean(eventSatisfiesCapability(event, name))
         : Boolean(eventSatisfiesCapability(event, name)))

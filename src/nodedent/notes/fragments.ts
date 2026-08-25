@@ -32,6 +32,7 @@ export function eventFragment(event: ClinicalEvent) {
 
   const canal = event.canal ? `${event.canal}: ` : "";
   const snap = event.details?.canalSnapshot || {};
+  const sealerLabel = String(event.details?.sealerLabel || snap.sealerLabel || "").trim();
   const fragments: Record<string, string> = {
     "preop.reviewCompleted": "Pre-op review completed; chamber depth and estimated WL recorded where available.",
     "case.continuedFromPriorVisit": "Case continued from prior visit / outside system; prior treatment facts recorded as history.",
@@ -111,11 +112,11 @@ export function eventFragment(event: ClinicalEvent) {
     "drying.persistentWetBeforeObturation": `${canal}Persistent wet canal noted before obturation; medication pathway selected.`,
     "sealer.patencyConfirmed": `${canal}10C file confirmed super loose patency before sealer placement.`,
     "sealer.patencyNotConfirmed": `${canal}Patency could not be confirmed before sealer placement; troubleshooting selected.`,
-    "sealer.applied": `${canal}Bioceramic sealer applied with passive White NaviTip withdrawal.`,
+    "sealer.applied": `${canal}${sealerLabel || "Bioceramic sealer"} applied with passive White NaviTip withdrawal.`,
     "sealer.naviTipUnsafe": `${canal}White NaviTip placement was not safe/predictable; medication pathway selected.`,
     "sealer.paperPointDistributed": `${canal}Paper point passed through sealer to shaping length to distribute sealer.`,
     "sealer.paperPointShort": `${canal}Paper point did not reach shaping length after sealer placement; returned to patency confirmation.`,
-    "sealer.reapplied": `${canal}Bioceramic sealer re-applied.`,
+    "sealer.reapplied": `${canal}${sealerLabel || "Bioceramic sealer"} re-applied.`,
     "sealer.reapplyUnsafe": `${canal}Sealer re-application was not safe/predictable; medication pathway selected.`,
     "gpSeating.coneSeated": `${canal}Pre-fit GP cone seated to shaping length.`,
     "gpSeating.coneShortAfterSealer": `${canal}GP cone did not seat to shaping length after sealer placement; returned to patency confirmation.`,

@@ -173,10 +173,11 @@ export function buildAnesthesiaEventFromForm(
   };
 }
 
-export function getAnesthesiaRouteActionLabel(route: AnesthesiaRoute) {
-  if (route === "topical") return "Add topical";
-  if (route === "other") return "Add other";
-  return "Add injection";
+export function getAnesthesiaAdministrationRecordLabel(route: AnesthesiaRoute, action: AnesthesiaAdministrationAction) {
+  if (action === anesthesiaEventTypes.topUpGiven) return "Record anesthesia top-up";
+  if (route === "topical") return "Record topical anesthesia";
+  if (route === "other") return "Record other anesthesia administration";
+  return "Record anesthesia injection";
 }
 
 export function getAnesthesiaRouteSelectionLabel(route: AnesthesiaRoute) {

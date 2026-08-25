@@ -48,6 +48,7 @@ export const CanalRecordSchema = z.object({
   finalShape: z.string().optional(),
   obturationGauge: z.string().optional(),
   masterCone: z.string().optional(),
+  sealerLabel: z.string().optional(),
   coneFitRadiograph: RadiographStatusSchema.optional(),
   dryingStatus: z.union([z.literal(""), z.literal("dry"), z.literal("slightly damp"), z.literal("wet"), z.literal("persistent wet")]).optional(),
   events: z.array(ClinicalEventSchema).optional(),

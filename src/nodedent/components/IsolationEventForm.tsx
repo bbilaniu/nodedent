@@ -204,7 +204,7 @@ export function IsolationEventForm({
             disabled={!canSaveShortcuts}
             className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
           >
-            Save shortcuts
+            Add entered values to Catalogue
           </button>
         ) : null}
         {onManageShortcuts ? (
@@ -213,7 +213,7 @@ export function IsolationEventForm({
             onClick={onManageShortcuts}
             className="rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
           >
-            Manage shortcuts
+            Manage Catalogue
           </button>
         ) : null}
       </div>
