@@ -22,10 +22,16 @@ export function MeasurementPanel({
 }) {
   const suggestedLengths = getSuggestedLengths(activeCanal);
   const pairedFieldGridClass = "grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]";
+  const toothLabel = caseData.tooth || "not set";
+  const canalLabel = activeCanal?.name ? `${activeCanal.name} canal` : "Canal not set";
 
   return (
     <aside className={`order-3 min-w-0 space-y-4 lg:col-span-2 lg:col-start-1 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-1 ${className}`}>
       <SectionCard title="Measurements">
+        <div className="mb-3 rounded-xl border border-brand-blue-light/60 bg-brand-blue-light/20 px-3 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-brand-slate">Measurement target</p>
+          <p className="mt-1 text-sm font-semibold text-brand-navy">Tooth {toothLabel} · {canalLabel}</p>
+        </div>
         <div className="grid gap-3">
           <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate">Case-level measurement</p>

@@ -985,6 +985,7 @@ test("active workflow target panel renders operative setup without canal control
       onManualEvent: noop,
       onResetManualStatus: noop,
       onOpenPhaseMap: noop,
+      onOpenCaseSetupStatus: noop,
     },
     operativeProps: {
       caseData,

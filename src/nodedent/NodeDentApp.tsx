@@ -1719,6 +1719,7 @@ function ClinicalWorkspace({
                       setSelectedProgressPhase(currentNode.phase);
                       setIsProgressDetailOpen(true);
                     },
+                    onOpenCaseSetupStatus: openCasePanel,
                   }}
                   operativeProps={{
                     caseData,
