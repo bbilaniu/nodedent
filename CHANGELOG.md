@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.1
+
+### Patch Changes
+
+- 83192fb: Created the catalogue management page. Cleaned up the anesthetic workflow and clarified the shared workflows
+
 ## 2.3.0
 
 ### Minor Changes
