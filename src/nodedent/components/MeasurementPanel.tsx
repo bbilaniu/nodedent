@@ -23,18 +23,6 @@ export function MeasurementPanel({
   const suggestedLengths = getSuggestedLengths(activeCanal);
   const pairedFieldGridClass = "grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(210px,1fr))]";
 
-  if (currentNodeId === "preop") {
-    return (
-      <aside className={`order-3 min-w-0 space-y-4 lg:col-span-2 lg:col-start-1 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-1 ${className}`}>
-        <SectionCard title="Measurements">
-          <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 text-sm leading-6 text-brand-slate">
-            Record scoped radiograph review in the shared radiology workflow, then enter chamber depth and estimated WL before beginning access.
-          </div>
-        </SectionCard>
-      </aside>
-    );
-  }
-
   return (
     <aside className={`order-3 min-w-0 space-y-4 lg:col-span-2 lg:col-start-1 lg:row-start-2 xl:col-span-1 xl:col-start-3 xl:row-start-1 ${className}`}>
       <SectionCard title="Measurements">
