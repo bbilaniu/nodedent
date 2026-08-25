@@ -32,6 +32,17 @@ surface-by-surface migration keep this spec active.
 - Color must reinforce labels and structure, never replace them.
 - Light, dark, high-contrast, keyboard-focus, touch, and disabled states are part of the same component contract.
 
+### Case Setup ownership
+
+Case Setup & Status owns case identity, visit status, treatment-workflow selection, and shared readiness. It does not repeat workflow-specific setup forms or summaries merely because a selected workflow consumes that state.
+
+- Endodontic canal management remains in Endodontic progress, and endodontic measurement capture remains in the always-visible Measurements panel.
+- Operative tooth, surface, restoration-intent, material, and shade capture remains in the operative workflow.
+- Selected workflows remain discoverable and openable from the Treatment plan section in Case Setup.
+- Removing duplicated Case Setup sections must not alter clinical events, persistence, validation, note output, exports, or workflow-owned controls.
+
+This active ownership boundary supersedes the historical Case Setup placement recorded in the archived workspace cross-workflow consistency specification.
+
 ## Required Inventory
 
 Inventory and classify the current UI before broad restyling:

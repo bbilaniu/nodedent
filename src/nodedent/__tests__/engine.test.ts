@@ -223,6 +223,7 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(blankMarkup.includes("Import vault"), true);
   assert.equal(blankMarkup.includes("Download vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
+  assert.equal(blankMarkup.indexOf("Sandbox — synthetic data only.") > blankMarkup.indexOf("Lock vault"), true);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: initialCase,
@@ -833,7 +834,7 @@ test("workflow target panel routing keeps operative workflows out of the endodon
   assert.equal(workflowHasOperativeTargetPanel(sharedIsolationWorkflowId), false);
 });
 
-test("full-page case setup shows every selected discipline without merging their target controls", () => {
+test("full-page case setup keeps workflow-specific setup in its owning workflow", () => {
   const radiologyEvent = {
     id: "evt_rendered_radiology_reviewed",
     timestamp: "2026-06-20T20:00:00.000Z",
@@ -867,20 +868,10 @@ test("full-page case setup shows every selected discipline without merging their
     onClose: noop,
     onUpdateCase: noop,
     onOpenDiagnosis: noop,
-    onUpdatePreOp: noop,
-    onUpdateActiveCanal: noop,
-    operativeSetup: {
-      tooth: "36",
-      surfaces: "MO",
-      restorationIntent: "direct restoration",
-      material: "composite",
-      shade: "A2",
-    },
     onApplySuggestedCaseStatus: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
-    onOpenOperativeWorkflowSetup: noop,
     onPrimaryWorkflowSelectionChange: noop,
     onPrimaryWorkflowProcedureChange: noop,
     onOpenPrimaryWorkflow: noop,
@@ -895,11 +886,7 @@ test("full-page case setup shows every selected discipline without merging their
   assert.equal(markup.includes("2 selected"), true);
   assert.equal(markup.includes("Return to workspace"), true);
   assert.equal(markup.includes("Shared readiness"), true);
-  assert.equal(markup.includes("Operative setup"), true);
-  assert.equal(markup.includes("Operative setup summary"), true);
-  assert.equal(markup.includes("Edit tooth and surface scope in the active operative workflow."), true);
-  assert.equal(markup.includes("Open operative workflow"), true);
-  assert.equal(markup.includes("36 MO"), true);
+  assert.equal(markup.includes("Operative setup"), false);
   assert.equal(markup.includes("placeholder=\"e.g., M O\""), false);
   assert.equal(markup.includes("Review diagnosis"), true);
   assert.equal(markup.includes("Pulpal diagnosis"), false);
@@ -915,10 +902,10 @@ test("full-page case setup shows every selected discipline without merging their
   assert.equal(markup.includes("Latest shared radiology event"), true);
   assert.equal(markup.includes("Radiograph review recorded"), true);
   assert.equal(markup.includes("Reviewed modalities: PA"), true);
-  assert.equal(markup.includes("Endodontic setup"), true);
-  assert.equal(markup.includes("Endodontic workflow setup"), true);
-  assert.equal(markup.includes("Estimated WL for"), true);
-  assert.equal(markup.includes("MB:"), true);
+  assert.equal(markup.includes("Endodontic setup"), false);
+  assert.equal(markup.includes("Estimated WL for"), false);
+  assert.equal(markup.includes("Open workflow"), true);
+  assert.equal(markup.includes("est WL 20 mm"), true);
 });
 
 test("diagnosis registry keeps current diagnosis capture discipline-scoped and panel-based", () => {
@@ -974,7 +961,7 @@ test("diagnosis page renders the endodontic fields without workflow-step semanti
   assert.equal(markup.includes("Current step"), false);
 });
 
-test("case setup keeps selected workflow sections visible from shared-module context", () => {
+test("case setup stays workflow-neutral when opened from shared-module context", () => {
   const caseData = baseCase();
   const noop = () => {};
   const markup = renderToStaticMarkup(React.createElement(CaseSetupPage, {
@@ -985,8 +972,6 @@ test("case setup keeps selected workflow sections visible from shared-module con
     onClose: noop,
     onUpdateCase: noop,
     onOpenDiagnosis: noop,
-    onUpdatePreOp: noop,
-    onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
@@ -999,10 +984,10 @@ test("case setup keeps selected workflow sections visible from shared-module con
 
   assert.equal(markup.includes("Case identity"), true);
   assert.equal(markup.includes("Shared readiness"), true);
-  assert.equal(markup.includes("Endodontic setup"), true);
-  assert.equal(markup.includes("Endodontic workflow setup"), true);
+  assert.equal(markup.includes("Endodontic setup"), false);
   assert.equal(markup.includes("Operative setup"), false);
-  assert.equal(markup.includes("Estimated WL for"), true);
+  assert.equal(markup.includes("Endodontic RCT"), true);
+  assert.equal(markup.includes("Open workflow"), true);
 });
 
 test("case setup keeps shared modules as summaries instead of inline event forms", () => {
@@ -1016,8 +1001,6 @@ test("case setup keeps shared modules as summaries instead of inline event forms
     onClose: noop,
     onUpdateCase: noop,
     onOpenDiagnosis: noop,
-    onUpdatePreOp: noop,
-    onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,

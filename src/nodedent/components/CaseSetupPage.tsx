@@ -4,7 +4,7 @@ import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCana
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import { priorCanalStatusLabels } from "../engine/resume";
 import { protocolNodes } from "../protocol/nodes";
-import { operativeDirectRestorationWorkflowId, type OperativeWorkflowSetupState } from "../workflow/operative";
+import { operativeDirectRestorationWorkflowId } from "../workflow/operative";
 import { endodonticRootWorkflowId } from "../workflow/registry";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
@@ -16,17 +16,13 @@ export function CaseSetupPage({
   activeCanal,
   activeWorkflowId,
   currentNodeId,
-  operativeSetup,
   onClose,
   onUpdateCase,
-  onUpdatePreOp,
-  onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
   onOpenDiagnosis,
-  onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
   onOpenPrimaryWorkflow,
@@ -37,17 +33,13 @@ export function CaseSetupPage({
   activeCanal?: CanalRecord | null;
   activeWorkflowId: string;
   currentNodeId: string;
-  operativeSetup?: OperativeWorkflowSetupState;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdatePreOp: (field: string, value: string | boolean) => void;
-  onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   onOpenDiagnosis: () => void;
-  onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
   onOpenPrimaryWorkflow: (workflowId: string) => void;
@@ -114,19 +106,13 @@ export function CaseSetupPage({
         <div className="mt-4">
           <CaseSetupStatusPanel
             caseData={caseData}
-            activeCanal={activeCanal}
-            activeWorkflowId={activeWorkflowId}
             currentNodeId={currentNodeId}
-            operativeSetup={operativeSetup}
             onUpdateCase={onUpdateCase}
-            onUpdatePreOp={onUpdatePreOp}
-            onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
             onOpenDiagnosis={onOpenDiagnosis}
-            onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
             onPrimaryWorkflowSelectionChange={onPrimaryWorkflowSelectionChange}
             onPrimaryWorkflowProcedureChange={onPrimaryWorkflowProcedureChange}
             onOpenPrimaryWorkflow={onOpenPrimaryWorkflow}

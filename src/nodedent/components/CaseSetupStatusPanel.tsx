@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import type { CanalRecord, CaseSetupFocusTarget, EndoCase } from "../types";
+import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import {
   deriveOverallWorkflowProgress,
@@ -11,24 +11,17 @@ import { caseStatusOptions } from "../state/persistence";
 import type { AnesthesiaEventType } from "../workflow/anesthesia";
 import { anesthesiaEventTypes, formatAnesthesiaEventFragment } from "../workflow/anesthesia";
 import { formatIsolationEventFragment, getIsolationCoverageSummary } from "../workflow/isolation";
-import {
-  createOperativeSetupScope,
-  operativeDirectRestorationWorkflowId,
-  type OperativeWorkflowSetupState,
-} from "../workflow/operative";
 import { endodonticProcedureOptions } from "../workflow/procedures";
 import { getDiagnosisSectionSummary } from "../workflow/diagnosis";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent } from "../workflow/radiology";
 import { endodonticRootWorkflowId } from "../workflow/registry";
 import type { CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
-import { getWorkflowTargetPanelKind } from "../workflow/targetPanels";
 import {
   canRemovePrimaryWorkflow,
   normalizeWorkflowInstances,
   selectablePrimaryWorkflows,
 } from "../workflow/workflowInstances";
-import { EndodonticWorkflowSetupPanel } from "./EndodonticWorkflowSetupPanel";
 import { SelectInput, TextInput } from "./FormControls";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel } from "./sharedModuleUi";
 import { cx, panelActionButton, panelSurface, sectionText, statusBadge } from "./uiStyles";
@@ -432,98 +425,33 @@ function IsolationReadinessSection({
   );
 }
 
-function OperativeWorkflowSetupSummary({
-  caseData,
-  setup,
-  onOpenOperativeWorkflowSetup,
-}: {
-  caseData: EndoCase;
-  setup: OperativeWorkflowSetupState;
-  onOpenOperativeWorkflowSetup?: () => void;
-}) {
-  const scope = createOperativeSetupScope(setup, caseData.tooth);
-  const rows = [
-    { label: "Scope", value: scope.label || "No tooth/surface scope yet" },
-    { label: "Restoration intent", value: setup.restorationIntent || "Not recorded" },
-    { label: "Material", value: setup.material || "Not recorded" },
-    { label: "Shade", value: setup.shade || "Not recorded" },
-  ];
-
-  return (
-    <section className={cx(panelSurface.muted, "lg:col-span-2")}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className={sectionText.titleSmall}>Operative setup summary</h3>
-          <p className={sectionText.descriptionSmall}>Edit tooth and surface scope in the active operative workflow.</p>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenOperativeWorkflowSetup}
-          disabled={!onOpenOperativeWorkflowSetup}
-          className="shrink-0 rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate"
-        >
-          Open operative workflow
-        </button>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-        {rows.map((row) => (
-          <div key={row.label} className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate">{row.label}</p>
-            <p className="mt-1 text-sm font-semibold text-brand-navy">{row.value}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export function CaseSetupStatusPanel({
   caseData,
-  activeCanal,
-  activeWorkflowId,
   currentNodeId,
-  operativeSetup,
   onUpdateCase,
-  onUpdatePreOp,
-  onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
   onOpenDiagnosis,
-  onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
   onOpenPrimaryWorkflow,
   initialFocusSection,
 }: {
   caseData: EndoCase;
-  activeCanal?: CanalRecord | null;
-  activeWorkflowId: string;
   currentNodeId: string;
-  operativeSetup?: OperativeWorkflowSetupState;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdatePreOp: (field: string, value: string | boolean) => void;
-  onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
   onOpenDiagnosis: () => void;
-  onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
   onOpenPrimaryWorkflow: (workflowId: string) => void;
   initialFocusSection?: CaseSetupFocusTarget | null;
 }) {
-  const workflowTargetPanelKind = getWorkflowTargetPanelKind(activeWorkflowId);
-  const selectedWorkflowInstances = normalizeWorkflowInstances(caseData, currentNodeId);
-  const showEndodonticWorkflowSetup = workflowTargetPanelKind === "endodontic" ||
-    selectedWorkflowInstances.some((instance) => instance.workflowId === endodonticRootWorkflowId);
-  const showOperativeWorkflowSetup = Boolean(operativeSetup) && (
-    workflowTargetPanelKind === "operative" ||
-    selectedWorkflowInstances.some((instance) => instance.workflowId === operativeDirectRestorationWorkflowId)
-  );
   const anesthesiaSectionRef = useRef<HTMLElement | null>(null);
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
@@ -587,22 +515,6 @@ export function CaseSetupStatusPanel({
           sectionRef={isolationSectionRef}
         />
       </CaseSetupGroup>
-
-      {showEndodonticWorkflowSetup ? (
-        <CaseSetupGroup title="Endodontic setup" description="Endodontic-only canal and measurement setup for the active RCT workflow.">
-          <EndodonticWorkflowSetupPanel caseData={caseData} activeCanal={activeCanal} onUpdatePreOp={onUpdatePreOp} onUpdateActiveCanal={onUpdateActiveCanal} />
-        </CaseSetupGroup>
-      ) : null}
-
-      {showOperativeWorkflowSetup && operativeSetup ? (
-        <CaseSetupGroup title="Operative setup" description="Operative tooth, surface, material, and shade documentation for the active direct restoration workflow.">
-          <OperativeWorkflowSetupSummary
-            caseData={caseData}
-            setup={operativeSetup}
-            onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
-          />
-        </CaseSetupGroup>
-      ) : null}
     </div>
   );
 }
