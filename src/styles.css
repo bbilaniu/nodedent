@@ -210,3 +210,41 @@ html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder {
   color: #7F8FA6;
 }
+
+/* Preserve monotonic interaction feedback where dark-mode palette overrides
+   are more specific than generated hover and active utilities. */
+html[data-theme="dark"] .semantic-action-primary:hover,
+html[data-theme="dark"] .semantic-action-primary:active {
+  background-color: #061A43;
+}
+
+html[data-theme="dark"] .semantic-action-secondary:active,
+html[data-theme="dark"] .semantic-choice-unselected:active {
+  background-color: #203047;
+}
+
+html[data-theme="dark"] .semantic-action-warning:hover {
+  background-color: #4A310D;
+}
+
+html[data-theme="dark"] .semantic-action-warning:active {
+  background-color: #5A3B0F;
+}
+
+html[data-theme="dark"] .semantic-choice-selected:hover {
+  background-color: rgb(96 165 250 / 0.28);
+}
+
+html[data-theme="dark"] .semantic-choice-selected:active {
+  background-color: rgb(96 165 250 / 0.34);
+}
+
+/* Semantic controls keep disabled state neutral in dark mode. The authored
+   dark palette selectors above are intentionally more specific than generated
+   utilities, so the native disabled state needs an equally explicit override. */
+html[data-theme="dark"] .semantic-control:disabled {
+  background-color: #203047;
+  border-color: #2A3A52;
+  color: #A9B8CB;
+  box-shadow: none;
+}

@@ -194,7 +194,7 @@ export function ClinicalVaultGate({
               onClick={onToggleTheme}
               className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-node"
             >
-              <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-mint bg-brand-mint" : "border-brand-slate bg-brand-light-slate"}`} />
+              <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-blue bg-brand-blue" : "border-brand-slate bg-brand-light-slate"}`} />
               {themeMode === "dark" ? "Dark" : "Light"} mode
             </button>
           </div>

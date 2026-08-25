@@ -5,7 +5,7 @@ import { getIsolationEventDetails, isolationEventTypes, isolationMethods, isolat
 import { buildUserIsolationCatalogItemsFromForm, getIsolationCatalogOptions } from "../workflow/isolationCatalog";
 import type { CatalogItem } from "../workflow/catalogs";
 import { SelectInput, TextInput } from "./FormControls";
-import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
+import { cx, panelActionButton, semanticActionButton, semanticChoiceControl } from "./uiStyles";
 
 const isolationActionLabels = {
   [isolationEventTypes.rubberDamPlaced]: "Rubber dam placed",
@@ -293,8 +293,9 @@ export function IsolationWorkflowRunner({
                 aria-pressed={actionMode === "placement"}
                 onClick={() => updateActionMode("placement")}
                 disabled={!canSelectPlacement}
-                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "placement" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+                className={cx(actionMode === "placement" ? semanticChoiceControl.selected : semanticChoiceControl.unselected, "px-4 py-3")}
               >
+                <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, actionMode === "placement" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
                 Placement
               </button>
               <button
@@ -302,8 +303,9 @@ export function IsolationWorkflowRunner({
                 aria-pressed={actionMode === "reassessment"}
                 onClick={() => updateActionMode("reassessment")}
                 disabled={!canSelectReassessment}
-                className={`rounded-xl border px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${actionMode === "reassessment" ? "border-brand-mint bg-brand-mint/20 text-brand-navy hover:bg-brand-mint/30" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+                className={cx(actionMode === "reassessment" ? semanticChoiceControl.selected : semanticChoiceControl.unselected, "px-4 py-3")}
               >
+                <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, actionMode === "reassessment" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
                 Reassessment
               </button>
             </div>
@@ -367,10 +369,10 @@ export function IsolationWorkflowRunner({
                   type="button"
                   data-clinical-record-action="isolation"
                   onClick={applySelectedOption}
-                  className={cx(workflowDecisionButton, "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}
+                  className={semanticActionButton.primaryDecision}
                 >
-                  {getIsolationRecordActionLabel(selectedEventType)}
-                  <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
+                  <span>{getIsolationRecordActionLabel(selectedEventType)}</span>
+                  <span className="text-xs font-normal text-white/80">Next: {workflow.nodes[selectedOption.nextNodeId]?.title || selectedOption.nextNodeId}</span>
                 </button>
               </div>
               {onUserCatalogItemsChange || onOpenCatalogue ? (
@@ -383,7 +385,7 @@ export function IsolationWorkflowRunner({
                         type="button"
                         onClick={saveCatalogItems}
                         disabled={!canSaveShortcuts}
-                        className={cx(panelActionButton.info, "disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate")}
+                        className={panelActionButton.secondary}
                       >
                         Add entered values to Catalogue
                       </button>

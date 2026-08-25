@@ -24,7 +24,7 @@ import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMod
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import { SelectInput, TextInput } from "./FormControls";
-import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
+import { cx, panelActionButton, semanticActionButton, semanticChoiceControl } from "./uiStyles";
 
 export function AnesthesiaEventForm({
   tooth,
@@ -136,7 +136,7 @@ export function AnesthesiaEventForm({
           type="time"
           value={form.administeredAt}
           onChange={(event) => updateForm({ administeredAt: event.target.value })}
-          className={`min-w-36 flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${administeredAtInvalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-mint focus:ring-brand-mint/20"}`}
+          className={`min-w-36 flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${administeredAtInvalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"}`}
         />
         <button type="button" onClick={() => updateForm({ administeredAt: getCurrentTimeString() })} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-light-slate">
           Set to now
@@ -158,16 +158,18 @@ export function AnesthesiaEventForm({
             type="button"
             aria-pressed={mode === "administration"}
             onClick={() => prepareMode("administration")}
-            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "administration" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-blue-light/20"}`}
+            className={mode === "administration" ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
           >
+            <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, mode === "administration" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
             Administration
           </button>
           <button
             type="button"
             aria-pressed={mode === "assessment"}
             onClick={() => prepareMode("assessment")}
-            className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${mode === "assessment" ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy hover:bg-brand-mint/20"}`}
+            className={mode === "assessment" ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
           >
+            <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, mode === "assessment" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
             Assessment
           </button>
         </div>
@@ -183,9 +185,11 @@ export function AnesthesiaEventForm({
                   <button
                     key={route}
                     type="button"
+                    aria-pressed={form.route === route}
                     onClick={() => selectRoute(route)}
-                    className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${form.route === route ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+                    className={form.route === route ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
                   >
+                    <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, form.route === route ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
                     {getAnesthesiaRouteSelectionLabel(route)}
                   </button>
                 );
@@ -200,9 +204,11 @@ export function AnesthesiaEventForm({
                 <button
                   key={response}
                   type="button"
+                  aria-pressed={form.response === response}
                   onClick={() => updateForm({ response: response as AnesthesiaAdequacyResponse })}
-                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${form.response === response ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "border-brand-light-node bg-white text-brand-navy hover:bg-brand-light-slate"}`}
+                  className={form.response === response ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
                 >
+                  <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, form.response === response ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
                   {label}
                 </button>
               ))}
@@ -272,13 +278,13 @@ export function AnesthesiaEventForm({
           data-clinical-record-action="anesthesia"
           onClick={submitEvent}
           disabled={!canSubmit}
-          className={cx(workflowDecisionButton, canSubmit && "border-brand-mint/50 bg-brand-light-slate text-brand-navy shadow-md hover:border-brand-mint hover:bg-brand-mint/10")}
+          className={semanticActionButton.primaryDecision}
         >
           <span className="flex items-start gap-3">
-            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-mint/20 text-lg leading-none text-brand-navy">+</span>
+            <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/10 text-lg leading-none text-white group-disabled:border-brand-light-node group-disabled:bg-white group-disabled:text-brand-slate">+</span>
             <span>
               <span className="block">{recordActionLabel}</span>
-              <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {nextStepLabel}</span>
+              <span className="mt-1 block text-xs font-normal text-white/80 group-disabled:text-brand-slate">Next: {nextStepLabel}</span>
             </span>
           </span>
         </button>
@@ -293,7 +299,7 @@ export function AnesthesiaEventForm({
                 type="button"
                 onClick={saveShortcuts}
                 disabled={!canSaveShortcuts}
-                className={cx(panelActionButton.info, "disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate")}
+                className={panelActionButton.secondary}
               >
                 Add entered values to Catalogue
               </button>

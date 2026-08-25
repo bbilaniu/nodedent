@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { RadiologyEventDetails, RadiologyModality, RadiologyRegionKind } from "../workflow/radiology";
 import { radiologyModalities, radiologyRegionKinds } from "../workflow/radiology";
 import { TextInput } from "./FormControls";
-import { cx, workflowDecisionButton } from "./uiStyles";
+import { cx, semanticActionButton, semanticChoiceControl } from "./uiStyles";
 
 export type RadiologyReviewFormState = {
   modalities: RadiologyModality[];
@@ -117,19 +117,16 @@ export function RadiologyEventForm({
       <div className="mt-3 grid gap-3">
         <div>
           <p className="mb-1 text-xs font-medium text-brand-slate">Modalities reviewed</p>
-          <div className="grid gap-2 sm:grid-cols-4">
+          <div role="group" aria-label="Radiology modalities reviewed" className="grid gap-2 sm:grid-cols-4">
             {radiologyModalities.map((modality) => (
               <button
                 key={modality}
                 type="button"
+                aria-pressed={form.modalities.includes(modality)}
                 onClick={() => toggleModality(modality)}
-                className={cx(
-                  "rounded-xl border px-3 py-2 text-sm font-semibold transition",
-                  form.modalities.includes(modality)
-                    ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep"
-                    : "border-brand-light-node bg-brand-light-slate text-brand-navy hover:bg-brand-light-node",
-                )}
+                className={form.modalities.includes(modality) ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
               >
+                <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, form.modalities.includes(modality) ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
                 {modalityLabels[modality]}
               </button>
             ))}
@@ -144,7 +141,7 @@ export function RadiologyEventForm({
           <select
             value={form.scopeKind}
             onChange={(event) => updateForm({ scopeKind: event.target.value as RadiologyRegionKind })}
-            className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+            className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue-light/20"
           >
             {radiologyRegionKinds.map((scopeKind) => <option key={scopeKind} value={scopeKind}>{scopeLabels[scopeKind]}</option>)}
           </select>
@@ -175,10 +172,10 @@ export function RadiologyEventForm({
           data-clinical-record-action="radiology"
           onClick={recordReview}
           disabled={!canRecordReview}
-          className={cx(workflowDecisionButton, canRecordReview && "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}
+          className={semanticActionButton.primaryDecision}
         >
-          Record radiograph review
-          <span className="mt-1 block text-xs font-normal text-brand-slate">Next: Radiograph review recorded</span>
+          <span>Record radiograph review</span>
+          <span className="text-xs font-normal text-white/80 group-disabled:text-brand-slate">Next: Radiograph review recorded</span>
         </button>
       </div>
     </div>

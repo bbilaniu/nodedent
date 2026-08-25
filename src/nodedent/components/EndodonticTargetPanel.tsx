@@ -18,6 +18,7 @@ export type EndodonticTargetPanelProps = {
   onManualEvent: (type: string, label: string, nextNodeId?: string | null, difficultyFlag?: DifficultyFlag | null) => void;
   onResetManualStatus: () => void;
   onOpenPhaseMap: () => void;
+  onOpenCaseSetupStatus: () => void;
   className?: string;
 };
 
@@ -34,6 +35,7 @@ export function EndodonticTargetPanel({
   onManualEvent,
   onResetManualStatus,
   onOpenPhaseMap,
+  onOpenCaseSetupStatus,
   className = "",
 }: EndodonticTargetPanelProps) {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -69,14 +71,20 @@ export function EndodonticTargetPanel({
   }
 
   return (
-    <SectionCard title="Endodontic progress" className={className}>
+    <SectionCard title={`Endodontic progress · Tooth ${caseData.tooth || "not set"}`} className={className}>
+      {!caseData.tooth ? (
+        <div className="mb-3 flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+          <span>Set the workflow tooth in Case Setup.</span>
+          <button type="button" onClick={onOpenCaseSetupStatus} className={panelActionButton.secondaryCompact}>Open Case Setup</button>
+        </div>
+      ) : null}
       <p className="mb-3 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs leading-5 text-brand-slate">
         Manage canals for the active endodontic workflow. Operative teeth and surfaces will use their own target panel.
       </p>
       <button
         type="button"
         onClick={onOpenPhaseMap}
-        className={cx(panelActionButton.info, "mb-3 w-full")}
+        className={cx(panelActionButton.secondary, "mb-3 w-full")}
       >
         Open phase/canal map
       </button>
@@ -167,7 +175,7 @@ export function EndodonticTargetPanel({
             <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
           </div>
           <div className="grid gap-2 text-sm">
-            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.success}>Mark {activeCanalName} complete</button>
+            <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.primary}>Mark {activeCanalName} complete</button>
             <button onClick={onResetManualStatus} className={panelActionButton.secondary}>Return {activeCanalName} to automatic status</button>
           </div>
           <p className="mt-3 text-xs leading-5 text-brand-slate">Use the always-visible <strong>Pause / end visit</strong> action to pause, medicate and temporize, or enter the referral pathway.</p>
