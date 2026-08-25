@@ -35,7 +35,7 @@ export function FilePickerControl({
         onChange={(event) => onFileSelect(event.target.files?.[0])}
         className="peer sr-only"
       />
-      <div className="flex min-w-0 flex-col items-start gap-2 peer-focus-visible:rounded-xl peer-focus-visible:ring-2 peer-focus-visible:ring-brand-mint peer-focus-visible:ring-offset-2 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-col items-start gap-2 peer-focus-visible:rounded-xl peer-focus-visible:outline-2 peer-focus-visible:outline-solid peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-blue sm:flex-row sm:items-center">
         <label
           htmlFor={inputId}
           className={`${formControlActionButton} cursor-pointer`}

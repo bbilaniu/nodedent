@@ -18,6 +18,7 @@ This folder separates clinical source material, active product specs, architectu
 - [Endodontic continuation and usability roadmap](specs/endodontic-continuation-and-usability-roadmap.md)
 - [Clinical note generator QA verification outputs](specs/codex-verification-outputs.md)
 - [Deployment mode implementation](specs/deployment-mode-implementation.md)
+- [Discipline-scoped diagnosis](specs/discipline-scoped-diagnosis.md)
 - [Local clinical data security, integrity, and recovery](specs/local-data-integrity-and-recovery.md)
 - [NodeDent long-term product roadmap](specs/nodedent-long-term-product-roadmap.md)
 - [NodeDent vision](specs/nodedent-vision.md)
@@ -25,6 +26,7 @@ This folder separates clinical source material, active product specs, architectu
 
 ## Engineering Guides
 
+- [Semantic UI contract](guides/semantic-ui-contract.md)
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 - [Local clinical deployment guide](guides/local-clinical-deployment.md)
 - [Deployment mode operations](guides/deployment-mode-operations.md)

@@ -9,6 +9,7 @@ import { endodonticRootWorkflowId } from "../workflow/registry";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
+import { panelActionButton } from "./uiStyles";
 
 export function CaseSetupPage({
   caseData,
@@ -18,13 +19,13 @@ export function CaseSetupPage({
   operativeSetup,
   onClose,
   onUpdateCase,
-  onUpdateDiagnosis,
   onUpdatePreOp,
   onUpdateActiveCanal,
   onApplySuggestedCaseStatus,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
+  onOpenDiagnosis,
   onOpenOperativeWorkflowSetup,
   onPrimaryWorkflowSelectionChange,
   onPrimaryWorkflowProcedureChange,
@@ -39,13 +40,13 @@ export function CaseSetupPage({
   operativeSetup?: OperativeWorkflowSetupState;
   onClose: () => void;
   onUpdateCase: (updates: Partial<EndoCase>) => void;
-  onUpdateDiagnosis: (field: string, value: string) => void;
   onUpdatePreOp: (field: string, value: string | boolean) => void;
   onUpdateActiveCanal: (field: string, value: string) => void;
   onApplySuggestedCaseStatus: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
+  onOpenDiagnosis: () => void;
   onOpenOperativeWorkflowSetup?: () => void;
   onPrimaryWorkflowSelectionChange: (workflowId: string, selected: boolean) => void;
   onPrimaryWorkflowProcedureChange: (workflowId: string, procedureLabel: string) => void;
@@ -71,7 +72,7 @@ export function CaseSetupPage({
             <h1 className="mt-1 text-2xl font-bold text-brand-navy sm:text-3xl">Case Setup & Status</h1>
             <p className="mt-1 text-sm text-brand-slate">Set case identity, select one or more disciplines, and review shared clinical context.</p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
+          <button onClick={onClose} className={panelActionButton.secondary}>
             Return to workspace
           </button>
         </div>
@@ -118,13 +119,13 @@ export function CaseSetupPage({
             currentNodeId={currentNodeId}
             operativeSetup={operativeSetup}
             onUpdateCase={onUpdateCase}
-            onUpdateDiagnosis={onUpdateDiagnosis}
             onUpdatePreOp={onUpdatePreOp}
             onUpdateActiveCanal={onUpdateActiveCanal}
             onApplySuggestedCaseStatus={onApplySuggestedCaseStatus}
             onOpenAnesthesiaWorkflow={onOpenAnesthesiaWorkflow}
             onOpenIsolationWorkflow={onOpenIsolationWorkflow}
             onOpenRadiologyWorkflow={onOpenRadiologyWorkflow}
+            onOpenDiagnosis={onOpenDiagnosis}
             onOpenOperativeWorkflowSetup={onOpenOperativeWorkflowSetup}
             onPrimaryWorkflowSelectionChange={onPrimaryWorkflowSelectionChange}
             onPrimaryWorkflowProcedureChange={onPrimaryWorkflowProcedureChange}
@@ -135,7 +136,7 @@ export function CaseSetupPage({
 
         <div className="mt-6 flex flex-col gap-2 border-t border-brand-light-node pt-4 sm:flex-row sm:items-center sm:justify-between">
           <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download plaintext NodeDent case JSON</button>
-          <button onClick={onClose} className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep">
+          <button onClick={onClose} className={panelActionButton.secondary}>
             Return to workspace
           </button>
         </div>

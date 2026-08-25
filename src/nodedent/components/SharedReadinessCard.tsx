@@ -1,5 +1,5 @@
 import React from "react";
-import type { CaseSetupFocusTarget, EndoCase } from "../types";
+import type { EndoCase } from "../types";
 import type { CaseCapabilitySummary, CapabilityStatus } from "../workflow/selectors";
 import { getCaseCapabilitySummary } from "../workflow/selectors";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedModuleEntryNodeId } from "./sharedModuleUi";
@@ -14,13 +14,13 @@ export type SharedReadinessAction = {
 
 export function getSharedReadinessActions({
   capabilitySummary,
-  onOpenCaseSetupStatus,
+  onOpenDiagnosis,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
 }: {
   capabilitySummary: CaseCapabilitySummary;
-  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenDiagnosis: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
@@ -34,7 +34,7 @@ export function getSharedReadinessActions({
       label: "Diagnosis",
       actionLabel: "Review diagnosis",
       status: capabilitySummary.diagnosis,
-      onClick: () => onOpenCaseSetupStatus("diagnosis"),
+      onClick: onOpenDiagnosis,
     },
     {
       label: "Radiographs",
@@ -60,7 +60,7 @@ export function getSharedReadinessActions({
 export function SharedReadinessCard({
   caseData,
   capabilitySummary,
-  onOpenCaseSetupStatus,
+  onOpenDiagnosis,
   onOpenAnesthesiaWorkflow,
   onOpenIsolationWorkflow,
   onOpenRadiologyWorkflow,
@@ -69,7 +69,7 @@ export function SharedReadinessCard({
 }: {
   caseData: EndoCase;
   capabilitySummary?: CaseCapabilitySummary;
-  onOpenCaseSetupStatus: (focusTarget?: CaseSetupFocusTarget) => void;
+  onOpenDiagnosis: () => void;
   onOpenAnesthesiaWorkflow: (entryNodeId?: string) => void;
   onOpenIsolationWorkflow: (entryNodeId?: string) => void;
   onOpenRadiologyWorkflow: (entryNodeId?: string) => void;
@@ -79,7 +79,7 @@ export function SharedReadinessCard({
   const summary = capabilitySummary || getCaseCapabilitySummary(caseData);
   const items = getSharedReadinessActions({
     capabilitySummary: summary,
-    onOpenCaseSetupStatus,
+    onOpenDiagnosis,
     onOpenAnesthesiaWorkflow,
     onOpenIsolationWorkflow,
     onOpenRadiologyWorkflow,

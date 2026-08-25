@@ -16,6 +16,14 @@ proposes the semantic separation of action prominence, control selection,
 clinical status, and workflow category. Once accepted, this spec owns the
 component/state matrix and incremental implementation of that decision.
 
+The implemented first-pass matrix, component usage, development fixture, and
+review checklist are published in the [Semantic UI contract](../guides/semantic-ui-contract.md).
+That pass normalizes launcher actions; separates anesthesia, isolation, and
+radiology selection from action styling; makes their record actions visually
+primary; centralizes shared status tones; and removes the ambiguous shared
+`info`, `mint`, and `success` action variants. The remaining broad inventory and
+surface-by-surface migration keep this spec active.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.

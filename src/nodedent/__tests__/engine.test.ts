@@ -14,6 +14,7 @@ import { CatalogAdministrationPanel } from "../components/CatalogAdministrationP
 import { CataloguePage } from "../components/CataloguePage";
 import { CaseEntryGate } from "../components/CaseEntryGate";
 import { CaseSetupPage } from "../components/CaseSetupPage";
+import { DiagnosisPage } from "../components/DiagnosisPage";
 import { ContextualEndodonticInputs } from "../components/ContextualEndodonticInputs";
 import { EndodonticEndVisitDialog, endVisitActionConfig } from "../components/EndodonticEndVisitDialog";
 import { getEncryptedBackupRestoreInputError } from "../components/ClinicalVaultGate";
@@ -80,6 +81,13 @@ import { buildAnesthesiaEventFromForm, canSubmitAnesthesiaForm, defaultAnesthesi
 import { formatLocalTime24, formatTime24Value, getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import type { CatalogItem } from "../workflow/catalogs";
 import { getCatalogLabels, mergeCatalogItems } from "../workflow/catalogs";
+import {
+  diagnosisSectionRegistry,
+  diagnosisWorkflowPromotionCriteria,
+  getDiagnosisSectionSummary,
+  hasDiagnosisSectionRecord,
+  updateDiagnosisField,
+} from "../workflow/diagnosis";
 import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions, seedEndodonticCatalogItems } from "../workflow/endodonticCatalog";
 import { capabilityScopeRules, knownCapabilityNames } from "../workflow/capabilities";
 import { buildIsolationEstablishedCapability, getIsolationCoverageSummary, getIsolationEventDetails, isolationEventTypes, sharedIsolationWorkflow, sharedIsolationWorkflowId } from "../workflow/isolation";
@@ -842,6 +850,7 @@ test("full-page case setup shows every selected discipline without merging their
   };
   const caseData = addPrimaryWorkflow(baseCase({
     tooth: "36",
+    preOp: { ...initialCase.preOp, paReviewed: true },
     globalEvents: [
       {
         ...radiologyEvent,
@@ -857,7 +866,7 @@ test("full-page case setup shows every selected discipline without merging their
     currentNodeId: "preop",
     onClose: noop,
     onUpdateCase: noop,
-    onUpdateDiagnosis: noop,
+    onOpenDiagnosis: noop,
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
     operativeSetup: {
@@ -892,17 +901,77 @@ test("full-page case setup shows every selected discipline without merging their
   assert.equal(markup.includes("Open operative workflow"), true);
   assert.equal(markup.includes("36 MO"), true);
   assert.equal(markup.includes("placeholder=\"e.g., M O\""), false);
-  assert.equal(markup.includes("Diagnosis readiness"), true);
-  assert.equal(markup.includes("Radiograph readiness"), true);
+  assert.equal(markup.includes("Review diagnosis"), true);
+  assert.equal(markup.includes("Pulpal diagnosis"), false);
+  assert.equal(markup.includes("Apical diagnosis"), false);
+  assert.equal(markup.includes("Radiograph readiness"), false);
+  assert.match(markup, /<h3[^>]*>Radiographs<\/h3>/);
+  assert.equal(markup.includes("Shared clinical readiness"), false);
+  assert.equal(markup.includes("Pre-op radiographs reviewed"), false);
+  assert.equal(markup.includes('type="checkbox"'), false);
   assert.equal(markup.includes("Shared radiology event"), false);
   assert.equal(markup.includes("Record radiograph review"), false);
   assert.equal(markup.includes("Review radiology"), true);
   assert.equal(markup.includes("Latest shared radiology event"), true);
   assert.equal(markup.includes("Radiograph review recorded"), true);
+  assert.equal(markup.includes("Reviewed modalities: PA"), true);
   assert.equal(markup.includes("Endodontic setup"), true);
   assert.equal(markup.includes("Endodontic workflow setup"), true);
   assert.equal(markup.includes("Estimated WL for"), true);
   assert.equal(markup.includes("MB:"), true);
+});
+
+test("diagnosis registry keeps current diagnosis capture discipline-scoped and panel-based", () => {
+  assert.deepEqual(diagnosisSectionRegistry.map((section) => section.id), ["endodontic"]);
+  assert.equal(diagnosisSectionRegistry[0].captureSurface, "panel");
+  assert.equal(diagnosisSectionRegistry[0].scopeKind, "tooth");
+  assert.equal(diagnosisSectionRegistry[0].capabilityName, "diagnosis.recorded");
+  assert.deepEqual(diagnosisSectionRegistry[0].fields.map((field) => field.id), ["pulpal", "apical"]);
+  assert.equal(diagnosisWorkflowPromotionCriteria.length, 3);
+
+  const emptyCase = baseCase({ diagnosis: { pulpal: "", apical: "" } });
+  const partialCase = baseCase({ diagnosis: { pulpal: "Normal pulp", apical: "" } });
+  const completeCase = baseCase({ diagnosis: { pulpal: "Normal pulp", apical: "Normal apical tissues" } });
+  assert.equal(hasDiagnosisSectionRecord(emptyCase, "endodontic"), false);
+  assert.equal(hasDiagnosisSectionRecord(partialCase, "endodontic"), true);
+  assert.equal(getDiagnosisSectionSummary(partialCase, "endodontic"), "Pulpal diagnosis recorded");
+  assert.equal(getDiagnosisSectionSummary(completeCase, "endodontic"), "Pulpal and apical diagnoses recorded");
+  const updatedCase = updateDiagnosisField(emptyCase, "endodontic", "apical", "Synthetic diagnosis");
+  assert.equal(updatedCase.diagnosis?.apical, "Synthetic diagnosis");
+  assert.notEqual(updatedCase, emptyCase);
+  assert.equal(updateDiagnosisField(emptyCase, "endodontic", "unknown", "ignored"), emptyCase);
+
+  const unscopedStatus = getCaseCapabilitySummary(baseCase({
+    tooth: "",
+    diagnosis: { pulpal: "Normal pulp", apical: "" },
+  })).diagnosis;
+  assert.equal(unscopedStatus.satisfied, false);
+  assert.equal(unscopedStatus.summary, "Diagnosis recorded; target tooth needed");
+  assert.equal(unscopedStatus.reason, "Set the default tooth to establish diagnosis readiness.");
+});
+
+test("diagnosis page renders the endodontic fields without workflow-step semantics", () => {
+  const caseData = baseCase({
+    tooth: "36",
+    diagnosis: { pulpal: "Normal pulp", apical: "Normal apical tissues" },
+  });
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(DiagnosisPage, {
+    caseData,
+    onUpdateDiagnosis: noop,
+    onClose: noop,
+    returnLabel: "Return to Case Setup",
+  }));
+
+  assert.equal(markup.includes("Shared clinical context"), true);
+  assert.equal(markup.includes("Endodontic diagnosis"), true);
+  assert.equal(markup.includes("Pulpal diagnosis"), true);
+  assert.equal(markup.includes("Apical diagnosis"), true);
+  assert.equal(markup.includes("Tooth 36"), true);
+  assert.equal(markup.includes("Pulpal and apical diagnoses recorded"), true);
+  assert.equal(markup.includes("Return to Case Setup"), true);
+  assert.equal(markup.includes("does not advance a treatment workflow"), true);
+  assert.equal(markup.includes("Current step"), false);
 });
 
 test("case setup keeps selected workflow sections visible from shared-module context", () => {
@@ -915,7 +984,7 @@ test("case setup keeps selected workflow sections visible from shared-module con
     currentNodeId: "anesthesia-select-route",
     onClose: noop,
     onUpdateCase: noop,
-    onUpdateDiagnosis: noop,
+    onOpenDiagnosis: noop,
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
@@ -946,7 +1015,7 @@ test("case setup keeps shared modules as summaries instead of inline event forms
     currentNodeId: "anesthesia-select-route",
     onClose: noop,
     onUpdateCase: noop,
-    onUpdateDiagnosis: noop,
+    onOpenDiagnosis: noop,
     onUpdatePreOp: noop,
     onUpdateActiveCanal: noop,
     onApplySuggestedCaseStatus: noop,
@@ -962,6 +1031,14 @@ test("case setup keeps shared modules as summaries instead of inline event forms
   assert.equal(markup.includes("Open anesthesia workflow"), true);
   assert.equal(markup.includes("Open isolation workflow"), true);
   assert.equal(markup.includes("Open radiology workflow"), true);
+  assert.equal(markup.includes("Shared clinical readiness"), false);
+  assert.equal(markup.includes("Pre-op radiographs reviewed"), false);
+  assert.equal(markup.includes('type="checkbox"'), false);
+  assert.match(markup, /<h3[^>]*>Diagnosis<\/h3>[\s\S]*<h3[^>]*>Radiographs<\/h3>[\s\S]*<h3[^>]*>Anesthesia<\/h3>[\s\S]*<h3[^>]*>Isolation<\/h3>/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Review diagnosis/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open radiology workflow/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open anesthesia workflow/);
+  assert.match(markup, /semantic-action-primary[^>]*>[\s\S]*Open isolation workflow/);
   assert.equal(markup.includes("Save shortcuts"), false);
   assert.equal(markup.includes("Manage shortcuts"), false);
   assert.equal(markup.includes("Favorites appear first in the selected field"), false);
@@ -985,6 +1062,7 @@ test("active workflow target panel renders operative setup without canal control
       onManualEvent: noop,
       onResetManualStatus: noop,
       onOpenPhaseMap: noop,
+      onOpenCaseSetupStatus: noop,
     },
     operativeProps: {
       caseData,
@@ -1122,13 +1200,13 @@ test("shared readiness actions open reusable setup and module paths for operativ
     diagnosis: { pulpal: "normal pulp", apical: "normal apical tissues" },
     preOp: { ...initialCase.preOp, paReviewed: true },
   });
-  const caseSetupTargets: string[] = [];
+  let diagnosisOpenCount = 0;
   const anesthesiaEntries: Array<string | undefined> = [];
   const isolationEntries: Array<string | undefined> = [];
   const radiologyEntries: Array<string | undefined> = [];
   const actions = getSharedReadinessActions({
     capabilitySummary: getCaseCapabilitySummary(caseData),
-    onOpenCaseSetupStatus: (focusTarget) => caseSetupTargets.push(focusTarget || ""),
+    onOpenDiagnosis: () => { diagnosisOpenCount += 1; },
     onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
     onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
     onOpenRadiologyWorkflow: (entryNodeId) => radiologyEntries.push(entryNodeId),
@@ -1140,7 +1218,7 @@ test("shared readiness actions open reusable setup and module paths for operativ
   actions.find((action) => action.label === "Anesthesia")?.onClick();
   actions.find((action) => action.label === "Isolation")?.onClick();
 
-  assert.deepEqual(caseSetupTargets, ["diagnosis"]);
+  assert.equal(diagnosisOpenCount, 1);
   assert.deepEqual(anesthesiaEntries, [undefined]);
   assert.deepEqual(isolationEntries, [undefined]);
   assert.deepEqual(radiologyEntries, ["radiology-review"]);
@@ -1155,7 +1233,7 @@ test("shared readiness band uses row-specific actions without a generic case set
   const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
     caseData,
     capabilitySummary: getCaseCapabilitySummary(caseData),
-    onOpenCaseSetupStatus: noop,
+    onOpenDiagnosis: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
@@ -1203,7 +1281,7 @@ test("shared readiness uses review labels when shared module status already exis
   const summary = getCaseCapabilitySummary(caseData);
   const actions = getSharedReadinessActions({
     capabilitySummary: summary,
-    onOpenCaseSetupStatus: noop,
+    onOpenDiagnosis: noop,
     onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
     onOpenIsolationWorkflow: (entryNodeId) => isolationEntries.push(entryNodeId),
     onOpenRadiologyWorkflow: (entryNodeId) => radiologyEntries.push(entryNodeId),
@@ -1211,7 +1289,7 @@ test("shared readiness uses review labels when shared module status already exis
   const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
     caseData,
     capabilitySummary: summary,
-    onOpenCaseSetupStatus: noop,
+    onOpenDiagnosis: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
@@ -1251,7 +1329,7 @@ test("shared readiness distinguishes administered anesthesia that still needs as
   const summary = getCaseCapabilitySummary(caseData);
   const actions = getSharedReadinessActions({
     capabilitySummary: summary,
-    onOpenCaseSetupStatus: noop,
+    onOpenDiagnosis: noop,
     onOpenAnesthesiaWorkflow: (entryNodeId) => anesthesiaEntries.push(entryNodeId),
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,
@@ -1259,7 +1337,7 @@ test("shared readiness distinguishes administered anesthesia that still needs as
   const markup = renderToStaticMarkup(React.createElement(SharedReadinessCard, {
     caseData,
     capabilitySummary: summary,
-    onOpenCaseSetupStatus: noop,
+    onOpenDiagnosis: noop,
     onOpenAnesthesiaWorkflow: noop,
     onOpenIsolationWorkflow: noop,
     onOpenRadiologyWorkflow: noop,

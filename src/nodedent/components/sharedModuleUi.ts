@@ -1,4 +1,5 @@
 import type { CapabilityStatus } from "../workflow/selectors";
+import { semanticStatusTone } from "./uiStyles";
 
 export type SharedModuleKind = "anesthesia" | "isolation" | "radiology";
 export type SharedCapabilityStatusLabel = "Ready" | "Review" | "Pending" | "Awaiting assessment";
@@ -10,20 +11,20 @@ export function sharedCapabilityStatusLabel(status: Pick<CapabilityStatus, "sati
 }
 
 export function sharedCapabilityStatusClass(status: Pick<CapabilityStatus, "satisfied" | "needsReassessment" | "recordedOutsideScope" | "pendingAssessment">) {
-  if (status.needsReassessment || status.recordedOutsideScope || status.pendingAssessment) return "border-amber-200 bg-amber-50 text-amber-900";
-  if (status.satisfied) return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
+  if (status.needsReassessment || status.recordedOutsideScope || status.pendingAssessment) return semanticStatusTone.attention;
+  if (status.satisfied) return semanticStatusTone.positive;
+  return semanticStatusTone.neutral;
 }
 
 export function sharedStatusLabelClass(label: string) {
-  if (label === "Ready") return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  if (label === "Review" || label === "Awaiting assessment") return "border-amber-200 bg-amber-50 text-amber-900";
-  return "border-brand-light-node bg-white text-brand-slate";
+  if (label === "Ready") return semanticStatusTone.positive;
+  if (label === "Review" || label === "Awaiting assessment") return semanticStatusTone.attention;
+  return semanticStatusTone.neutral;
 }
 
 export function sharedAvailabilityClass(availability: string) {
-  if (availability === "ready") return "border-brand-mint/40 bg-brand-mint/10 text-brand-navy";
-  return "border-brand-light-node bg-white text-brand-slate";
+  if (availability === "ready") return semanticStatusTone.positive;
+  return semanticStatusTone.neutral;
 }
 
 export function sharedModuleActionLabel(module: SharedModuleKind, status: Pick<CapabilityStatus, "satisfied" | "needsReassessment" | "recordedOutsideScope" | "pendingAssessment">) {
