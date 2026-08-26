@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import {
   cx,
+  headerActionButton,
   semanticActionButton,
   semanticChoiceControl,
+  semanticFormControl,
   semanticInteraction,
+  semanticSelectionSurface,
+  semanticSelectionTone,
+  semanticStatusSurface,
   semanticStatusTone,
   statusBadge,
 } from "./uiStyles";
@@ -89,6 +95,30 @@ export function SemanticStateGallery() {
           </div>
         </header>
 
+        <section aria-labelledby="gallery-chrome-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-chrome-heading" className="text-lg font-bold">Application chrome and notices</h2>
+          <p className="mt-1 text-sm text-brand-slate">Header actions retain action hierarchy while vault, deployment, privacy, and error messages use non-interactive status surfaces.</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex min-h-9 items-center rounded-full border border-brand-light-node bg-white px-3 font-semibold text-brand-slate">Chart: SYN-001</span>
+                  <span role="status" className={cx("inline-flex min-h-9 items-center", statusBadge.base, semanticStatusTone.positive)}>Vault: saved</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className={headerActionButton.primary}>Case Setup &amp; Status</button>
+                  <button type="button" className={headerActionButton.secondary}>Catalogue</button>
+                </div>
+              </div>
+            </div>
+            <ClinicalDataNotice compact />
+            <div role="alert" className={cx(semanticStatusSurface.danger, "flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between")}>
+              <p><strong>Protected autosave needs attention.</strong> Review the protected record before continuing.</p>
+              <button type="button" className={semanticActionButton.warning}>Export current JSON</button>
+            </div>
+          </div>
+        </section>
+
         <section aria-labelledby="gallery-action-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
           <h2 id="gallery-action-heading" className="text-lg font-bold">Action roles and interaction states</h2>
           <p className="mt-1 text-sm text-brand-slate">Action appearance describes prominence or consequence, never workflow category or selection.</p>
@@ -121,6 +151,36 @@ export function SemanticStateGallery() {
             <ChoiceExample selected>Selected choice</ChoiceExample>
             <ChoiceExample selected={false}>Unselected choice</ChoiceExample>
             <ChoiceExample selected={false} disabled>Unavailable choice</ChoiceExample>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-setup-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-setup-heading" className="text-lg font-bold">Setup selection and form controls</h2>
+          <p className="mt-1 text-sm text-brand-slate">A selected workflow uses selection styling, its principal launcher remains primary, and form focus stays blue.</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <article className={semanticSelectionSurface.selected}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Selected workflow</p>
+                  <h3 className="mt-1 font-bold">Example treatment</h3>
+                </div>
+                <span className={cx(statusBadge.base, semanticSelectionTone.selected)}>Selected</span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" className={semanticActionButton.primary}>Open workflow</button>
+                <button type="button" aria-pressed="true" className={semanticActionButton.secondary}>Remove from case</button>
+              </div>
+            </article>
+            <div className="grid gap-3 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Default field</span>
+                <input aria-label="Default field" readOnly value="Synthetic value" className={semanticFormControl.default} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Invalid field</span>
+                <input aria-label="Invalid field" aria-invalid="true" readOnly value="Review value" className={semanticFormControl.invalid} />
+              </label>
+            </div>
           </div>
         </section>
 

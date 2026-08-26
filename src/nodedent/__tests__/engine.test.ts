@@ -224,6 +224,8 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(blankMarkup.includes("Download vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
   assert.equal(blankMarkup.indexOf("Sandbox — synthetic data only.") > blankMarkup.indexOf("Lock vault"), true);
+  assert.match(blankMarkup, /<button[^>]*semantic-action-primary[^>]*>\s*New case\s*<\/button>/);
+  assert.match(blankMarkup, /<button[^>]*semantic-action-secondary[^>]*>\s*Import case\s*<\/button>/);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: initialCase,
@@ -260,6 +262,8 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(resumableMarkup.includes("Continue case"), true);
   assert.equal(resumableMarkup.includes("New case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+  assert.match(resumableMarkup, /<button[^>]*semantic-action-primary[^>]*>\s*Continue case\s*<\/button>/);
+  assert.match(resumableMarkup, /<button[^>]*semantic-action-secondary[^>]*>\s*New case\s*<\/button>/);
 });
 
 test("case entry excludes the active encounter from other saved cases", () => {
@@ -906,6 +910,11 @@ test("full-page case setup keeps workflow-specific setup in its owning workflow"
   assert.equal(markup.includes("Estimated WL for"), false);
   assert.equal(markup.includes("Open workflow"), true);
   assert.equal(markup.includes("est WL 20 mm"), true);
+  assert.match(markup, /<article class="[^"]*semantic-selection-selected[^"]*">/);
+  assert.match(markup, /aria-pressed="true"/);
+  assert.match(markup, /<button[^>]*semantic-action-primary[^>]*>\s*Open workflow\s*<\/button>/);
+  assert.match(markup, /<button[^>]*semantic-action-warning[^>]*>Download plaintext NodeDent case JSON<\/button>/);
+  assert.doesNotMatch(markup, /focus:border-brand-mint/);
 });
 
 test("diagnosis registry keeps current diagnosis capture discipline-scoped and panel-based", () => {

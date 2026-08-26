@@ -75,7 +75,11 @@ supplementary.
 | Radiology | Modality multi-select uses selection semantics and the record action is primary | Consolidate its remaining form layout during the radiology surface pass |
 | Shared status summaries | Positive, attention, and neutral styling comes from `semanticStatusTone` | Migrate remaining component-local status combinations by surface family |
 | Shared controls | Shared button and form-control focus moved to blue; ambiguous shared `info`, `mint`, and `success` action variants were removed | Migrate remaining component-local mint focus styles and solid-navy selectors incrementally |
-| Other major surfaces | Inventoried as deferred: application chrome, setup, targets, history, output, dialogs, tables, banners, and end-visit controls | Migrate and verify one surface family at a time; do not perform an unexplained global rewrite |
+| Case Entry | Continue or first New case is primary; alternate case, saved-case, import, download, and lock actions use the shared secondary contract; storage warnings use the attention tone | Verify vault-entry variants whenever recovery or case-library actions change |
+| Case Setup | Workflow inclusion uses blue selection surfaces and `aria-pressed`; Open workflow is primary; removal and suggested-status actions are secondary; plaintext download is warning; form focus is blue | Preserve workflow-owned setup boundaries and migrate any new Case Setup controls through these contracts |
+| Application chrome | Header actions use the shared action hierarchy; vault state uses explicit positive, attention, neutral, or danger status; footer navigation uses the shared blue focus treatment | Preserve one principal header action and classify future global actions by prominence or consequence |
+| Shared banners and notices | Deployment, sandbox, clinical-data, storage, configuration-error, and difficulty surfaces use shared non-interactive status contracts; banner navigation is secondary and plaintext export is warning | Keep specialized workflow instructions in their owning surface while migrating equivalent feedback incrementally |
+| Other major surfaces | Inventoried as deferred: targets, history, output, dialogs, tables, and end-visit controls | Migrate and verify one surface family at a time; do not perform an unexplained global rewrite |
 
 No event construction, workflow transition, validation, generated note,
 persistence, or clinical source behavior is changed by this pass.
@@ -139,3 +143,19 @@ Verified on 2026-08-24:
 - focused semantic rendering tests, the full test suite, documentation checks,
   type checking, and the production build passed. The production bundle did
   not contain the development fixture text.
+
+Second surface pass on 2026-08-25:
+
+- Case Entry and Case Setup actions were migrated from repeated local classes to the shared action contracts;
+- treatment-workflow inclusion moved from mint status styling to blue selection styling with programmatic pressed state;
+- Case Setup launch, removal, plaintext-download, and form-focus roles were separated explicitly; and
+- the development fixture and focused rendering tests were extended for selected setup surfaces and semantic form controls;
+- the fixture had no horizontal overflow at 320 px in light or dark mode, and selection and primary-action colors remained distinct; and
+- all 184 tests, the production build, documentation checks, and versioning checks passed.
+
+Third surface pass on 2026-08-25:
+
+- application chrome and reusable notices moved to explicit semantic status surfaces without changing their visible status wording;
+- auxiliary phase-map navigation became secondary, while plaintext export retained warning consequence styling;
+- the chrome fixture had no horizontal overflow at 320 px in light or dark mode, action and status surfaces remained visually distinct, and the browser console reported no errors; and
+- all 185 tests, the production build, documentation checks, and versioning checks passed.

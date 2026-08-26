@@ -23,7 +23,14 @@ import { PhaseCanalMapModal } from "./components/PhaseCanalMapModal";
 import { SharedWorkflowRunnerModal } from "./components/SharedWorkflowRunnerModal";
 import { SharedReadinessCard } from "./components/SharedReadinessCard";
 import { WorkflowLauncher } from "./components/WorkflowLauncher";
-import { cx, headerActionButton } from "./components/uiStyles";
+import {
+  cx,
+  headerActionButton,
+  semanticActionButton,
+  semanticStatusSurface,
+  semanticStatusTone,
+  statusBadge,
+} from "./components/uiStyles";
 import { applyDecision as applyDecisionEngine } from "./engine/applyDecision";
 import { getCaseStatus, hydrateCaseStatusOverride } from "./engine/deriveCaseStatus";
 import { CANAL_RESUMED_EVENT_TYPE, getCanalStatus, isManualCanalStatusEvent } from "./engine/deriveCanalStatus";
@@ -147,6 +154,13 @@ function createRuntimeEventArgs() {
 
 type StorageStatus = "loading" | "saving" | "saved" | "failed" | "conflict";
 
+function getStorageStatusTone(status: StorageStatus) {
+  if (status === "failed" || status === "conflict") return semanticStatusTone.danger;
+  if (status === "saving") return semanticStatusTone.attention;
+  if (status === "saved") return semanticStatusTone.positive;
+  return semanticStatusTone.neutral;
+}
+
 class ClinicalWorkspaceErrorBoundary extends React.Component<
   { children: React.ReactNode; onFatalError: () => void; onLock: () => void },
   { failed: boolean }
@@ -166,11 +180,11 @@ class ClinicalWorkspaceErrorBoundary extends React.Component<
     return (
       <main className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
         <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-2xl place-items-center">
-          <section className="w-full rounded-3xl border border-red-300 bg-white p-6 shadow-xl">
+          <section role="alert" className={cx(semanticStatusSurface.danger, "w-full rounded-3xl p-6 shadow-xl")}>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-red-800">Protected workspace locked</p>
             <h1 className="mt-2 text-2xl font-bold">NodeDent encountered an unexpected display error</h1>
             <p className="mt-3 text-sm leading-6 text-brand-slate">The in-memory vault key was cleared. No diagnostic containing clinical data was sent anywhere. Return to the lock screen and reopen the protected case.</p>
-            <button type="button" onClick={this.props.onLock} className="mt-4 rounded-xl bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep">Return to vault lock screen</button>
+            <button type="button" onClick={this.props.onLock} className={cx(semanticActionButton.primary, "mt-4")}>Return to vault lock screen</button>
           </section>
         </div>
       </main>
@@ -1496,10 +1510,10 @@ function ClinicalWorkspace({
           <section className="w-full rounded-3xl border border-brand-light-node bg-white p-6 shadow-xl">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">NodeDent protected clinical workspace</p>
             <h1 className="mt-2 text-2xl font-bold">{storageStatus === "failed" ? "Protected storage could not open" : "Opening protected storage…"}</h1>
-            <p role={storageStatus === "failed" ? "alert" : "status"} className={`mt-3 rounded-2xl border p-4 text-sm leading-6 ${storageStatus === "failed" ? "border-red-300 bg-red-50 text-red-900" : "border-brand-light-node bg-brand-light-slate text-brand-slate"}`}>
+            <p role={storageStatus === "failed" ? "alert" : "status"} className={cx("mt-3 p-4 text-sm leading-6", storageStatus === "failed" ? semanticStatusSurface.danger : semanticStatusSurface.neutral)}>
               {storageMessage}
             </p>
-            <button type="button" onClick={() => void lockVault(false)} className="mt-4 rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold hover:bg-brand-light-slate">
+            <button type="button" onClick={() => void lockVault(false)} className={cx(semanticActionButton.secondary, "mt-4")}>
               Return to vault lock screen
             </button>
           </section>
@@ -1576,14 +1590,14 @@ function ClinicalWorkspace({
       <div className="mx-auto max-w-[96rem] space-y-4">
         <ClinicalDataNotice />
         {!persistentStorage ? (
-          <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div role="status" className={cx(semanticStatusSurface.attention, "px-4 py-3 text-sm")}>
             This browser did not grant persistent storage. It may remove the encrypted vault under storage pressure; download encrypted backups regularly.
           </div>
         ) : null}
         {storageStatus === "failed" || storageStatus === "conflict" ? (
-          <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between">
+          <div role="alert" className={cx(semanticStatusSurface.danger, "flex flex-col gap-3 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between")}>
             <p><strong>Protected autosave needs attention.</strong> {storageMessage} The current in-memory work will not overwrite a newer record. If clinic policy permits, export the current plaintext JSON before locking; otherwise lock and reopen the protected case.</p>
-            <button type="button" onClick={downloadCaseJson} className="shrink-0 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-bold text-red-900 hover:bg-red-100">Export current JSON</button>
+            <button type="button" onClick={downloadCaseJson} className={cx(semanticActionButton.warning, "shrink-0")}>Export current JSON</button>
           </div>
         ) : null}
         <header className="rounded-3xl border border-brand-light-node bg-white p-4 shadow-sm">
@@ -1603,7 +1617,7 @@ function ClinicalWorkspace({
               <span className="inline-flex min-h-9 items-center justify-center rounded-full border border-brand-light-node bg-brand-light-slate px-3 py-1.5 font-semibold leading-none text-brand-slate">{getCaseStatus(caseData)}</span>
               <span
                 role="status"
-                className={`inline-flex min-h-9 items-center justify-center rounded-full border px-3 py-1.5 font-semibold leading-none ${storageStatus === "failed" || storageStatus === "conflict" ? "border-red-300 bg-red-50 text-red-900" : storageStatus === "saving" ? "border-amber-300 bg-amber-50 text-amber-950" : "border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+                className={cx("inline-flex min-h-9 items-center justify-center leading-none", statusBadge.base, getStorageStatusTone(storageStatus))}
               >
                 Vault: {storageMessage}
               </span>

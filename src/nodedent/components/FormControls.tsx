@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useState } from "react";
+import { semanticFormControl } from "./uiStyles";
 
 export function TextInput({
   label,
@@ -49,7 +50,7 @@ export function TextInput({
         inputMode={inputMode}
         type={type}
         list={hasSuggestions ? suggestionListId : undefined}
-        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"}`}
+        className={invalid ? semanticFormControl.invalid : semanticFormControl.default}
       />
       {hasSuggestions ? (
         <datalist id={suggestionListId}>
@@ -90,7 +91,7 @@ export function SelectInput({
           setDraft(next);
           onChange(next);
         }}
-        className={`w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${invalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"}`}
+        className={invalid ? semanticFormControl.invalid : semanticFormControl.default}
       >
         {options.map((option) => <option key={option} value={option}>{option}</option>)}
       </select>

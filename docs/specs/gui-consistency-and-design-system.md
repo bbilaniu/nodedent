@@ -24,6 +24,18 @@ primary; centralizes shared status tones; and removes the ambiguous shared
 `info`, `mint`, and `success` action variants. The remaining broad inventory and
 surface-by-surface migration keep this spec active.
 
+The second surface pass migrates Case Entry and Case Setup. It centralizes their
+action and form-control treatments, represents workflow inclusion as blue
+selection rather than mint positive status, keeps workflow launch actions
+primary, and classifies plaintext download as a warning action.
+
+The third surface pass migrates application chrome and reusable notices. It
+uses the status contract for deployment, privacy, vault, error, and difficulty
+feedback; keeps header prominence separate from vault state; gives footer
+navigation the common blue focus treatment; and treats auxiliary banner
+navigation as secondary while preserving warning semantics for plaintext
+export.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.
