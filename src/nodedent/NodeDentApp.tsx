@@ -850,10 +850,6 @@ function ClinicalWorkspace({
     activatePrimaryWorkflow(workflowId);
   }
 
-  function openOperativeWorkflowSetupFromCasePanel() {
-    openPrimaryWorkflowFromCasePanel(operativeDirectRestorationWorkflowId);
-  }
-
   function updateOperativeSetup(updates: Partial<OperativeWorkflowSetupState>) {
     setCaseData((prev) => {
       const selectedCase = addPrimaryWorkflow(prev, operativeDirectRestorationWorkflowId, currentNodeId, {
@@ -1868,21 +1864,17 @@ function ClinicalWorkspace({
             activeCanal={activeCanal}
             activeWorkflowId={casePanelWorkflowId}
             currentNodeId={currentNodeId}
-            operativeSetup={operativeSetup}
             onClose={() => {
               setIsCasePanelOpen(false);
               setCasePanelFocusTarget(null);
               setCasePanelWorkflowId(activePrimaryWorkflowId || "");
             }}
             onUpdateCase={updateCase}
-            onUpdatePreOp={updatePreOp}
-            onUpdateActiveCanal={updateActiveCanal}
             onApplySuggestedCaseStatus={applySuggestedCaseStatus}
             onOpenAnesthesiaWorkflow={openAnesthesiaWorkflow}
             onOpenIsolationWorkflow={openIsolationWorkflow}
             onOpenRadiologyWorkflow={openRadiologyWorkflow}
             onOpenDiagnosis={openDiagnosis}
-            onOpenOperativeWorkflowSetup={openOperativeWorkflowSetupFromCasePanel}
             onPrimaryWorkflowSelectionChange={setPrimaryWorkflowSelected}
             onPrimaryWorkflowProcedureChange={setPrimaryWorkflowProcedure}
             onOpenPrimaryWorkflow={openPrimaryWorkflowFromCasePanel}

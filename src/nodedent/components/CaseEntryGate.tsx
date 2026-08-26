@@ -117,51 +117,53 @@ export function CaseEntryGate({
               </section>
             ) : null}
 
-            <div className="grid gap-5 border-t border-brand-light-node pt-5 sm:grid-cols-2">
-              <section aria-labelledby="import-actions-heading">
-                <h2 id="import-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
-                  Import
-                </h2>
-                <SandboxDataWarning className="mt-2" />
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <button
-                    type="button"
-                    onClick={onImportCaseJson}
-                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
-                  >
-                    Import case
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onImportEncryptedVault}
-                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
-                  >
-                    Import vault
-                  </button>
-                </div>
-              </section>
+            <div className="border-t border-brand-light-node pt-5">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <section aria-labelledby="import-actions-heading">
+                  <h2 id="import-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
+                    Import
+                  </h2>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={onImportCaseJson}
+                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                    >
+                      Import case
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onImportEncryptedVault}
+                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                    >
+                      Import vault
+                    </button>
+                  </div>
+                </section>
 
-              <section aria-labelledby="vault-actions-heading">
-                <h2 id="vault-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
-                  Vault
-                </h2>
-                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                  <button
-                    type="button"
-                    onClick={onDownloadEncryptedVault}
-                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
-                  >
-                    Download vault
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onLockVault}
-                    className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate sm:w-auto"
-                  >
-                    Lock vault
-                  </button>
-                </div>
-              </section>
+                <section aria-labelledby="vault-actions-heading">
+                  <h2 id="vault-actions-heading" className="text-xs font-bold uppercase tracking-wide text-brand-slate">
+                    Vault
+                  </h2>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={onDownloadEncryptedVault}
+                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                    >
+                      Download vault
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onLockVault}
+                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate sm:w-auto"
+                    >
+                      Lock vault
+                    </button>
+                  </div>
+                </section>
+              </div>
+              <SandboxDataWarning className="mt-5 w-full" />
             </div>
           </div>
         </section>
