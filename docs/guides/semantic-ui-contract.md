@@ -36,8 +36,19 @@ and a neutral disabled treatment.
 
 Use `semanticActionButton` from
 `src/nodedent/components/uiStyles.ts`. Use `primaryDecision` or
-`secondaryDecision` for the larger bottom-of-form decision treatment. Warning
-or destructive consequence overrides ordinary prominence.
+`secondaryDecision` for the larger bottom-of-form decision treatment, and the
+corresponding `warningDecision` or `destructiveDecision` when consequence
+overrides ordinary prominence.
+
+### Dialogs
+
+Use `semanticDialogSurface` for the overlay and elevated panel. A modal surface
+must expose `role="dialog"` (or `role="alertdialog"` for a confirmation that
+requires immediate attention), `aria-modal="true"`, and a label relationship to
+its visible title. A visible Close or Cancel action uses the secondary action
+contract. The other actions retain their ordinary semantic roles: being inside
+a dialog does not make a routine action a warning, and a warning path does not
+become destructive unless it irreversibly removes data.
 
 ### Choice controls
 
@@ -82,7 +93,9 @@ supplementary.
 | Workflow targets | Active canal cards use blue selection, `aria-pressed`, and a visible check while the canal's clinical status remains a separate labeled badge; target forms use blue focus | Preserve phase-specific canal status colors and workflow-owned target structures |
 | History and output | Event history uses ordered-list and time semantics; output-format tabs use selection rather than action styling; read-only output has visible blue focus; plaintext copy and download actions are warnings | Preserve generated-note content and export behavior while migrating any future output formats through the same contract |
 | Tables and administrative rows | Catalogue and encrypted-recovery row collections use explicit list structure, shared compact actions, and semantic feedback; no clinical data table currently requires a separate HTML table primitive | Introduce a table primitive only when column relationships materially require one; retain responsive row/card layouts otherwise |
-| Other major surfaces | Inventoried as deferred: dialogs and end-visit controls | Migrate and verify the high-consequence interaction family without changing workflow transitions |
+| Dialogs and confirmations | Shared modal frames expose dialog semantics and labelled titles; visible dismissal is secondary; new-case confirmation retains a primary continuation action; saved-case deletion/reset actions are destructive | Preserve focus management and escape behavior when dialog infrastructure changes |
+| End-visit and phase/canal map | Stop choices use decision-sized primary or warning actions; referral remains a warning route rather than a destructive action; phase/canal selection is separate from the phase-progress badge | Preserve workflow transitions, required next-visit plans, and phase-derived status logic |
+| Other surface refinements | No remaining major surface family is deferred; component-local cleanup continues incrementally as touched | Apply the same contracts to new controls and remove unexplained one-off styling without global rewrites |
 
 No event construction, workflow transition, validation, generated note,
 persistence, or clinical source behavior is changed by this pass.
@@ -169,3 +182,18 @@ Fourth surface pass on 2026-08-25:
 - canal status, event and recovery history, catalogue rows, read-only output focus, and plaintext action consequences remain separate dimensions;
 - the dense-surface fixture had no horizontal overflow at 320 px in light or dark mode, target selection and positive clinical status remained visually distinct, and the browser console reported no errors; and
 - all 188 tests, the production build, documentation checks, and versioning checks passed.
+
+Fifth surface pass on 2026-08-25:
+
+- workflow, saved-case, prior-visit, phase/canal-map, new-case, and end-visit
+  dialogs use a shared modal frame with programmatic dialog names;
+- end-visit actions use the large decision hierarchy, destructive case-library
+  actions remain red, and referral/medication routes remain warning actions;
+- phase and canal selection uses blue selected-choice semantics while current,
+  recorded, and not-recorded phase progress remains a separate labeled status;
+- the dialog fixture was visually inspected in light and dark modes at the
+  available wide-desktop viewport, with no document overflow or application
+  console errors; and
+- focused semantic rendering tests, all 189 tests, documentation checks, type
+  checking, the production build, deployment/security checks, and versioning
+  checks passed.

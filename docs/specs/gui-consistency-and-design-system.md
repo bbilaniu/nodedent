@@ -43,6 +43,15 @@ structure; output-format tabs use programmatic selected state; plaintext copy
 and download actions use warning semantics; and catalogue/recovery controls use
 the shared compact action, form-focus, and feedback contracts.
 
+The fifth surface pass migrates dialogs and end-visit controls. Shared modal
+frames now expose dialog names and modality consistently; quiet dismissal stays
+secondary; phase and canal selection uses the blue choice contract while phase
+progress remains a separate clinical status; and high-consequence decisions use
+large primary, warning, or destructive actions according to their actual effect.
+Saved-case deletion remains destructive, while referral and medication pathways
+remain warning actions because they route documentation rather than deleting
+clinical data.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.

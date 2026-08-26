@@ -6,6 +6,7 @@ import {
   semanticActionButton,
   semanticChoiceControl,
   semanticChoiceSurfaceControl,
+  semanticDialogSurface,
   semanticFormControl,
   semanticInteraction,
   semanticSelectionSurface,
@@ -266,6 +267,32 @@ export function SemanticStateGallery() {
               <strong>Recorded</strong>
               <span className="mt-1 block text-xs">Mint communicates the resulting positive state.</span>
             </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-dialog-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-dialog-heading" className="text-lg font-bold">Dialogs and high-consequence decisions</h2>
+          <p className="mt-1 text-sm text-brand-slate">A consistent dialog frame keeps dismissal quiet while primary, warning, and destructive decisions communicate prominence and consequence explicitly.</p>
+          <div className="mt-4 rounded-3xl bg-brand-navy-deep/10 p-3 sm:p-5">
+            <article role="dialog" aria-labelledby="gallery-synthetic-dialog-title" className={cx(semanticDialogSurface.panelCentered, "mx-auto max-w-2xl")}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Synthetic dialog</p>
+                  <h3 id="gallery-synthetic-dialog-title" className="mt-1 text-xl font-bold">Pause or end this visit</h3>
+                  <p className="mt-1 text-sm text-brand-slate">Choose an explicitly labeled action. Clinical state appears after the action is recorded.</p>
+                </div>
+                <button type="button" className={semanticActionButton.secondary}>Cancel</button>
+              </div>
+              <label className="mt-4 block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Next-visit plan</span>
+                <textarea readOnly value="Synthetic continuation plan" className={semanticFormControl.default} />
+              </label>
+              <div className="mt-4 grid gap-3">
+                <button type="button" className={semanticActionButton.primaryDecision}>Pause here and continue later</button>
+                <button type="button" className={semanticActionButton.warningDecision}>Open a cautionary pathway</button>
+                <button type="button" className={semanticActionButton.destructiveDecision}>Delete saved case permanently</button>
+              </div>
+            </article>
           </div>
         </section>
 

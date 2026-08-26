@@ -27,6 +27,7 @@ import {
   cx,
   headerActionButton,
   semanticActionButton,
+  semanticDialogSurface,
   semanticStatusSurface,
   semanticStatusTone,
   statusBadge,
@@ -1957,23 +1958,23 @@ function ClinicalWorkspace({
         ) : null}
 
         {isNewCaseConfirmOpen ? (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-navy-deep/30 p-4">
-            <section className="w-full max-w-md rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
+          <div className={semanticDialogSurface.overlayCentered}>
+            <section role="alertdialog" aria-modal="true" aria-labelledby="new-case-confirm-title" aria-describedby="new-case-confirm-description" className={cx(semanticDialogSurface.panelCentered, "max-w-md")}>
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
-              <h2 className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
-              <p className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case creates a neutral blank case and opens the full-page Case Setup.</p>
+              <h2 id="new-case-confirm-title" className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
+              <p id="new-case-confirm-description" className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case creates a neutral blank case and opens the full-page Case Setup.</p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setIsNewCaseConfirmOpen(false)}
-                  className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate"
+                  className={semanticActionButton.secondary}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => startNewCase({ openCaseSetup: true })}
-                  className="rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep"
+                  className={semanticActionButton.primary}
                 >
                   Start and open Case Setup
                 </button>

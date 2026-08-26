@@ -20,7 +20,7 @@ import {
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
-import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
+import { cx, panelActionButton, panelSurface, sectionText, semanticActionButton, semanticDialogSurface, statusBadge, workspaceSurface } from "./uiStyles";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
@@ -104,18 +104,23 @@ export function WorkflowLauncher({
   ].filter(Boolean).filter((fact, index, facts) => index === facts.indexOf(fact));
 
   const content = (
-      <section className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}>
+      <section
+        role={presentation === "modal" ? "dialog" : undefined}
+        aria-modal={presentation === "modal" ? true : undefined}
+        aria-labelledby={presentation === "modal" ? "workflow-launcher-dialog-title" : undefined}
+        className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}
+      >
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className={sectionText.eyebrow}>Clinical workspace</p>
-            <h2 className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
+            <h2 id={presentation === "modal" ? "workflow-launcher-dialog-title" : undefined} className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
             <p className="mt-1 text-sm text-brand-slate">{activeCaseFacts.join(" · ")}</p>
           </div>
           {presentation === "modal" ? (
             <button
               type="button"
               onClick={onClose}
-              className={panelActionButton.muted}
+              className={semanticActionButton.secondary}
             >
               Close
             </button>
@@ -305,7 +310,7 @@ export function WorkflowLauncher({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
+    <div className={semanticDialogSurface.overlay}>
       {content}
     </div>
   );

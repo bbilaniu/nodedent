@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { DifficultyFlag } from "../types";
-import { panelActionButton } from "./uiStyles";
+import { cx, semanticActionButton, semanticDialogSurface, semanticFormControl } from "./uiStyles";
 
 export type EndVisitActionId = "pause" | "medicate" | "refer";
 
@@ -57,13 +57,13 @@ export function EndodonticEndVisitDialog({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-auto bg-brand-navy-deep/40 p-4">
-      <button type="button" aria-label="Cancel pause or end visit" onClick={onClose} className="absolute inset-0" />
+    <div className={semanticDialogSurface.overlayRaised}>
+      <button type="button" tabIndex={-1} aria-label="Cancel pause or end visit" onClick={onClose} className={semanticDialogSurface.backdropButton} />
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-visit-title"
-        className="relative mt-6 w-full max-w-2xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl"
+        className={cx(semanticDialogSurface.panel, "max-w-2xl")}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -73,7 +73,7 @@ export function EndodonticEndVisitDialog({
               Active canal <strong>{activeCanalName}</strong> · {currentPhase} · {currentNodeTitle}
             </p>
           </div>
-          <button type="button" onClick={onClose} className={panelActionButton.secondaryMuted}>Cancel</button>
+          <button type="button" onClick={onClose} className={semanticActionButton.secondary}>Cancel</button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
@@ -84,7 +84,7 @@ export function EndodonticEndVisitDialog({
               onChange={(event) => setNextVisitPlan(event.target.value)}
               placeholder="Required when pausing or entering the medication / temporary closure pathway"
               rows={3}
-              className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+              className={semanticFormControl.default}
             />
           </label>
         </div>
@@ -94,7 +94,7 @@ export function EndodonticEndVisitDialog({
             type="button"
             disabled={!trimmedPlan}
             onClick={() => onSelectAction("pause", trimmedPlan)}
-            className={`${panelActionButton.primary} p-4 text-left disabled:cursor-not-allowed disabled:opacity-45`}
+            className={semanticActionButton.primaryDecision}
           >
             <span className="block">Pause here and continue later</span>
             <span className="mt-1 block text-xs font-normal opacity-80">Records the pause at the current step without advancing the workflow.</span>
@@ -103,7 +103,7 @@ export function EndodonticEndVisitDialog({
             type="button"
             disabled={!trimmedPlan}
             onClick={() => onSelectAction("medicate", trimmedPlan)}
-            className={`${panelActionButton.warning} p-4 text-left disabled:cursor-not-allowed disabled:opacity-45`}
+            className={semanticActionButton.warningDecision}
           >
             <span className="block">Continue to medication / temporary closure</span>
             <span className="mt-1 block text-xs font-normal opacity-80">Opens the existing protocol steps so medication and closure are documented when performed.</span>
@@ -111,7 +111,7 @@ export function EndodonticEndVisitDialog({
           <button
             type="button"
             onClick={() => onSelectAction("refer", trimmedPlan)}
-            className={`${panelActionButton.danger} p-4 text-left`}
+            className={semanticActionButton.warningDecision}
           >
             <span className="block">Open referral / stop pathway</span>
             <span className="mt-1 block text-xs font-normal opacity-80">Continues to referral documentation and the decision about medication and temporary closure.</span>

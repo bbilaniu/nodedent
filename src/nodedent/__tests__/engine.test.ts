@@ -1757,6 +1757,8 @@ test("shared workflow modal separates mode, clinical record, catalogue, and clos
   }));
 
   assert.equal((anesthesiaMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.match(anesthesiaMarkup, /role="dialog" aria-modal="true" aria-labelledby="shared-workflow-dialog-title"/);
+  assert.match(anesthesiaMarkup, /semantic-action-secondary[^"]*[^>]*>Close<\/button>/);
   assert.equal(anesthesiaMarkup.includes("Close shared workflow"), false);
   assert.equal(anesthesiaMarkup.includes("Return to parent workflow"), false);
   assert.equal((isolationMarkup.match(/>Close<\/button>/g) || []).length, 1);

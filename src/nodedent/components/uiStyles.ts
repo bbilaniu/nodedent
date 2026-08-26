@@ -53,9 +53,11 @@ export const semanticActionButton = {
   warning: getActionButtonClass("warning"),
   warningCompact: getActionButtonClass("warning", "compact"),
   warningLarge: getActionButtonClass("warning", "large"),
+  warningDecision: getActionButtonClass("warning", "decision"),
   destructive: getActionButtonClass("destructive"),
   destructiveCompact: getActionButtonClass("destructive", "compact"),
   destructiveLarge: getActionButtonClass("destructive", "large"),
+  destructiveDecision: getActionButtonClass("destructive", "decision"),
 };
 
 const choiceBase = cx(
@@ -174,6 +176,16 @@ export const workspaceSurface = {
   shell: "w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5",
   statusTile: "rounded-xl border px-3 py-2",
   launcherCard: "rounded-xl border border-brand-light-node bg-brand-light-slate p-3",
+};
+
+/** Shared modal structure; action and status meaning remains with their own contracts. */
+export const semanticDialogSurface = {
+  overlay: "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-navy-deep/30 p-4",
+  overlayRaised: "fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-brand-navy-deep/40 p-4",
+  overlayCentered: "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-navy-deep/30 p-4",
+  panel: "relative mt-6 w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
+  panelCentered: "relative w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
+  backdropButton: "absolute inset-0 cursor-default",
 };
 
 export const statusBadge = {
