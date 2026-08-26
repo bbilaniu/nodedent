@@ -10,6 +10,13 @@ import { CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH } from "../state/clinicalVaultCryp
 import { FilePickerControl } from "./FilePickerControl";
 import { ImportDisclosure } from "./ImportDisclosure";
 import { SandboxDataWarning } from "./SandboxDataWarning";
+import {
+  cx,
+  semanticActionButton,
+  semanticFormControl,
+  semanticStatusSurface,
+  statusBadge,
+} from "./uiStyles";
 
 const MAX_ENCRYPTED_BACKUP_BYTES = 50 * 1024 * 1024;
 const AUTO_PREVIEW_DELAY_MS = 500;
@@ -164,7 +171,7 @@ export function BackupRecoveryPanel({
         expanded={isImportOpen}
         onToggle={() => setIsImportOpen((open) => !open)}
         action={(
-          <button type="button" onClick={onDownloadEncryptedVaultBackup} className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20">
+          <button type="button" onClick={onDownloadEncryptedVaultBackup} className={semanticActionButton.secondary}>
             Download encrypted backup
           </button>
         )}
@@ -193,7 +200,7 @@ export function BackupRecoveryPanel({
               setPassphrase(event.target.value);
               resetPreview();
             }}
-            className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+            className={semanticFormControl.default}
           />
         </label>
         {file && passphrase.length < CLINICAL_VAULT_MIN_PASSPHRASE_LENGTH ? (
@@ -201,9 +208,9 @@ export function BackupRecoveryPanel({
         ) : null}
         {isPreviewing ? <p role="status" className="mt-3 text-sm font-semibold text-brand-slate">Previewing encrypted backup…</p> : null}
         {previewError ? (
-          <div role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          <div role="alert" className={cx(semanticStatusSurface.danger, "mt-3 rounded-xl px-3 py-2 text-sm")}>
             <p>{previewError}</p>
-            <button type="button" onClick={() => setPreviewRetry((attempt) => attempt + 1)} className="mt-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800 hover:bg-red-50">
+            <button type="button" onClick={() => setPreviewRetry((attempt) => attempt + 1)} className={cx(semanticActionButton.secondaryCompact, "mt-2")}>
               Retry preview
             </button>
           </div>
@@ -220,13 +227,13 @@ export function BackupRecoveryPanel({
               </p>
             ) : null}
             {preview.conflicts.map((conflict) => (
-              <div key={conflict.encounterId} className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+              <div key={conflict.encounterId} className={cx(semanticStatusSurface.attention, "mt-3 rounded-xl p-3")}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-amber-950">Chart {conflict.local.patientNumber} · tooth {conflict.local.tooth}</p>
                     <p className="text-xs text-amber-900">{conflict.classification === "divergentSameRevision" ? "Same revision, different content" : conflict.classification === "incomingNewer" ? "Backup revision is newer; ancestry is unknown" : "Backup revision is older"}</p>
                   </div>
-                  {conflict.activeEncounter ? <span className="rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-800">Active encounter cannot be replaced</span> : null}
+                  {conflict.activeEncounter ? <span className={cx(statusBadge.base, statusBadge.danger)}>Active encounter cannot be replaced</span> : null}
                 </div>
                 <div className="mt-2 grid gap-2 text-xs text-brand-slate sm:grid-cols-2">
                   <div className="rounded-lg border border-brand-light-node bg-white p-2">
@@ -273,7 +280,7 @@ export function BackupRecoveryPanel({
                 </fieldset>
               </div>
             ))}
-            <button type="button" disabled={busy || (!preview.additions && !preview.conflicts.length)} onClick={() => void applyReviewedImport()} className="mt-3 rounded-lg border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-white disabled:text-brand-slate">
+            <button type="button" disabled={busy || (!preview.additions && !preview.conflicts.length)} onClick={() => void applyReviewedImport()} className={cx(semanticActionButton.primaryCompact, "mt-3")}>
               Apply reviewed import
             </button>
           </div>
@@ -282,36 +289,36 @@ export function BackupRecoveryPanel({
           <p className="text-xs leading-5 text-brand-slate">
             <strong className="text-brand-navy">Full vault restore:</strong> lock the vault before replacing the complete local vault or resolving a conflict involving the active encounter.
           </p>
-          <button type="button" onClick={onLockForRestore} className="shrink-0 rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-slate">
+          <button type="button" onClick={onLockForRestore} className={cx(semanticActionButton.secondary, "shrink-0")}>
             Lock vault to restore
           </button>
         </div>
       </ImportDisclosure>
-      {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
-      {message ? <p role="status" className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2 text-sm text-brand-navy">{message}</p> : null}
+      {error ? <p role="alert" className={cx(semanticStatusSurface.danger, "mt-3 rounded-xl px-3 py-2 text-sm")}>{error}</p> : null}
+      {message ? <p role="status" className={cx(semanticStatusSurface.positive, "mt-3 rounded-xl px-3 py-2 text-sm")}>{message}</p> : null}
       {recoveryHistory.length ? (
         <div className="mt-3 rounded-xl border border-brand-light-node bg-white p-3">
           <p className="text-sm font-semibold text-brand-navy">Encrypted recovery history</p>
           <p className="mt-1 text-xs leading-5 text-brand-slate">Versions displaced by an explicit recovery replacement remain encrypted, are included in new vault backups, and are removed when their encounter or the entire vault is deleted.</p>
-          <div className="mt-2 space-y-2">
+          <ul aria-label="Encrypted recovery history versions" className="mt-2 space-y-2">
             {recoveryHistory.map((entry) => {
               const active = entry.encounterId === activeEncounterId;
               return (
-                <div key={entry.id} className="flex flex-col gap-2 rounded-lg border border-brand-light-node bg-brand-light-slate p-2 text-xs text-brand-slate sm:flex-row sm:items-center sm:justify-between">
+                <li key={entry.id} className="flex flex-col gap-2 rounded-lg border border-brand-light-node bg-brand-light-slate p-2 text-xs text-brand-slate sm:flex-row sm:items-center sm:justify-between">
                   <span>
                     <strong className="text-brand-navy">Chart {entry.patientNumber} · tooth {entry.tooth} · revision {entry.revision}</strong>
                     <span className="mt-1 block">Archived {new Date(entry.archivedAt).toLocaleString()} · {entry.reason === "recovery-history-restoration" ? "history restoration" : "backup conflict replacement"}</span>
                   </span>
-                  <button type="button" disabled={busy || active} onClick={() => void restoreHistoryEntry(entry)} className="rounded-lg border border-brand-blue-light bg-white px-3 py-2 font-semibold text-brand-navy hover:bg-brand-blue-light/20 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" disabled={busy || active} onClick={() => void restoreHistoryEntry(entry)} className={semanticActionButton.warningCompact}>
                     {active ? "Close active encounter first" : "Restore archived version"}
                   </button>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       ) : (
-        <p className="mt-3 rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs text-brand-slate">
+        <p className={cx(semanticStatusSurface.neutral, "mt-3 rounded-xl px-3 py-2 text-xs")}>
           <strong className="text-brand-navy">Encrypted recovery history:</strong> No displaced versions are stored.
         </p>
       )}

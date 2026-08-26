@@ -5,10 +5,12 @@ import {
   headerActionButton,
   semanticActionButton,
   semanticChoiceControl,
+  semanticChoiceSurfaceControl,
   semanticFormControl,
   semanticInteraction,
   semanticSelectionSurface,
   semanticSelectionTone,
+  semanticReadOnlyOutput,
   semanticStatusSurface,
   semanticStatusTone,
   statusBadge,
@@ -181,6 +183,51 @@ export function SemanticStateGallery() {
                 <input aria-label="Invalid field" aria-invalid="true" readOnly value="Review value" className={semanticFormControl.invalid} />
               </label>
             </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-dense-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-dense-heading" className="text-lg font-bold">Targets, history, and output</h2>
+          <p className="mt-1 text-sm text-brand-slate">Dense clinical surfaces keep target selection, recorded status, historical rows, output formats, and plaintext actions semantically independent.</p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <article>
+              <h3 className="text-sm font-semibold">Target selection</h3>
+              <button type="button" aria-pressed="true" className={cx(semanticChoiceSurfaceControl.selected, "mt-2")}>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorSelected)}>✓</span>
+                    <strong>Main canal</strong>
+                  </span>
+                  <span className={cx(statusBadge.base, semanticStatusTone.positive)}>Shaped</span>
+                </span>
+                <span className="mt-2 block text-xs text-brand-slate">WL 21 mm · Shape 25/.04</span>
+              </button>
+            </article>
+            <article>
+              <h3 className="text-sm font-semibold">Recent history</h3>
+              <ol className="mt-2 space-y-2">
+                <li className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3 text-xs">
+                  <div className="flex justify-between gap-2"><strong>workingLength.established</strong><time dateTime="2026-08-25T12:00:00.000Z" className="text-brand-slate">12:00</time></div>
+                  <p className="mt-1 text-brand-slate">Main canal working length recorded.</p>
+                </li>
+                <li className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3 text-xs">
+                  <div className="flex justify-between gap-2"><strong>shaping.completed</strong><time dateTime="2026-08-25T12:08:00.000Z" className="text-brand-slate">12:08</time></div>
+                  <p className="mt-1 text-brand-slate">Main canal shaping recorded.</p>
+                </li>
+              </ol>
+            </article>
+            <article>
+              <h3 className="text-sm font-semibold">Output</h3>
+              <div role="tablist" aria-label="Synthetic output format" className="mt-2 flex flex-wrap gap-2">
+                <button type="button" role="tab" aria-selected="true" className={semanticChoiceControl.selected}><span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorSelected)}>✓</span>Compact</button>
+                <button type="button" role="tab" aria-selected="false" className={semanticChoiceControl.unselected}><span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorUnselected)}>✓</span>Full</button>
+              </div>
+              <textarea aria-label="Synthetic read-only output" readOnly value="Synthetic clinical output" className={cx(semanticReadOnlyOutput, "mt-2 h-24")} />
+              <div className="mt-2 grid gap-2">
+                <button type="button" className={semanticActionButton.warning}>Download plaintext</button>
+                <button type="button" className={semanticActionButton.warning}>Copy output</button>
+              </div>
+            </article>
           </div>
         </section>
 

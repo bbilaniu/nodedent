@@ -79,7 +79,10 @@ supplementary.
 | Case Setup | Workflow inclusion uses blue selection surfaces and `aria-pressed`; Open workflow is primary; removal and suggested-status actions are secondary; plaintext download is warning; form focus is blue | Preserve workflow-owned setup boundaries and migrate any new Case Setup controls through these contracts |
 | Application chrome | Header actions use the shared action hierarchy; vault state uses explicit positive, attention, neutral, or danger status; footer navigation uses the shared blue focus treatment | Preserve one principal header action and classify future global actions by prominence or consequence |
 | Shared banners and notices | Deployment, sandbox, clinical-data, storage, configuration-error, and difficulty surfaces use shared non-interactive status contracts; banner navigation is secondary and plaintext export is warning | Keep specialized workflow instructions in their owning surface while migrating equivalent feedback incrementally |
-| Other major surfaces | Inventoried as deferred: targets, history, output, dialogs, tables, and end-visit controls | Migrate and verify one surface family at a time; do not perform an unexplained global rewrite |
+| Workflow targets | Active canal cards use blue selection, `aria-pressed`, and a visible check while the canal's clinical status remains a separate labeled badge; target forms use blue focus | Preserve phase-specific canal status colors and workflow-owned target structures |
+| History and output | Event history uses ordered-list and time semantics; output-format tabs use selection rather than action styling; read-only output has visible blue focus; plaintext copy and download actions are warnings | Preserve generated-note content and export behavior while migrating any future output formats through the same contract |
+| Tables and administrative rows | Catalogue and encrypted-recovery row collections use explicit list structure, shared compact actions, and semantic feedback; no clinical data table currently requires a separate HTML table primitive | Introduce a table primitive only when column relationships materially require one; retain responsive row/card layouts otherwise |
+| Other major surfaces | Inventoried as deferred: dialogs and end-visit controls | Migrate and verify the high-consequence interaction family without changing workflow transitions |
 
 No event construction, workflow transition, validation, generated note,
 persistence, or clinical source behavior is changed by this pass.
@@ -159,3 +162,10 @@ Third surface pass on 2026-08-25:
 - auxiliary phase-map navigation became secondary, while plaintext export retained warning consequence styling;
 - the chrome fixture had no horizontal overflow at 320 px in light or dark mode, action and status surfaces remained visually distinct, and the browser console reported no errors; and
 - all 185 tests, the production build, documentation checks, and versioning checks passed.
+
+Fourth surface pass on 2026-08-25:
+
+- active target and output-format selection moved from solid primary-action styling to blue selection with programmatic state and visible check indicators;
+- canal status, event and recovery history, catalogue rows, read-only output focus, and plaintext action consequences remain separate dimensions;
+- the dense-surface fixture had no horizontal overflow at 320 px in light or dark mode, target selection and positive clinical status remained visually distinct, and the browser console reported no errors; and
+- all 188 tests, the production build, documentation checks, and versioning checks passed.

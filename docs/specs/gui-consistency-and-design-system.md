@@ -36,6 +36,13 @@ navigation the common blue focus treatment; and treats auxiliary banner
 navigation as secondary while preserving warning semantics for plaintext
 export.
 
+The fourth surface pass migrates workflow targets, history and output, and
+administrative row collections. Active targets use selection semantics without
+overwriting their clinical status; event and recovery history use list and time
+structure; output-format tabs use programmatic selected state; plaintext copy
+and download actions use warning semantics; and catalogue/recovery controls use
+the shared compact action, form-focus, and feedback contracts.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.

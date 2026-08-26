@@ -4,10 +4,14 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AnesthesiaEventForm } from "../components/AnesthesiaEventForm";
 import { AppFooter } from "../components/AppFooter";
+import { CataloguePage } from "../components/CataloguePage";
 import { ClinicalDataNotice } from "../components/ClinicalDataNotice";
 import { DeploymentConfigurationError } from "../components/DeploymentConfigurationError";
 import { DeploymentModeBanner } from "../components/DeploymentModeBanner";
 import { DifficultyBanner } from "../components/DifficultyBanner";
+import { EndodonticTargetPanel } from "../components/EndodonticTargetPanel";
+import { EventLog } from "../components/EventLog";
+import { NotePreview } from "../components/NotePreview";
 import { RadiologyEventForm } from "../components/RadiologyEventForm";
 import { SandboxDataWarning } from "../components/SandboxDataWarning";
 import { SemanticStateGallery } from "../components/SemanticStateGallery";
@@ -15,15 +19,17 @@ import { WorkflowLauncher } from "../components/WorkflowLauncher";
 import {
   semanticActionButton,
   semanticChoiceControl,
+  semanticChoiceSurfaceControl,
   semanticFormControl,
   semanticInteraction,
   semanticSelectionSurface,
   semanticSelectionTone,
+  semanticReadOnlyOutput,
   semanticStatusSurface,
   semanticStatusTone,
 } from "../components/uiStyles";
 import type { DeploymentIdentity } from "../deploymentMode";
-import { initialCase } from "../state/persistence";
+import { blankCanal, initialCase } from "../state/persistence";
 
 test("semantic action roles own focus, pressed, disabled, and consequence treatments", () => {
   for (const className of [
@@ -51,6 +57,8 @@ test("selection and status contracts do not reuse primary-action meaning", () =>
   assert.doesNotMatch(semanticChoiceControl.selected, /bg-brand-navy/);
   assert.doesNotMatch(semanticChoiceControl.selected, /brand-mint/);
   assert.match(semanticChoiceControl.indicatorSelected, /bg-brand-blue/);
+  assert.match(semanticChoiceSurfaceControl.selected, /semantic-selection-selected/);
+  assert.doesNotMatch(semanticChoiceSurfaceControl.selected, /bg-brand-navy/);
   assert.match(semanticSelectionSurface.selected, /semantic-selection-selected/);
   assert.match(semanticSelectionSurface.selected, /bg-brand-blue-light\/20/);
   assert.doesNotMatch(semanticSelectionSurface.selected, /brand-mint/);
@@ -67,6 +75,7 @@ test("selection and status contracts do not reuse primary-action meaning", () =>
   assert.match(semanticFormControl.default, /focus:border-brand-blue/);
   assert.doesNotMatch(semanticFormControl.default, /focus:border-brand-mint/);
   assert.match(semanticFormControl.invalid, /focus:border-red-400/);
+  assert.match(semanticReadOnlyOutput, /focus-visible:outline-brand-blue/);
 });
 
 test("application chrome and notices keep status separate from action hierarchy", () => {
@@ -134,6 +143,70 @@ test("primary-workflow and shared-module launchers render the same primary contr
   assert.match(markup, /Shared modules[\s\S]*Open anesthesia workflow/);
 });
 
+test("target selection stays separate from canal status", () => {
+  const noop = () => {};
+  const markup = renderToStaticMarkup(React.createElement(EndodonticTargetPanel, {
+    caseData: { ...initialCase, tooth: "36", canals: [blankCanal("Main"), blankCanal("DB")] },
+    newCanalName: "",
+    renameCanalName: "Main",
+    onNewCanalNameChange: noop,
+    onRenameCanalNameChange: noop,
+    onSelectCanal: noop,
+    onAddCanal: noop,
+    onRenameActiveCanal: noop,
+    onDeleteActiveCanal: noop,
+    onManualEvent: noop,
+    onResetManualStatus: noop,
+    onOpenPhaseMap: noop,
+    onOpenCaseSetupStatus: noop,
+  }));
+
+  assert.match(markup, /aria-pressed="true"/);
+  assert.match(markup, /aria-pressed="false"/);
+  assert.match(markup, /semantic-selection-selected/);
+  assert.match(markup, /data-clinical-status="notStarted"/);
+  assert.doesNotMatch(markup, /semantic-selection-selected[^\"]*bg-brand-navy/);
+});
+
+test("history and output surfaces expose list, tab, focus, and plaintext consequence semantics", () => {
+  const eventMarkup = renderToStaticMarkup(React.createElement(EventLog, {
+    events: [{ id: "evt-1", timestamp: "2026-08-25T12:00:00.000Z", type: "canal.completed", canal: "Main" }],
+  }));
+  assert.match(eventMarkup, /<ol aria-label="Recent clinical events"/);
+  assert.match(eventMarkup, /<time dateTime="2026-08-25T12:00:00.000Z"/);
+
+  const outputMarkup = renderToStaticMarkup(React.createElement(NotePreview, {
+    noteMode: "compact",
+    displayedNote: "Synthetic note output",
+    copied: false,
+    onNoteModeChange: () => {},
+    onCopyDisplayedNote: () => {},
+    onDownloadDisplayedText: () => {},
+  }));
+  assert.match(outputMarkup, /role="tablist" aria-label="Note output format"/);
+  assert.match(outputMarkup, /role="tab" aria-selected="true"/);
+  assert.match(outputMarkup, /semantic-selection-selected/);
+  assert.match(outputMarkup, /note-preview-output/);
+  assert.match(outputMarkup, /focus-visible:outline-brand-blue/);
+  assert.match(outputMarkup, /semantic-action-warning[^\"]*[^>]*>Download plaintext/);
+  assert.match(outputMarkup, /semantic-action-warning[^\"]*[^>]*><span aria-live="polite">Copy current output/);
+});
+
+test("catalogue administration uses selection, list, status, and destructive contracts", () => {
+  const markup = renderToStaticMarkup(React.createElement(CataloguePage, {
+    items: [],
+    onChange: () => {},
+    onClose: () => {},
+  }));
+
+  assert.match(markup, /role="tab" aria-selected="true"/);
+  assert.match(markup, /semantic-selection-selected/);
+  assert.match(markup, /aria-label="Agents catalogue items"/);
+  assert.match(markup, /semantic-status-neutral/);
+  assert.match(markup, /semantic-action-primary[^\"]*[^>]*>Add item/);
+  assert.match(markup, /semantic-action-destructive[^\"]*[^>]*>Reset local catalogue/);
+});
+
 test("anesthesia renders selected-choice semantics and a primary record action", () => {
   const markup = renderToStaticMarkup(React.createElement(AnesthesiaEventForm, {
     tooth: "36",
@@ -167,6 +240,7 @@ test("development gallery is a stable synthetic state fixture", () => {
   assert.match(markup, /Application chrome and notices/);
   assert.match(markup, /Choice controls/);
   assert.match(markup, /Setup selection and form controls/);
+  assert.match(markup, /Targets, history, and output/);
   assert.match(markup, /semantic-selection-selected/);
   assert.match(markup, /aria-invalid="true"/);
   assert.match(markup, /Equivalent launcher actions/);

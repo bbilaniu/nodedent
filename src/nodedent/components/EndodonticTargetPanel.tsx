@@ -3,7 +3,15 @@ import type { DifficultyFlag, EndoCase } from "../types";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
-import { cx, panelActionButton } from "./uiStyles";
+import {
+  cx,
+  panelActionButton,
+  semanticActionButton,
+  semanticChoiceControl,
+  semanticChoiceSurfaceControl,
+  semanticFormControl,
+  semanticStatusSurface,
+} from "./uiStyles";
 
 export type EndodonticTargetPanelProps = {
   caseData: EndoCase;
@@ -73,7 +81,7 @@ export function EndodonticTargetPanel({
   return (
     <SectionCard title={`Endodontic progress · Tooth ${caseData.tooth || "not set"}`} className={className}>
       {!caseData.tooth ? (
-        <div className="mb-3 flex flex-col gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+        <div className={cx(semanticStatusSurface.attention, "mb-3 flex flex-col gap-2 rounded-xl px-3 py-2 text-xs leading-5 sm:flex-row sm:items-center sm:justify-between")}>
           <span>Set the workflow tooth in Case Setup.</span>
           <button type="button" onClick={onOpenCaseSetupStatus} className={panelActionButton.secondaryCompact}>Open Case Setup</button>
         </div>
@@ -91,15 +99,21 @@ export function EndodonticTargetPanel({
       <div className="mb-3 grid gap-2">
         {caseData.canals.map((canal) => {
           const status = getCanalStatus(canal);
+          const selected = canal.name === activeCanalName;
           return (
             <button
+              type="button"
               key={canal.name}
+              aria-pressed={selected}
               onClick={() => onSelectCanal(canal.name)}
-              className={`rounded-xl border p-3 text-left text-sm transition hover:-translate-y-0.5 hover:shadow-sm ${canal.name === caseData.currentCanal ? "border-brand-navy bg-brand-navy text-white shadow-sm" : "border-brand-light-node bg-brand-light-slate text-brand-slate hover:bg-brand-light-node"}`}
+              className={selected ? semanticChoiceSurfaceControl.selected : semanticChoiceSurfaceControl.unselected}
             >
               <span className="flex items-center justify-between gap-2">
-                <strong>{canal.name}</strong>
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${canal.name === caseData.currentCanal ? "border-white/30 bg-white/10 text-white" : statusStyles[status]}`}>{statusLabels[status]}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, selected ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
+                  <strong>{canal.name}</strong>
+                </span>
+                <span data-clinical-status={status} className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[status]}`}>{statusLabels[status]}</span>
               </span>
               <span className="mt-1 block text-xs opacity-75">{formatCanalMeasurements(canal) || "No measurements yet"}</span>
             </button>
@@ -117,7 +131,7 @@ export function EndodonticTargetPanel({
             <input
               value={newCanalName}
               onChange={(event) => onNewCanalNameChange(event.target.value)}
-              className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+              className={cx(semanticFormControl.default, "min-w-0")}
               placeholder="blank = New"
             />
             <button onClick={addCanalAndCollapse} className={cx(panelActionButton.primary, "w-full")}>Add new canal</button>
@@ -134,21 +148,21 @@ export function EndodonticTargetPanel({
             <input
               value={renameCanalName}
               onChange={(event) => onRenameCanalNameChange(event.target.value)}
-              className="min-w-0 w-full rounded-xl border border-brand-light-node px-3 py-2 text-sm outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+              className={cx(semanticFormControl.default, "min-w-0")}
               placeholder="e.g., B, L, P"
             />
             <button onClick={renameActiveCanalAndCollapse} className={cx(panelActionButton.secondaryMuted, "w-full")}>Rename active canal</button>
             <button
               type="button"
               onClick={requestDeleteActiveCanal}
-              className={cx(panelActionButton.danger, "w-full")}
+              className={cx(semanticActionButton.warning, "w-full")}
             >
               Delete active canal
             </button>
           </div>
         </details>
         {isDeleteConfirmOpen ? (
-          <div role="alertdialog" aria-label={`Confirm deletion of ${activeCanalName}`} className="rounded-xl border border-red-200 bg-red-50 p-3">
+          <div role="alertdialog" aria-label={`Confirm deletion of ${activeCanalName}`} className={cx(semanticStatusSurface.danger, "rounded-xl p-3")}>
             <p className="text-sm font-semibold text-red-900">Delete {activeCanalName}?</p>
             <p className="mt-1 text-xs leading-5 text-red-800">This removes the canal and its recorded events from this case.</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -172,7 +186,7 @@ export function EndodonticTargetPanel({
         <div className="rounded-xl border border-brand-light-node bg-white p-3">
           <div className="mb-3 flex items-center justify-between gap-2">
             <span className="text-sm font-semibold text-brand-navy">Active canal status</span>
-            <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
+            <span data-clinical-status={activeStatus} className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusStyles[activeStatus]}`}>{activeCanal?.name || "Canal"}: {statusLabels[activeStatus]}</span>
           </div>
           <div className="grid gap-2 text-sm">
             <button onClick={() => onManualEvent("canal.completed", `Mark ${activeCanalName} complete`, "endodontic-pathway-complete")} className={panelActionButton.primary}>Mark {activeCanalName} complete</button>

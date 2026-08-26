@@ -11,6 +11,7 @@ import {
 } from "../state/catalogPersistence";
 import { FilePickerControl } from "./FilePickerControl";
 import { ImportDisclosure } from "./ImportDisclosure";
+import { cx, semanticActionButton, semanticStatusSurface } from "./uiStyles";
 
 function downloadCatalogExport(items: CatalogItem[]) {
   const blob = new Blob([JSON.stringify(buildUserCatalogExport(items), null, 2)], { type: "application/json" });
@@ -81,7 +82,7 @@ export function CatalogAdministrationPanel({
           <button
             type="button"
             onClick={() => downloadCatalogExport(items)}
-            className="rounded-xl border border-brand-mint bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-mint/20"
+            className={semanticActionButton.secondary}
           >
             Download catalogue preferences
           </button>
@@ -107,15 +108,15 @@ export function CatalogAdministrationPanel({
               type="button"
               disabled={!preview.additions}
               onClick={importNewItems}
-              className="mt-2 rounded-lg border border-brand-navy bg-brand-navy px-3 py-2 text-xs font-semibold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate"
+              className={cx(semanticActionButton.primaryCompact, "mt-2")}
             >
               Import new catalogue items
             </button>
           </div>
         ) : null}
       </ImportDisclosure>
-      {error ? <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
-      {message ? <p role="status" className="mt-3 rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-3 py-2 text-sm text-brand-navy">{message}</p> : null}
+      {error ? <p role="alert" className={cx(semanticStatusSurface.danger, "mt-3 rounded-xl px-3 py-2 text-sm")}>{error}</p> : null}
+      {message ? <p role="status" className={cx(semanticStatusSurface.positive, "mt-3 rounded-xl px-3 py-2 text-sm")}>{message}</p> : null}
     </div>
   );
 }

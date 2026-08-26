@@ -51,7 +51,11 @@ export const semanticActionButton = {
   secondaryLarge: getActionButtonClass("secondary", "large"),
   secondaryDecision: getActionButtonClass("secondary", "decision"),
   warning: getActionButtonClass("warning"),
+  warningCompact: getActionButtonClass("warning", "compact"),
+  warningLarge: getActionButtonClass("warning", "large"),
   destructive: getActionButtonClass("destructive"),
+  destructiveCompact: getActionButtonClass("destructive", "compact"),
+  destructiveLarge: getActionButtonClass("destructive", "large"),
 };
 
 const choiceBase = cx(
@@ -83,6 +87,17 @@ export const semanticChoiceControl = {
   indicatorUnselected: "border-brand-light-node bg-white text-transparent",
 };
 
+const choiceSurfaceBase = cx(
+  "semantic-control w-full rounded-xl border p-3 text-left text-sm transition-colors duration-150",
+  semanticInteraction.focus,
+  semanticInteraction.disabled,
+);
+
+export const semanticChoiceSurfaceControl = {
+  selected: cx(choiceSurfaceBase, choiceStateClasses.selected),
+  unselected: cx(choiceSurfaceBase, choiceStateClasses.unselected),
+};
+
 export const semanticSelectionSurface = {
   selected: cx("rounded-2xl border p-4", semanticSelectionTone.selected),
   unselected: cx("rounded-2xl border p-4", semanticSelectionTone.unselected),
@@ -94,6 +109,11 @@ export const semanticFormControl = {
   default: cx(formControlBase, "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"),
   invalid: cx(formControlBase, "border-red-300 focus:border-red-400 focus:ring-red-100"),
 };
+
+export const semanticReadOnlyOutput = cx(
+  "w-full resize-none rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 font-mono text-xs leading-5 text-brand-navy",
+  semanticInteraction.focus,
+);
 
 export const semanticStatusTone: Record<StatusRole, string> = {
   positive: "semantic-status-positive border-brand-mint/40 bg-brand-mint/10 text-brand-navy",
