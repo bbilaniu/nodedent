@@ -35,6 +35,33 @@ const fieldLabels: Record<EndodonticFieldId, string> = {
   dryingStatus: "Drying status",
 };
 
+const validationTerms: Record<EndodonticFieldId, string[]> = {
+  estimatedChamberDepth: ["chamber depth"],
+  estimatedWorkingLength: ["estimated wl", "estimated working length"],
+  fileTerminalLength: ["10c terminal length"],
+  availableTreatmentSpace: ["available treatment space"],
+  referencePoint: ["reference point"],
+  eal0: ["eal 0", "guide path length"],
+  patencyLength: ["patency length"],
+  shapingLength: ["shaping length"],
+  wlRadiographStatus: ["wl pa"],
+  finalShape: ["final shaping file"],
+  obturationGauge: ["obturation gauge"],
+  masterCone: ["master cone"],
+  sealerLabel: ["sealer used"],
+  coneFitRadiograph: ["cone fit radiograph"],
+  dryingStatus: ["drying status", "select drying status", "requires dry", "requires wet", "requires persistent wet"],
+};
+
+export function contextualEndodonticInputId(fieldId: EndodonticFieldId) {
+  return `endodontic-context-${fieldId}`;
+}
+
+export function getContextualFieldForValidationMessage(message: string, fieldIds: EndodonticFieldId[]) {
+  const normalizedMessage = message.toLowerCase();
+  return fieldIds.find((fieldId) => validationTerms[fieldId].some((term) => normalizedMessage.includes(term)));
+}
+
 const fieldPlaceholders: Partial<Record<EndodonticFieldId, string>> = {
   estimatedChamberDepth: "mm",
   estimatedWorkingLength: "mm",
@@ -152,11 +179,13 @@ export function ContextualEndodonticInputs({
               return (
                 <SelectInput
                   key={fieldId}
+                  id={contextualEndodonticInputId(fieldId)}
                   label={fieldLabels[fieldId]}
                   value={value}
                   onChange={(nextValue) => updateField(fieldId, nextValue)}
                   options={["", "acceptable", "short", "long", "not taken"]}
                   invalid={invalid}
+                  helperText={invalid ? `Select ${fieldLabels[fieldId]} before continuing.` : undefined}
                 />
               );
             }
@@ -165,11 +194,13 @@ export function ContextualEndodonticInputs({
               return (
                 <SelectInput
                   key={fieldId}
+                  id={contextualEndodonticInputId(fieldId)}
                   label={fieldLabels[fieldId]}
                   value={value}
                   onChange={(nextValue) => updateField(fieldId, nextValue)}
                   options={["", "dry", "slightly damp", "wet", "persistent wet"]}
                   invalid={invalid}
+                  helperText={invalid ? `Select ${fieldLabels[fieldId]} before continuing.` : undefined}
                 />
               );
             }
@@ -177,12 +208,14 @@ export function ContextualEndodonticInputs({
             return (
               <TextInput
                 key={fieldId}
+                id={contextualEndodonticInputId(fieldId)}
                 label={fieldLabels[fieldId]}
                 value={value}
                 onChange={(nextValue) => updateField(fieldId, nextValue)}
                 placeholder={fieldPlaceholders[fieldId]}
                 inputMode={positiveMeasurementFields.has(fieldId) || fieldId === "fileTerminalLength" || fieldId === "obturationGauge" ? "decimal" : undefined}
                 invalid={invalid}
+                helperText={invalid ? `Enter ${fieldLabels[fieldId]} before continuing.` : undefined}
                 suggestions={fieldId === "sealerLabel" ? sealerSuggestions : []}
                 rightLabel={fieldId === "patencyLength" && suggestedLengths.patency
                   ? `Suggested: ${suggestedLengths.patency} mm`

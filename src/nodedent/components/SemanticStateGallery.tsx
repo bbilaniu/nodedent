@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { AccessibleDialog } from "./AccessibleDialog";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import {
   cx,
@@ -61,6 +62,7 @@ function StateCell({ label, children }: { label: string; children: React.ReactNo
 
 export function SemanticStateGallery() {
   const [theme, setTheme] = useState<GalleryTheme>(getInitialGalleryTheme);
+  const [interactiveDialogOpen, setInteractiveDialogOpen] = useState(false);
 
   useEffect(() => {
     const previousTheme = document.documentElement.dataset.theme;
@@ -294,6 +296,14 @@ export function SemanticStateGallery() {
               </div>
             </article>
           </div>
+          <button
+            type="button"
+            data-testid="open-accessible-dialog-fixture"
+            onClick={() => setInteractiveDialogOpen(true)}
+            className={cx(semanticActionButton.secondary, "mt-4")}
+          >
+            Open interactive dialog fixture
+          </button>
         </section>
 
         <section aria-labelledby="gallery-status-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
@@ -307,6 +317,29 @@ export function SemanticStateGallery() {
           </div>
         </section>
       </div>
+      {interactiveDialogOpen ? (
+        <AccessibleDialog
+          labelledBy="gallery-interactive-dialog-title"
+          describedBy="gallery-interactive-dialog-description"
+          overlayVariant="centered"
+          panelClassName="max-w-lg"
+          closeOnBackdrop
+          onRequestClose={() => setInteractiveDialogOpen(false)}
+        >
+          <h2 id="gallery-interactive-dialog-title" className="text-xl font-bold">Accessible dialog behavior fixture</h2>
+          <p id="gallery-interactive-dialog-description" className="mt-2 text-sm leading-6 text-brand-slate">
+            Synthetic controls exercise initial focus, contained tab order, Escape dismissal, background inertness, scroll locking, and focus restoration.
+          </p>
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs font-medium text-brand-slate">Synthetic field</span>
+            <input className={semanticFormControl.default} defaultValue="Synthetic value" />
+          </label>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" data-dialog-initial-focus onClick={() => setInteractiveDialogOpen(false)} className={semanticActionButton.secondary}>Cancel</button>
+            <button type="button" onClick={() => setInteractiveDialogOpen(false)} className={semanticActionButton.primary}>Confirm synthetic action</button>
+          </div>
+        </AccessibleDialog>
+      ) : null}
     </main>
   );
 }

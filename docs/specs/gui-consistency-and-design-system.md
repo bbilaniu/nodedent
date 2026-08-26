@@ -52,6 +52,16 @@ Saved-case deletion remains destructive, while referral and medication pathways
 remain warning actions because they route documentation rather than deleting
 clinical data.
 
+The sixth surface pass completes the remaining local semantic families and the
+shared dialog behavior. Vault entry and recovery, contextual validation,
+decision feedback, measurements, operative progress, anesthesia, isolation,
+radiology, import disclosure, privacy navigation, and the floating end-visit
+action now use the shared action, choice, form, status, and focus contracts.
+Clickable diagnosis readiness is separated into a non-interactive status tile
+and an explicit action. The accessible dialog primitive now owns focus,
+keyboard, background, scroll, and restoration behavior for application modals
+and destructive canal confirmation.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.

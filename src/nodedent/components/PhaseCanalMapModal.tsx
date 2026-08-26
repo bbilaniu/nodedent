@@ -4,7 +4,8 @@ import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
 import { getCanalPhaseIndicator, getGlobalPhaseIndicator } from "../engine/phaseProgress";
 import { phases } from "../protocol/phases";
-import { cx, semanticActionButton, semanticChoiceControl, semanticChoiceSurfaceControl, semanticDialogSurface, semanticStatusTone, statusBadge } from "./uiStyles";
+import { cx, semanticActionButton, semanticChoiceControl, semanticChoiceSurfaceControl, semanticStatusTone, statusBadge } from "./uiStyles";
+import { AccessibleDialog } from "./AccessibleDialog";
 
 export function PhaseCanalMapModal({
   caseData,
@@ -22,16 +23,14 @@ export function PhaseCanalMapModal({
   onClose: () => void;
 }) {
   return (
-    <div className={semanticDialogSurface.overlay}>
-      <button type="button" tabIndex={-1} aria-label="Close phase details" onClick={onClose} className={semanticDialogSurface.backdropButton} />
-      <section role="dialog" aria-modal="true" aria-labelledby="phase-canal-map-title" className={cx(semanticDialogSurface.panel, "max-w-3xl")}>
+    <AccessibleDialog labelledBy="phase-canal-map-title" panelClassName="max-w-3xl" closeOnBackdrop onRequestClose={onClose}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Phase / canal map</p>
             <h2 id="phase-canal-map-title" className="mt-1 text-2xl font-bold text-brand-navy">{progressPhase}</h2>
             <p className="mt-1 text-sm text-brand-slate">Inspect phase progress by canal. Selecting a canal changes the active canal, but does not advance the workflow.</p>
           </div>
-          <button type="button" onClick={onClose} className={semanticActionButton.secondary}>
+          <button type="button" data-dialog-initial-focus onClick={onClose} className={semanticActionButton.secondary}>
             Close
           </button>
         </div>
@@ -95,7 +94,6 @@ export function PhaseCanalMapModal({
             })}
           </div>
         </div>
-      </section>
-    </div>
+    </AccessibleDialog>
   );
 }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AnesthesiaEventForm } from "../components/AnesthesiaEventForm";
+import { AccessibleDialog } from "../components/AccessibleDialog";
 import { AppFooter } from "../components/AppFooter";
 import { CataloguePage } from "../components/CataloguePage";
 import { PriorVisitModal, SavedCasesModal } from "../components/CaseManagementModal";
@@ -13,6 +14,7 @@ import { DifficultyBanner } from "../components/DifficultyBanner";
 import { EndodonticEndVisitDialog } from "../components/EndodonticEndVisitDialog";
 import { EndodonticTargetPanel } from "../components/EndodonticTargetPanel";
 import { EventLog } from "../components/EventLog";
+import { SelectInput, TextInput } from "../components/FormControls";
 import { NotePreview } from "../components/NotePreview";
 import { PhaseCanalMapModal } from "../components/PhaseCanalMapModal";
 import { RadiologyEventForm } from "../components/RadiologyEventForm";
@@ -138,6 +140,28 @@ test("dialog contracts separate dismissal, decisions, selection, and status", ()
   assert.doesNotMatch(priorVisitMarkup, /focus:border-brand-mint/);
 });
 
+test("accessible dialog primitive exposes the runtime behavior hooks", () => {
+  const markup = renderToStaticMarkup(React.createElement(AccessibleDialog, {
+    labelledBy: "synthetic-dialog-title",
+    describedBy: "synthetic-dialog-description",
+    role: "alertdialog",
+    closeOnBackdrop: true,
+    onRequestClose: () => {},
+    children: React.createElement(React.Fragment, null,
+      React.createElement("h2", { id: "synthetic-dialog-title" }, "Synthetic confirmation"),
+      React.createElement("p", { id: "synthetic-dialog-description" }, "Synthetic description"),
+      React.createElement("button", { type: "button", "data-dialog-initial-focus": true }, "Cancel"),
+    ),
+  }));
+
+  assert.match(markup, /data-accessible-dialog-overlay="true"/);
+  assert.match(markup, /role="alertdialog" aria-modal="true"/);
+  assert.match(markup, /aria-labelledby="synthetic-dialog-title"/);
+  assert.match(markup, /aria-describedby="synthetic-dialog-description"/);
+  assert.match(markup, /tabindex="-1"/);
+  assert.match(markup, /data-dialog-initial-focus="true"/);
+});
+
 test("selection and status contracts do not reuse primary-action meaning", () => {
   assert.match(semanticChoiceControl.selected, /bg-brand-blue-light\/20/);
   assert.match(semanticChoiceControl.selected, /border-brand-blue/);
@@ -163,6 +187,31 @@ test("selection and status contracts do not reuse primary-action meaning", () =>
   assert.doesNotMatch(semanticFormControl.default, /focus:border-brand-mint/);
   assert.match(semanticFormControl.invalid, /focus:border-red-400/);
   assert.match(semanticReadOnlyOutput, /focus-visible:outline-brand-blue/);
+});
+
+test("shared form controls connect invalid state to field-specific help", () => {
+  const textMarkup = renderToStaticMarkup(React.createElement(TextInput, {
+    id: "synthetic-text-field",
+    label: "Synthetic text field",
+    value: "",
+    invalid: true,
+    helperText: "Enter a synthetic value.",
+    onChange: () => {},
+  }));
+  const selectMarkup = renderToStaticMarkup(React.createElement(SelectInput, {
+    id: "synthetic-select-field",
+    label: "Synthetic select field",
+    value: "",
+    options: ["", "Recorded"],
+    invalid: true,
+    helperText: "Select a synthetic value.",
+    onChange: () => {},
+  }));
+
+  assert.match(textMarkup, /id="synthetic-text-field"[^>]*aria-invalid="true"[^>]*aria-describedby="synthetic-text-field-helper"/);
+  assert.match(textMarkup, /id="synthetic-text-field-helper"[^>]*>Enter a synthetic value/);
+  assert.match(selectMarkup, /id="synthetic-select-field"[^>]*aria-invalid="true"[^>]*aria-describedby="synthetic-select-field-helper"/);
+  assert.match(selectMarkup, /id="synthetic-select-field-helper"[^>]*>Select a synthetic value/);
 });
 
 test("application chrome and notices keep status separate from action hierarchy", () => {
@@ -349,6 +398,7 @@ test("development gallery is a stable synthetic state fixture", () => {
   assert.match(markup, /Setup selection and form controls/);
   assert.match(markup, /Targets, history, and output/);
   assert.match(markup, /Dialogs and high-consequence decisions/);
+  assert.match(markup, /Open interactive dialog fixture/);
   assert.match(markup, /semantic-selection-selected/);
   assert.match(markup, /aria-invalid="true"/);
   assert.match(markup, /Equivalent launcher actions/);

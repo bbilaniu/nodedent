@@ -153,9 +153,7 @@ export const panelActionButton = {
   secondaryCompact: semanticActionButton.secondaryCompact,
   secondaryLarge: semanticActionButton.secondaryLarge,
   secondaryMuted: cx(semanticActionButton.secondary, "text-brand-slate"),
-  muted: cx(semanticActionButton.secondary, "bg-brand-light-slate text-brand-slate hover:bg-brand-light-node"),
   warning: semanticActionButton.warning,
-  danger: cx(getActionButtonClass("warning"), "border-red-200 bg-red-50 text-red-800 hover:bg-red-100 active:bg-red-100"),
   destructive: semanticActionButton.destructive,
 };
 
@@ -185,7 +183,6 @@ export const semanticDialogSurface = {
   overlayCentered: "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-navy-deep/30 p-4",
   panel: "relative mt-6 w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
   panelCentered: "relative w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
-  backdropButton: "absolute inset-0 cursor-default",
 };
 
 export const statusBadge = {

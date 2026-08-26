@@ -6,6 +6,7 @@ import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getAnesthesiaEventLabel } from "../workflow/anesthesiaForm";
 import type { CatalogItem } from "../workflow/catalogs";
 import { AnesthesiaEventForm } from "./AnesthesiaEventForm";
+import { cx, semanticStatusSurface } from "./uiStyles";
 
 function getNextAnesthesiaNodeId(eventType: AnesthesiaEventType) {
   if (eventType === anesthesiaEventTypes.adequacyConfirmed) return "anesthesia-complete";
@@ -84,7 +85,7 @@ export function AnesthesiaWorkflowRunner({
       </div>
 
       {recordedLabel ? (
-        <div className={`mt-4 rounded-2xl border p-4 text-sm leading-6 ${assessmentPending ? "border-amber-200 bg-amber-50 text-amber-900" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
+        <div role="status" className={cx(assessmentPending ? semanticStatusSurface.attention : semanticStatusSurface.positive, "mt-4 p-4 text-sm leading-6")}>
           <strong>{recordedLabel}</strong> was appended to the current visit. {assessmentPending ? "Record the adequacy assessment next; the parent workflow remains blocked until adequacy is confirmed." : "The parent workflow remains at its current step."}
         </div>
       ) : null}

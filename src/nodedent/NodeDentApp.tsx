@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CanalContinuationTarget, CaseSetupFocusTarget, ClinicalEvent, DecisionOption, DifficultyFlag, EmbeddedWorkflowLaunch, EndoCase, ValidationMessage } from "./types";
 import { ActiveWorkflowTargetPanel } from "./components/ActiveWorkflowTargetPanel";
+import { AccessibleDialog } from "./components/AccessibleDialog";
 import { DecisionCard } from "./components/DecisionCard";
 import { EndodonticEndVisitDialog, endVisitActionConfig, type EndVisitActionId } from "./components/EndodonticEndVisitDialog";
 import { PriorVisitModal, SavedCasesModal } from "./components/CaseManagementModal";
@@ -27,7 +28,6 @@ import {
   cx,
   headerActionButton,
   semanticActionButton,
-  semanticDialogSurface,
   semanticStatusSurface,
   semanticStatusTone,
   statusBadge,
@@ -1832,7 +1832,7 @@ function ClinicalWorkspace({
               <button
                 type="button"
                 onClick={() => setIsEndVisitOpen(true)}
-                className="fixed bottom-4 right-4 z-40 rounded-full border border-amber-300 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-950 shadow-xl transition hover:-translate-y-0.5 hover:bg-amber-100 focus:outline-none focus:ring-4 focus:ring-amber-200"
+                className={cx(semanticActionButton.warningLarge, "fixed bottom-4 right-4 z-40 rounded-full shadow-xl")}
               >
                 Pause / end visit
               </button>
@@ -1958,14 +1958,21 @@ function ClinicalWorkspace({
         ) : null}
 
         {isNewCaseConfirmOpen ? (
-          <div className={semanticDialogSurface.overlayCentered}>
-            <section role="alertdialog" aria-modal="true" aria-labelledby="new-case-confirm-title" aria-describedby="new-case-confirm-description" className={cx(semanticDialogSurface.panelCentered, "max-w-md")}>
+          <AccessibleDialog
+            role="alertdialog"
+            labelledBy="new-case-confirm-title"
+            describedBy="new-case-confirm-description"
+            overlayVariant="centered"
+            panelClassName="max-w-md"
+            onRequestClose={() => setIsNewCaseConfirmOpen(false)}
+          >
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">New case</p>
               <h2 id="new-case-confirm-title" className="mt-1 text-xl font-bold text-brand-navy">Start a blank case?</h2>
               <p id="new-case-confirm-description" className="mt-2 text-sm leading-6 text-brand-slate">The current case is autosaved in the encrypted local vault. Starting a new case creates a neutral blank case and opens the full-page Case Setup.</p>
               <div className="mt-5 grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
+                  data-dialog-initial-focus
                   onClick={() => setIsNewCaseConfirmOpen(false)}
                   className={semanticActionButton.secondary}
                 >
@@ -1979,8 +1986,7 @@ function ClinicalWorkspace({
                   Start and open Case Setup
                 </button>
               </div>
-            </section>
-          </div>
+          </AccessibleDialog>
         ) : null}
 
         {isProgressDetailOpen ? (

@@ -3,6 +3,7 @@ import type { DifficultyFlag, EndoCase } from "../types";
 import { getCanalStatus, statusLabels, statusStyles } from "../engine/deriveCanalStatus";
 import { formatCanalMeasurements } from "../engine/measurements";
 import { SectionCard } from "./FormControls";
+import { AccessibleDialog } from "./AccessibleDialog";
 import {
   cx,
   panelActionButton,
@@ -162,12 +163,21 @@ export function EndodonticTargetPanel({
           </div>
         </details>
         {isDeleteConfirmOpen ? (
-          <div role="alertdialog" aria-label={`Confirm deletion of ${activeCanalName}`} className={cx(semanticStatusSurface.danger, "rounded-xl p-3")}>
-            <p className="text-sm font-semibold text-red-900">Delete {activeCanalName}?</p>
-            <p className="mt-1 text-xs leading-5 text-red-800">This removes the canal and its recorded events from this case.</p>
+          <AccessibleDialog
+            role="alertdialog"
+            labelledBy="delete-canal-dialog-title"
+            describedBy="delete-canal-dialog-description"
+            overlayVariant="centered"
+            panelClassName={cx(semanticStatusSurface.danger, "max-w-md p-4")}
+            closeOnBackdrop
+            onRequestClose={() => setIsDeleteConfirmOpen(false)}
+          >
+            <p id="delete-canal-dialog-title" className="text-sm font-semibold text-red-900">Delete {activeCanalName}?</p>
+            <p id="delete-canal-dialog-description" className="mt-1 text-xs leading-5 text-red-800">This removes the canal and its recorded events from this case.</p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
+                data-dialog-initial-focus
                 onClick={() => setIsDeleteConfirmOpen(false)}
                 className={panelActionButton.secondaryMuted}
               >
@@ -181,7 +191,7 @@ export function EndodonticTargetPanel({
                 Confirm delete
               </button>
             </div>
-          </div>
+          </AccessibleDialog>
         ) : null}
         <div className="rounded-xl border border-brand-light-node bg-white p-3">
           <div className="mb-3 flex items-center justify-between gap-2">

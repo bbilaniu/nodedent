@@ -1128,6 +1128,8 @@ test("contextual endodontic inputs put pre-op fields and radiology action beside
   assert.equal(markup.includes("Record radiograph review"), true);
   assert.equal(markup.includes("Review anesthesia record"), true);
   assert.equal(markup.includes("Drying status"), false);
+  assert.match(markup, /id="endodontic-context-estimatedChamberDepth"[^>]*aria-invalid="true"[^>]*aria-describedby="endodontic-context-estimatedChamberDepth-helper"/);
+  assert.match(markup, /id="endodontic-context-estimatedChamberDepth-helper"[^>]*>Enter Chamber depth before continuing/);
 });
 
 test("contextual endodontic inputs expose only the active step's canal fields", () => {

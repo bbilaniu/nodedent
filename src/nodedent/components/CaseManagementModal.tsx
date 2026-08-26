@@ -9,7 +9,8 @@ import { FilePickerControl } from "./FilePickerControl";
 import { BackupRecoveryPanel } from "./BackupRecoveryPanel";
 import type { BackupConflictResolution, ClinicalVaultBackup, EncryptedBackupImportPreview, EncryptedBackupResolutionResult, RecoveryHistorySummary } from "../state/clinicalVault";
 import { SandboxDataWarning } from "./SandboxDataWarning";
-import { cx, semanticActionButton, semanticDialogSurface, semanticFormControl, semanticSelectionTone, semanticStatusSurface, semanticStatusTone, statusBadge } from "./uiStyles";
+import { cx, semanticActionButton, semanticFormControl, semanticSelectionTone, semanticStatusSurface, semanticStatusTone, statusBadge } from "./uiStyles";
+import { AccessibleDialog } from "./AccessibleDialog";
 
 const MAX_CASE_JSON_BYTES = 1_000_000;
 
@@ -71,15 +72,14 @@ export function SavedCasesModal({
   }
 
   return (
-    <div className={semanticDialogSurface.overlay}>
-      <section role="dialog" aria-modal="true" aria-labelledby="saved-cases-dialog-title" className={cx(semanticDialogSurface.panel, "max-w-3xl")}>
+    <AccessibleDialog labelledBy="saved-cases-dialog-title" panelClassName="max-w-3xl" onRequestClose={onClose}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-blue">Saved cases</p>
             <h2 id="saved-cases-dialog-title" className="mt-1 text-2xl font-bold text-brand-navy">Resume saved workflow</h2>
             <p className="mt-1 text-sm text-brand-slate">Open an encrypted local autosave or explicitly import a NodeDent case JSON.</p>
           </div>
-          <button type="button" onClick={onClose} className={semanticActionButton.secondary}>Close</button>
+          <button type="button" data-dialog-initial-focus onClick={onClose} className={semanticActionButton.secondary}>Close</button>
         </div>
 
         <ClinicalDataNotice compact />
@@ -99,14 +99,17 @@ export function SavedCasesModal({
               <SandboxDataWarning className="mb-2" />
               <div className="rounded-lg border border-brand-blue-light/60 bg-brand-light-slate p-3">
                 <FilePickerControl
+                  id="case-json-file"
                   label="NodeDent case JSON file"
                   buttonLabel="Choose case file"
                   accept=".json,application/json"
                   fileName={importFileName}
+                  describedBy={importFileError ? "case-json-file-error" : undefined}
+                  invalid={Boolean(importFileError)}
                   onFileSelect={(file) => void selectImportFile(file)}
                 />
               </div>
-              {importFileError ? <p role="alert" className="mt-2 text-xs font-semibold text-red-800">{importFileError}</p> : null}
+              {importFileError ? <p id="case-json-file-error" role="alert" className={cx(semanticStatusSurface.danger, "mt-2 rounded-xl px-3 py-2 text-xs")}><a href="#case-json-file" className="font-semibold underline underline-offset-2">Review case JSON file</a>: {importFileError}</p> : null}
               <label className="mt-3 block">
                 <span className="mb-1 block text-xs font-medium text-brand-slate">Or paste case JSON</span>
                 <textarea
@@ -151,8 +154,7 @@ export function SavedCasesModal({
             )) : <li className="text-sm text-brand-slate">No autosaves yet.</li>}
           </ul>
         </div>
-      </section>
-    </div>
+    </AccessibleDialog>
   );
 }
 
@@ -226,8 +228,7 @@ export function PriorVisitModal({
   }
 
   return (
-    <div className={semanticDialogSurface.overlay}>
-      <section role="dialog" aria-modal="true" aria-labelledby="prior-visit-dialog-title" className={cx(semanticDialogSurface.panel, "max-w-4xl")}>
+    <AccessibleDialog labelledBy="prior-visit-dialog-title" panelClassName="max-w-4xl" onRequestClose={onClose}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Prior visit</p>
@@ -236,7 +237,7 @@ export function PriorVisitModal({
           </div>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={onContinueFromPriorVisit} className={semanticActionButton.primaryCompact}>Mark as continued from a prior visit</button>
-            <button type="button" onClick={onClose} className={semanticActionButton.secondaryCompact}>Close</button>
+            <button type="button" data-dialog-initial-focus onClick={onClose} className={semanticActionButton.secondaryCompact}>Close</button>
           </div>
         </div>
 
@@ -311,7 +312,6 @@ export function PriorVisitModal({
             Resume from prior visit setup
           </button>
         </div>
-      </section>
-    </div>
+    </AccessibleDialog>
   );
 }

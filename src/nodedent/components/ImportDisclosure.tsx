@@ -1,4 +1,5 @@
 import React, { type ReactNode } from "react";
+import { cx, semanticActionButton } from "./uiStyles";
 
 export function ImportDisclosure({
   action,
@@ -27,7 +28,7 @@ export function ImportDisclosure({
           aria-expanded={expanded}
           aria-controls={id}
           onClick={onToggle}
-          className="flex min-h-10 items-center justify-center gap-2 rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold leading-5 text-brand-navy hover:bg-brand-blue-light/20"
+          className={cx(semanticActionButton.secondary, "w-full leading-5")}
         >
           <span>{buttonLabel}</span>
           <svg

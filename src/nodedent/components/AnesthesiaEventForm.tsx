@@ -24,7 +24,7 @@ import type { AnesthesiaAdministrationAction, AnesthesiaFormState, AnesthesiaMod
 import type { AnesthesiaEventOptions } from "../workflow/anesthesiaForm";
 import { getCurrentTimeString, isCompleteTime24 } from "../workflow/dateTime";
 import { SelectInput, TextInput } from "./FormControls";
-import { cx, panelActionButton, semanticActionButton, semanticChoiceControl } from "./uiStyles";
+import { cx, panelActionButton, semanticActionButton, semanticChoiceControl, semanticFormControl, semanticStatusSurface } from "./uiStyles";
 
 export function AnesthesiaEventForm({
   tooth,
@@ -136,16 +136,18 @@ export function AnesthesiaEventForm({
           type="time"
           value={form.administeredAt}
           onChange={(event) => updateForm({ administeredAt: event.target.value })}
-          className={`min-w-36 flex-1 rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${administeredAtInvalid ? "border-red-300 focus:border-red-400 focus:ring-red-100" : "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"}`}
+          aria-invalid={administeredAtInvalid || undefined}
+          aria-describedby={administeredAtInvalid ? "anesthesia-administered-at-error" : undefined}
+          className={cx(administeredAtInvalid ? semanticFormControl.invalid : semanticFormControl.default, "min-w-36 flex-1")}
         />
-        <button type="button" onClick={() => updateForm({ administeredAt: getCurrentTimeString() })} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-light-slate">
+        <button type="button" onClick={() => updateForm({ administeredAt: getCurrentTimeString() })} className={semanticActionButton.secondaryCompact}>
           Set to now
         </button>
-        <button type="button" onClick={() => updateForm({ administeredAt: "" })} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-navy transition hover:bg-brand-light-slate">
+        <button type="button" onClick={() => updateForm({ administeredAt: "" })} className={semanticActionButton.secondaryCompact}>
           Clear time
         </button>
       </div>
-      {administeredAtInvalid ? <p role="status" className="mt-1 text-xs text-red-800">Enter time as HH:mm or clear it.</p> : null}
+      {administeredAtInvalid ? <p id="anesthesia-administered-at-error" role="alert" className={cx(semanticStatusSurface.danger, "mt-2 rounded-xl px-3 py-2 text-xs")}>Enter time as HH:mm or clear it.</p> : null}
     </div>
   );
 
@@ -270,7 +272,7 @@ export function AnesthesiaEventForm({
           />
         ) : null}
       </div>
-      {!hasTargetScope ? <p role="status" className="mt-2 text-xs leading-5 text-amber-900">Enter at least one target tooth or a region label before recording anesthesia.</p> : null}
+      {!hasTargetScope ? <p role="status" className={cx(semanticStatusSurface.attention, "mt-2 rounded-xl px-3 py-2 text-xs leading-5")}>Enter at least one target tooth or a region label before recording anesthesia.</p> : null}
       <div className="mt-5 border-t border-brand-light-node pt-4">
         <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand-slate">Record to current visit</p>
         <button
@@ -314,7 +316,7 @@ export function AnesthesiaEventForm({
               </button>
             ) : null}
           </div>
-          <p className="mt-2 text-xs leading-5 text-amber-900">Do not save chart numbers, patient facts, or identifiers in a Catalogue entry.</p>
+          <p className={cx(semanticStatusSurface.attention, "mt-3 rounded-xl px-3 py-2 text-xs leading-5")}>Do not save chart numbers, patient facts, or identifiers in a Catalogue entry.</p>
         </div>
       ) : null}
     </>

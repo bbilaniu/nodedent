@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import type { DifficultyFlag } from "../types";
-import { cx, semanticActionButton, semanticDialogSurface, semanticFormControl } from "./uiStyles";
+import { semanticActionButton, semanticFormControl } from "./uiStyles";
+import { AccessibleDialog } from "./AccessibleDialog";
 
 export type EndVisitActionId = "pause" | "medicate" | "refer";
 
@@ -48,23 +49,19 @@ export function EndodonticEndVisitDialog({
   const [nextVisitPlan, setNextVisitPlan] = useState(initialNextVisitPlan);
   const trimmedPlan = nextVisitPlan.trim();
 
-  useEffect(() => {
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
+  function requestClose() {
+    if (nextVisitPlan !== initialNextVisitPlan && !window.confirm("Discard the unrecorded next-visit plan and close this dialog?")) return;
+    onClose();
+  }
 
   return (
-    <div className={semanticDialogSurface.overlayRaised}>
-      <button type="button" tabIndex={-1} aria-label="Cancel pause or end visit" onClick={onClose} className={semanticDialogSurface.backdropButton} />
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="end-visit-title"
-        className={cx(semanticDialogSurface.panel, "max-w-2xl")}
-      >
+    <AccessibleDialog
+      labelledBy="end-visit-title"
+      overlayVariant="raised"
+      panelClassName="max-w-2xl"
+      closeOnBackdrop
+      onRequestClose={requestClose}
+    >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Chairside stop action</p>
@@ -73,7 +70,7 @@ export function EndodonticEndVisitDialog({
               Active canal <strong>{activeCanalName}</strong> · {currentPhase} · {currentNodeTitle}
             </p>
           </div>
-          <button type="button" onClick={onClose} className={semanticActionButton.secondary}>Cancel</button>
+          <button type="button" data-dialog-initial-focus onClick={requestClose} className={semanticActionButton.secondary}>Cancel</button>
         </div>
 
         <div className="mt-4 rounded-2xl border border-brand-blue-light/60 bg-brand-blue-light/20 p-4">
@@ -117,7 +114,6 @@ export function EndodonticEndVisitDialog({
             <span className="mt-1 block text-xs font-normal opacity-80">Continues to referral documentation and the decision about medication and temporary closure.</span>
           </button>
         </div>
-      </section>
-    </div>
+    </AccessibleDialog>
   );
 }
