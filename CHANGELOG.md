@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.2
+
+### Patch Changes
+
+- 08e8f80: Apply the semantic action, selection, status, and form-focus contracts to Case Entry and Case Setup so workflow selection no longer looks like positive clinical status and principal, secondary, and plaintext-download actions have consistent visual hierarchy.
+- ee65fd5: Complete the semantic UI migration for vault, validation, workflow feedback, measurements, clinical runners, import, privacy, and floating actions, and add accessible dialog focus, keyboard, background, scroll, restoration, and discard-warning behavior.
+- 94c695b: Apply semantic selection, status, action, focus, and list contracts to workflow targets, note history and output, catalogue administration, and encrypted recovery rows.
+- 14b8725: Standardize dialog structure, dismissal, high-consequence decision actions, saved-case administration, and phase/canal selection without changing clinical workflow behavior.
+- 08e8f80: Align application chrome, vault feedback, deployment and clinical-data notices, difficulty banners, and footer focus with the shared semantic action and status contracts.
+
 ## 2.4.1
 
 ### Patch Changes
