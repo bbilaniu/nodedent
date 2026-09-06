@@ -66,13 +66,9 @@ jobs:
               node -e 'let value = ""; process.stdin.setEncoding("utf8"); process.stdin.on("data", (chunk) => { value += chunk; }); process.stdin.on("end", () => { process.stdout.write(JSON.parse(value).version); });'
           )"
           current_version="$(node -p "require('./package.json').version")"
-          current_tag="v${current_version}"
 
           echo "Application version transition: ${previous_version} -> ${current_version}"
           if [[ "${previous_version}" != "${current_version}" ]]; then
-            echo "version_changed=true" >> "${GITHUB_OUTPUT}"
-          elif ! git show-ref --verify --quiet "refs/tags/${current_tag}"; then
-            echo "Release tag ${current_tag} is missing; backfilling release artifacts."
             echo "version_changed=true" >> "${GITHUB_OUTPUT}"
           else
             echo "version_changed=false" >> "${GITHUB_OUTPUT}"
@@ -144,9 +140,57 @@ jobs:
           fetch-depth: 0
 
       - name: Fast-forward beta to main
+        shell: bash
         run: |
           git fetch origin beta
-          git merge-base --is-ancestor origin/beta HEAD
+          if ! git merge-base --is-ancestor origin/beta HEAD; then
+            echo "::error::beta advanced independently and cannot be fast-forwarded to main. Merge main back into beta; never force-push the branch."
+            exit 1
+          fi
+          git push origin HEAD:beta
+
+  sync-beta-without-release:
+    name: Fast-forward beta after non-release main update
+    needs: [changesets, detect_release]
+    if: needs.detect_release.outputs.version_changed == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main update
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Verify the current release baseline
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+
+          git fetch --tags origin
+          if ! git show-ref --verify --quiet "refs/tags/${tag}"; then
+            echo "::error::Release tag ${tag} is missing. Recover the exact version-changing commit manually; refusing to tag or synchronize from the current commit."
+            exit 1
+          fi
+
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          if ! git merge-base --is-ancestor "${tag_commit}" HEAD; then
+            echo "::error::Release tag ${tag} points to ${tag_commit}, which is not an ancestor of main."
+            exit 1
+          fi
+
+      - name: Fast-forward beta to main
+        shell: bash
+        run: |
+          git fetch origin beta
+          if ! git merge-base --is-ancestor origin/beta HEAD; then
+            echo "::error::beta advanced independently and cannot be fast-forwarded to main. Merge main back into beta; never force-push the branch."
+            exit 1
+          fi
           git push origin HEAD:beta
 
   archive-release:
