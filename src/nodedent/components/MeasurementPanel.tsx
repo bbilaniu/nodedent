@@ -2,6 +2,7 @@ import React from "react";
 import type { CanalRecord, EndoCase } from "../types";
 import { getSuggestedLengths, isBlank, isPositiveMeasurement } from "../engine/measurements";
 import { SectionCard, SelectInput, TextInput } from "./FormControls";
+import { semanticActionButton, semanticFormControl } from "./uiStyles";
 
 export function MeasurementPanel({
   caseData,
@@ -73,7 +74,7 @@ export function MeasurementPanel({
           <div className="rounded-xl bg-brand-blue-light/20 px-3 py-2 text-xs text-brand-navy">
             {suggestedLengths.patency && suggestedLengths.shaping ? <span>Suggested from EAL 0: patency <strong>{suggestedLengths.patency}</strong> mm, shaping <strong>{suggestedLengths.shaping}</strong> mm.</span> : <span>Enter EAL 0 to preview suggested patency/shaping lengths.</span>}
           </div>
-          <button onClick={onApplyEalDerivedLengths} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Use EAL ±1 {suggestedLengths.patency && suggestedLengths.shaping ? `(patency ${suggestedLengths.patency}, shaping ${suggestedLengths.shaping})` : ""}</button>
+          <button type="button" onClick={onApplyEalDerivedLengths} className={semanticActionButton.secondary}>Use EAL ±1 {suggestedLengths.patency && suggestedLengths.shaping ? `(patency ${suggestedLengths.patency}, shaping ${suggestedLengths.shaping})` : ""}</button>
           <div className={pairedFieldGridClass}>
             <TextInput label="Final shaping file" value={activeCanal?.finalShape} onChange={(value) => onUpdateActiveCanal("finalShape", value)} placeholder="e.g., 30/.04 or PTN X2 25/.06" />
             <TextInput label="Master cone" value={activeCanal?.masterCone} onChange={(value) => onUpdateActiveCanal("masterCone", value)} placeholder="30/.04" />
@@ -84,7 +85,7 @@ export function MeasurementPanel({
           </div>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-brand-slate">Drying status</span>
-            <select value={activeCanal?.dryingStatus || ""} onChange={(event) => onUpdateActiveCanal("dryingStatus", event.target.value)} className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20">
+            <select value={activeCanal?.dryingStatus || ""} onChange={(event) => onUpdateActiveCanal("dryingStatus", event.target.value)} className={semanticFormControl.default}>
               <option value="">Select drying status</option>
               <option value="dry">dry</option>
               <option value="slightly damp">slightly damp</option>

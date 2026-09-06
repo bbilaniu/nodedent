@@ -36,8 +36,27 @@ and a neutral disabled treatment.
 
 Use `semanticActionButton` from
 `src/nodedent/components/uiStyles.ts`. Use `primaryDecision` or
-`secondaryDecision` for the larger bottom-of-form decision treatment. Warning
-or destructive consequence overrides ordinary prominence.
+`secondaryDecision` for the larger bottom-of-form decision treatment, and the
+corresponding `warningDecision` or `destructiveDecision` when consequence
+overrides ordinary prominence.
+
+### Dialogs
+
+Use `AccessibleDialog` for application modals. It composes the
+`semanticDialogSurface` overlay and elevated panel with `role="dialog"` (or
+`role="alertdialog"` for a confirmation that requires immediate attention),
+`aria-modal="true"`, and label/description relationships to visible content. It
+also owns initial focus, contained Tab order, topmost-dialog Escape handling,
+background `inert`/`aria-hidden` suppression, body scroll locking, optional
+backdrop dismissal, and focus restoration. Mark the least destructive initial
+action with `data-dialog-initial-focus`. Route Escape, backdrop, and visible
+dismissal through the same close request so unconfirmed edits receive the same
+discard warning.
+
+A visible Close or Cancel action uses the secondary action contract. The other
+actions retain their ordinary semantic roles: being inside a dialog does not
+make a routine action a warning, and a warning path does not become destructive
+unless it irreversibly removes data.
 
 ### Choice controls
 
@@ -70,12 +89,21 @@ supplementary.
 | Surface family | First-pass result | Follow-up boundary |
 | --- | --- | --- |
 | Primary-workflow and shared-module launcher cards | Principal enabled actions share the primary contract; headings and descriptions retain category | Audit quick actions and less prominent launcher-adjacent actions with real content |
-| Anesthesia | Entry mode, route, and adequacy choices use selection semantics; record action is primary; recorded feedback remains mint | Exercise all validation and long-label combinations at supported widths |
-| Isolation | Entry modes use selection semantics and the clinical record action is primary | Classify warning overrides for compromised or removal documentation during the isolation surface pass |
-| Radiology | Modality multi-select uses selection semantics and the record action is primary | Consolidate its remaining form layout during the radiology surface pass |
-| Shared status summaries | Positive, attention, and neutral styling comes from `semanticStatusTone` | Migrate remaining component-local status combinations by surface family |
-| Shared controls | Shared button and form-control focus moved to blue; ambiguous shared `info`, `mint`, and `success` action variants were removed | Migrate remaining component-local mint focus styles and solid-navy selectors incrementally |
-| Other major surfaces | Inventoried as deferred: application chrome, setup, targets, history, output, dialogs, tables, banners, and end-visit controls | Migrate and verify one surface family at a time; do not perform an unexplained global rewrite |
+| Anesthesia | Entry mode, route, and adequacy choices use selection semantics; record action is primary; time controls, scope feedback, catalogue warnings, and recorded feedback use shared contracts | Exercise future validation and long-label additions at supported widths |
+| Isolation | Entry modes use selection semantics; compromised/removal preparation is warning; replacement is secondary; the clinical record action is primary; scope feedback is attention | Preserve event meaning when adding future reassessment actions |
+| Radiology | Modality multi-select uses selection semantics; scope controls and feedback are shared; the record action is primary; repeated-entry and recorded feedback use shared contracts | Preserve explicit review scope when extending modalities |
+| Shared status summaries | Positive, attention, and neutral styling comes from `semanticStatusTone`; actionable diagnosis review is a separate explicit control | Keep future status tiles non-interactive unless they contain an explicit action |
+| Shared controls | Shared button and form-control focus is blue; equivalent local controls use the action/form contracts; invalid text, select, file, and time inputs expose error relationships | Route new controls through the same shared roles |
+| Case Entry | Continue or first New case is primary; alternate case, saved-case, import, download, and lock actions use the shared secondary contract; storage warnings use the attention tone | Verify vault-entry variants whenever recovery or case-library actions change |
+| Case Setup | Workflow inclusion uses blue selection surfaces and `aria-pressed`; Open workflow is primary; removal and suggested-status actions are secondary; plaintext download is warning; form focus is blue | Preserve workflow-owned setup boundaries and migrate any new Case Setup controls through these contracts |
+| Application chrome | Header actions use the shared action hierarchy; vault state uses explicit positive, attention, neutral, or danger status; footer navigation uses the shared blue focus treatment | Preserve one principal header action and classify future global actions by prominence or consequence |
+| Shared banners and notices | Deployment, sandbox, clinical-data, storage, configuration-error, and difficulty surfaces use shared non-interactive status contracts; banner navigation is secondary and plaintext export is warning | Keep specialized workflow instructions in their owning surface while migrating equivalent feedback incrementally |
+| Workflow targets | Active canal cards use blue selection, `aria-pressed`, and a visible check while the canal's clinical status remains a separate labeled badge; target forms use blue focus | Preserve phase-specific canal status colors and workflow-owned target structures |
+| History and output | Event history uses ordered-list and time semantics; output-format tabs use selection rather than action styling; read-only output has visible blue focus; plaintext copy and download actions are warnings | Preserve generated-note content and export behavior while migrating any future output formats through the same contract |
+| Tables and administrative rows | Catalogue and encrypted-recovery row collections use explicit list structure, shared compact actions, and semantic feedback; no clinical data table currently requires a separate HTML table primitive | Introduce a table primitive only when column relationships materially require one; retain responsive row/card layouts otherwise |
+| Dialogs and confirmations | `AccessibleDialog` owns semantics, naming, focus entry/containment/restoration, Escape, background suppression, scroll lock, and backdrop behavior; visible dismissal is secondary; destructive confirmation remains explicit and separated | Add committed browser/assistive-technology evidence as target environments become available |
+| End-visit and phase/canal map | Stop choices use decision-sized primary or warning actions; referral remains a warning route rather than a destructive action; phase/canal selection is separate from the phase-progress badge | Preserve workflow transitions, required next-visit plans, and phase-derived status logic |
+| Other surface refinements | No remaining major surface family is deferred; component-local cleanup continues incrementally as touched | Apply the same contracts to new controls and remove unexplained one-off styling without global rewrites |
 
 No event construction, workflow transition, validation, generated note,
 persistence, or clinical source behavior is changed by this pass.
@@ -92,8 +120,8 @@ http://127.0.0.1:5173/?theme=dark#/dev/semantic-ui
 The fixture is dynamically imported only when `import.meta.env.DEV` is true and
 does not appear in the production clinical workspace. It renders synthetic
 examples of action roles, selection, status, focus, disabled, loading,
-equivalent launcher actions, and a record-to-status transition. The same route
-is the stable visual snapshot input.
+equivalent launcher actions, a record-to-status transition, and an interactive
+dialog behavior fixture. The same route is the stable visual snapshot input.
 
 Capture or compare the full page in both themes at these CSS viewport widths:
 
@@ -139,3 +167,61 @@ Verified on 2026-08-24:
 - focused semantic rendering tests, the full test suite, documentation checks,
   type checking, and the production build passed. The production bundle did
   not contain the development fixture text.
+
+Second surface pass on 2026-08-25:
+
+- Case Entry and Case Setup actions were migrated from repeated local classes to the shared action contracts;
+- treatment-workflow inclusion moved from mint status styling to blue selection styling with programmatic pressed state;
+- Case Setup launch, removal, plaintext-download, and form-focus roles were separated explicitly; and
+- the development fixture and focused rendering tests were extended for selected setup surfaces and semantic form controls;
+- the fixture had no horizontal overflow at 320 px in light or dark mode, and selection and primary-action colors remained distinct; and
+- all 184 tests, the production build, documentation checks, and versioning checks passed.
+
+Third surface pass on 2026-08-25:
+
+- application chrome and reusable notices moved to explicit semantic status surfaces without changing their visible status wording;
+- auxiliary phase-map navigation became secondary, while plaintext export retained warning consequence styling;
+- the chrome fixture had no horizontal overflow at 320 px in light or dark mode, action and status surfaces remained visually distinct, and the browser console reported no errors; and
+- all 185 tests, the production build, documentation checks, and versioning checks passed.
+
+Fourth surface pass on 2026-08-25:
+
+- active target and output-format selection moved from solid primary-action styling to blue selection with programmatic state and visible check indicators;
+- canal status, event and recovery history, catalogue rows, read-only output focus, and plaintext action consequences remain separate dimensions;
+- the dense-surface fixture had no horizontal overflow at 320 px in light or dark mode, target selection and positive clinical status remained visually distinct, and the browser console reported no errors; and
+- all 188 tests, the production build, documentation checks, and versioning checks passed.
+
+Fifth surface pass on 2026-08-25:
+
+- workflow, saved-case, prior-visit, phase/canal-map, new-case, and end-visit
+  dialogs use a shared modal frame with programmatic dialog names;
+- end-visit actions use the large decision hierarchy, destructive case-library
+  actions remain red, and referral/medication routes remain warning actions;
+- phase and canal selection uses blue selected-choice semantics while current,
+  recorded, and not-recorded phase progress remains a separate labeled status;
+- the dialog fixture was visually inspected in light and dark modes at the
+  available wide-desktop viewport, with no document overflow or application
+  console errors; and
+- focused semantic rendering tests, all 189 tests, documentation checks, type
+  checking, the production build, deployment/security checks, and versioning
+  checks passed.
+
+Sixth surface and interaction pass on 2026-08-25:
+
+- vault, validation, decision, measurement, operative, anesthesia, isolation,
+  radiology, import, privacy-navigation, readiness, and floating-action one-offs
+  moved to the shared semantic contracts;
+- application dialogs and canal deletion use `AccessibleDialog`, while
+  shared-workflow close/Catalogue navigation and end-visit close requests warn
+  before discarding unrecorded edits;
+- shared form controls and contextual clinical inputs expose field-specific
+  invalid/help relationships and local error-summary links;
+- the interactive fixture confirmed initial focus, forward/reverse Tab wrap,
+  Escape dismissal, background suppression, body scroll locking, focus
+  restoration, a 44-pixel action target, two-pixel visible focus, and no
+  horizontal overflow at the available 1920-pixel desktop viewport in light and
+  dark modes; and
+- all 191 tests, type checking, documentation lifecycle checks, the production
+  build, versioning, deployment-mode, and clinical-security checks passed.
+  Manual assistive-technology, 200% zoom, forced-colors, and target-device checks
+  remain acceptance work in the active accessibility and GUI specs.

@@ -20,7 +20,8 @@ import {
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { sharedAvailabilityClass, sharedCapabilityStatusClass, sharedCapabilityStatusLabel, sharedModuleActionLabel, sharedStatusLabelClass } from "./sharedModuleUi";
-import { cx, panelActionButton, panelSurface, sectionText, statusBadge, workspaceSurface } from "./uiStyles";
+import { cx, panelActionButton, panelSurface, sectionText, semanticActionButton, statusBadge, workspaceSurface } from "./uiStyles";
+import { AccessibleDialog } from "./AccessibleDialog";
 
 function formatTimestamp(timestamp?: string) {
   if (!timestamp) return "not yet";
@@ -104,18 +105,19 @@ export function WorkflowLauncher({
   ].filter(Boolean).filter((fact, index, facts) => index === facts.indexOf(fact));
 
   const content = (
-      <section className={cx(workspaceSurface.shell, presentation === "modal" ? "mt-6 shadow-2xl" : "shadow-sm")}>
+      <>
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className={sectionText.eyebrow}>Clinical workspace</p>
-            <h2 className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
+            <h2 id="workflow-launcher-dialog-title" className="mt-1 text-2xl font-bold text-brand-navy">NodeDent Home</h2>
             <p className="mt-1 text-sm text-brand-slate">{activeCaseFacts.join(" · ")}</p>
           </div>
           {presentation === "modal" ? (
             <button
               type="button"
+              data-dialog-initial-focus
               onClick={onClose}
-              className={panelActionButton.muted}
+              className={semanticActionButton.secondary}
             >
               Close
             </button>
@@ -180,16 +182,11 @@ export function WorkflowLauncher({
           <section className={panelSurface.muted}>
             <h3 className={sectionText.titleSmall}>Shared readiness status</h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={onOpenDiagnosis}
-                disabled={!onOpenDiagnosis}
-                className={cx(workspaceSurface.statusTile, "text-left transition hover:-translate-y-0.5 hover:shadow-sm disabled:cursor-default disabled:hover:translate-y-0 disabled:hover:shadow-none", sharedCapabilityStatusClass(capabilitySummary.diagnosis))}
-              >
+              <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.diagnosis))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Diagnosis</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.diagnosis.summary}</p>
-                {onOpenDiagnosis ? <p className="mt-2 text-xs font-semibold">Review diagnosis</p> : null}
-              </button>
+                {onOpenDiagnosis ? <button type="button" onClick={onOpenDiagnosis} className={cx(semanticActionButton.secondaryCompact, "mt-2")}>Review diagnosis</button> : null}
+              </div>
               <div className={cx(workspaceSurface.statusTile, sharedCapabilityStatusClass(capabilitySummary.radiographs))}>
                 <p className="text-xs font-bold uppercase tracking-wide">Radiographs</p>
                 <p className="mt-1 text-sm font-semibold">{capabilitySummary.radiographs.summary}</p>
@@ -297,16 +294,16 @@ export function WorkflowLauncher({
             </div>
           </section>
         ) : null}
-      </section>
+      </>
   );
 
   if (presentation === "page") {
-    return <div className="flex justify-center">{content}</div>;
+    return <div className="flex justify-center"><section className={cx(workspaceSurface.shell, "shadow-sm")}>{content}</section></div>;
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-auto bg-brand-navy-deep/30 p-4">
+    <AccessibleDialog labelledBy="workflow-launcher-dialog-title" panelClassName={workspaceSurface.shell} onRequestClose={onClose}>
       {content}
-    </div>
+    </AccessibleDialog>
   );
 }

@@ -9,7 +9,7 @@ import { endodonticRootWorkflowId } from "../workflow/registry";
 import { normalizeWorkflowInstances } from "../workflow/workflowInstances";
 import { CaseSetupStatusPanel } from "./CaseSetupStatusPanel";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
-import { panelActionButton } from "./uiStyles";
+import { cx, panelActionButton, panelSurface } from "./uiStyles";
 
 export function CaseSetupPage({
   caseData,
@@ -71,7 +71,7 @@ export function CaseSetupPage({
 
         <ClinicalDataNotice compact />
 
-        <div className="mt-4 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+        <div className={cx(panelSurface.muted, "mt-4")}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h2 className="text-sm font-semibold text-brand-navy">Case audit</h2>
@@ -121,7 +121,7 @@ export function CaseSetupPage({
         </div>
 
         <div className="mt-6 flex flex-col gap-2 border-t border-brand-light-node pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <button onClick={onDownloadCaseJson} className="rounded-xl border border-brand-blue-light bg-brand-blue-light/20 px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/30">Download plaintext NodeDent case JSON</button>
+          <button onClick={onDownloadCaseJson} className={panelActionButton.warning}>Download plaintext NodeDent case JSON</button>
           <button onClick={onClose} className={panelActionButton.secondary}>
             Return to workspace
           </button>

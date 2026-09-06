@@ -3,6 +3,7 @@ import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase } from "../types";
 import type { RadiologyEventDetails } from "../workflow/radiology";
 import { formatRadiologyEventFragment, isRadiologyReviewedEvent, radiologyEventTypes, sharedRadiologyWorkflow } from "../workflow/radiology";
 import { RadiologyEventForm } from "./RadiologyEventForm";
+import { cx, semanticActionButton, semanticStatusSurface } from "./uiStyles";
 
 export function RadiologyWorkflowRunner({
   launch,
@@ -75,7 +76,7 @@ export function RadiologyWorkflowRunner({
       </div>
 
       {recordedLabel ? (
-        <div className="mt-4 rounded-2xl border border-brand-mint/40 bg-brand-mint/10 p-4 text-sm leading-6 text-brand-navy">
+        <div role="status" className={cx(semanticStatusSurface.positive, "mt-4 p-4 text-sm leading-6")}>
           <strong>{recordedLabel}</strong> was appended to the current visit. The parent workflow remains at its current step.
         </div>
       ) : null}
@@ -93,7 +94,7 @@ export function RadiologyWorkflowRunner({
             setRecordedLabel("");
             setModuleNodeId(workflow.entryNodeIds[0]);
           }}
-          className="mt-4 rounded-xl border border-brand-blue-light bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+          className={cx(semanticActionButton.secondary, "mt-4")}
         >
           Add another radiograph entry
         </button>

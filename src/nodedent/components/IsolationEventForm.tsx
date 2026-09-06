@@ -23,6 +23,7 @@ import {
 } from "../workflow/isolationForm";
 import type { IsolationFormState } from "../workflow/isolationForm";
 import { SelectInput, TextInput } from "./FormControls";
+import { cx, semanticActionButton, semanticStatusSurface } from "./uiStyles";
 
 export function IsolationEventForm({
   tooth,
@@ -118,7 +119,7 @@ export function IsolationEventForm({
             type="button"
             aria-label="Prepare compromised isolation event"
             onClick={() => prepareAction(isolationEventTypes.compromised)}
-            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
+            className={semanticActionButton.warning}
           >
             Compromised
           </button>
@@ -126,7 +127,7 @@ export function IsolationEventForm({
             type="button"
             aria-label="Prepare removed isolation event"
             onClick={() => prepareAction(isolationEventTypes.removed)}
-            className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-50"
+            className={semanticActionButton.warning}
           >
             Removed
           </button>
@@ -134,7 +135,7 @@ export function IsolationEventForm({
             type="button"
             aria-label="Prepare replacement isolation event"
             onClick={() => prepareAction(isolationEventTypes.replaced)}
-            className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-blue-light/20"
+            className={semanticActionButton.secondary}
           >
             Replace isolation
           </button>
@@ -187,13 +188,13 @@ export function IsolationEventForm({
           suggestions={actionIsReassessment ? isolationReasonSuggestions : isolationNoteSuggestions}
         />
       </div>
-      {!hasTargetScope ? <p role="status" className="mt-2 text-xs leading-5 text-amber-900">Enter at least one exposed tooth or a region label before recording isolation.</p> : null}
+      {!hasTargetScope ? <p role="status" className={cx(semanticStatusSurface.attention, "mt-2 px-3 py-2 text-xs leading-5")}>Enter at least one exposed tooth or a region label before recording isolation.</p> : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={submitEvent}
           disabled={!canSubmit}
-          className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSubmit ? "border-brand-navy bg-brand-navy text-white hover:bg-brand-navy-deep" : "cursor-not-allowed border-brand-light-node bg-white text-brand-slate"}`}
+          className={semanticActionButton.primary}
         >
           {isolationSubmitLabels[form.action]}
         </button>
@@ -202,7 +203,7 @@ export function IsolationEventForm({
             type="button"
             onClick={saveShortcuts}
             disabled={!canSaveShortcuts}
-            className={`rounded-xl border px-4 py-2 text-sm font-semibold transition ${canSaveShortcuts ? "border-brand-blue-light bg-white text-brand-navy hover:bg-brand-light-slate" : "cursor-not-allowed border-brand-light-node bg-brand-light-slate text-brand-slate"}`}
+            className={semanticActionButton.secondary}
           >
             Add entered values to Catalogue
           </button>
@@ -211,7 +212,7 @@ export function IsolationEventForm({
           <button
             type="button"
             onClick={onManageShortcuts}
-            className="rounded-xl border border-brand-light-node bg-white px-4 py-2 text-sm font-semibold text-brand-navy transition hover:bg-brand-light-slate"
+            className={semanticActionButton.secondary}
           >
             Manage Catalogue
           </button>

@@ -2,6 +2,7 @@ import React from "react";
 import { applicationVersion } from "../applicationVersion";
 import { deploymentIdentity, deploymentModeLabel } from "../deploymentMode";
 import { SandboxDataWarning } from "./SandboxDataWarning";
+import { cx, semanticActionButton } from "./uiStyles";
 
 function PolicySection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -27,7 +28,7 @@ export function PrivacyPolicyPage() {
           </p>
           <p className="mt-3 text-sm font-semibold text-brand-navy">Deployment: {deploymentModeLabel(deploymentIdentity)}</p>
           <SandboxDataWarning className="mt-4" />
-          <a href="#" className="mt-4 inline-flex rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-node focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint">
+          <a href="#" className={cx(semanticActionButton.secondary, "mt-4")}>
             Return to NodeDent
           </a>
         </header>

@@ -7,6 +7,7 @@ export function FilePickerControl({
   describedBy,
   fileName,
   id,
+  invalid = false,
   label,
   onFileSelect,
 }: {
@@ -15,6 +16,7 @@ export function FilePickerControl({
   describedBy?: string;
   fileName?: string;
   id?: string;
+  invalid?: boolean;
   label: string;
   onFileSelect: (file?: File) => void;
 }) {
@@ -32,6 +34,7 @@ export function FilePickerControl({
         accept={accept}
         aria-labelledby={labelId}
         aria-describedby={[describedBy, fileNameId].filter(Boolean).join(" ")}
+        aria-invalid={invalid || undefined}
         onChange={(event) => onFileSelect(event.target.files?.[0])}
         className="peer sr-only"
       />

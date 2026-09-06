@@ -24,7 +24,16 @@ import {
 } from "../workflow/workflowInstances";
 import { SelectInput, TextInput } from "./FormControls";
 import { sharedCapabilityStatusClass, sharedCapabilityStatusLabel } from "./sharedModuleUi";
-import { cx, panelActionButton, panelSurface, sectionText, statusBadge } from "./uiStyles";
+import {
+  cx,
+  panelActionButton,
+  panelSurface,
+  sectionText,
+  semanticFormControl,
+  semanticSelectionSurface,
+  semanticSelectionTone,
+  statusBadge,
+} from "./uiStyles";
 
 type CaseSetupFocusRefs = Record<CaseSetupFocusTarget, React.RefObject<HTMLElement | null>>;
 
@@ -109,7 +118,7 @@ function WorkflowSelectionSection({
             Select every implemented primary workflow that belongs to this case. Endodontic and operative treatment may coexist.
           </p>
         </div>
-        <span className={cx(statusBadge.base, instances.length ? statusBadge.ready : statusBadge.neutral)}>
+        <span className={cx(statusBadge.base, instances.length ? semanticSelectionTone.selected : semanticSelectionTone.unselected)}>
           {instances.length ? `${instances.length} selected` : "None selected"}
         </span>
       </div>
@@ -124,7 +133,7 @@ function WorkflowSelectionSection({
           return (
             <article
               key={definition.workflowId}
-              className={`rounded-2xl border p-4 ${selected ? "border-brand-mint bg-brand-mint/10" : "border-brand-light-node bg-white"}`}
+              className={selected ? semanticSelectionSurface.selected : semanticSelectionSurface.unselected}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -132,7 +141,7 @@ function WorkflowSelectionSection({
                   <h4 className="mt-1 text-base font-bold text-brand-navy">{definition.label}</h4>
                   <p className="mt-1 text-xs leading-5 text-brand-slate">{definition.summary}</p>
                 </div>
-                <span className={cx(statusBadge.base, selected ? statusBadge.ready : statusBadge.neutral)}>
+                <span className={cx(statusBadge.base, instance?.status === "complete" ? statusBadge.positive : statusBadge.neutral)}>
                   {instance ? workflowLifecycleLabels[instance.status] : "Not selected"}
                 </span>
               </div>
@@ -151,25 +160,24 @@ function WorkflowSelectionSection({
               ) : null}
 
               <div className="mt-4 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => onSelectionChange(definition.workflowId, !selected)}
-                  disabled={selected && !removable}
-                  className={selected
-                    ? "rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:border-brand-light-node disabled:text-brand-slate"
-                    : "rounded-xl border border-brand-navy bg-brand-navy px-3 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep"}
-                >
-                  {selected ? removable ? "Remove from case" : "Retained with recorded activity" : "Add to case"}
-                </button>
                 {selected ? (
                   <button
                     type="button"
                     onClick={() => onOpenWorkflow(definition.workflowId)}
-                    className="rounded-xl border border-brand-blue-light bg-white px-3 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-blue-light/20"
+                    className={panelActionButton.primary}
                   >
                     Open workflow
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => onSelectionChange(definition.workflowId, !selected)}
+                  disabled={selected && !removable}
+                  className={selected ? panelActionButton.secondary : panelActionButton.primary}
+                >
+                  {selected ? removable ? "Remove from case" : "Retained with recorded activity" : "Add to case"}
+                </button>
               </div>
             </article>
           );
@@ -207,14 +215,14 @@ function CaseVisitStatusSection({
           <p className="mt-1 text-xs leading-5 text-brand-slate">Derived from the selected workflow lifecycles.</p>
         </div>
         <SelectInput label="Visit status" value={getCaseStatus(caseData)} onChange={(value) => onUpdateCase({ caseStatus: value })} options={caseStatusOptions} />
-        <button onClick={onApplySuggestedCaseStatus} className="rounded-xl border border-brand-light-node bg-white px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-slate">Use suggested status</button>
+        <button onClick={onApplySuggestedCaseStatus} className={panelActionButton.secondaryCompact}>Use suggested status</button>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-brand-slate">Next visit / plan</span>
           <textarea
             value={caseData.nextVisitPlan || ""}
             onChange={(event) => onUpdateCase({ nextVisitPlan: event.target.value })}
             placeholder="e.g., continue obturation, crown recommended, refer"
-            className="h-24 w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+            className={cx(semanticFormControl.default, "h-24")}
           />
         </label>
       </div>

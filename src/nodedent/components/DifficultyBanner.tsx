@@ -1,7 +1,15 @@
 import React from "react";
 import type { CanalRecord, EndoCase } from "../types";
-import { difficultyLabels, difficultyStyles } from "../engine/deriveCaseStatus";
+import { difficultyLabels } from "../engine/deriveCaseStatus";
 import { getCanalStatus, statusLabels } from "../engine/deriveCanalStatus";
+import { cx, semanticActionButton, semanticStatusSurface, type StatusRole } from "./uiStyles";
+
+const difficultyStatusRoles: Record<EndoCase["difficulty"], StatusRole> = {
+  none: "positive",
+  caution: "attention",
+  high: "difficulty",
+  refer: "danger",
+};
 
 export function DifficultyBanner({
   caseData,
@@ -17,7 +25,7 @@ export function DifficultyBanner({
   const activeCanalStatus = getCanalStatus(activeCanal);
 
   return (
-    <div className={`rounded-2xl border p-4 text-sm shadow-sm ${difficultyStyles[caseData.difficulty]}`}>
+    <div className={cx(semanticStatusSurface[difficultyStatusRoles[caseData.difficulty]], "p-4 text-sm shadow-sm")}>
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
           <strong>{difficultyLabels[caseData.difficulty]}</strong>
@@ -26,7 +34,7 @@ export function DifficultyBanner({
         <button
           type="button"
           onClick={onOpenPhaseMap}
-          className="shrink-0 rounded-full border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-navy-deep"
+          className={cx(semanticActionButton.secondary, "shrink-0")}
         >
           Phase / canal map
         </button>
