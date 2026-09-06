@@ -65,14 +65,16 @@ build as Sandbox. Push builds use Current only for `main` and Beta only for
 as exact-commit evidence. The GitHub Pages workflow repeats the complete gate
 for the exact `main` commit before uploading that artifact.
 
-After a `Version Packages` merge, the Version workflow retains the canonical
-`vM.m.p` tag behavior and creates `archive/vM.m.p` from that exact tag. It
-first builds that tagged commit with an explicit Historical Sandbox identity
-and checks the generated deployment metadata and security boundary. It refuses
-to overwrite an archive branch pointing elsewhere. The workflow summary records
-the artifact validation separately from the still-pending external Cloudflare
-branch build. Repository branch protection or a ruleset must separately prevent
-ordinary edits to `archive/*`.
+After a `Version Packages` merge, the Version workflow detects the application-
+version change from the pushed commits instead of relying on editable merge-
+commit text. It retains the canonical `vM.m.p` tag behavior and creates
+`archive/vM.m.p` from that exact tag. It first builds that tagged commit with an
+explicit Historical Sandbox identity and checks the generated deployment
+metadata and security boundary. It refuses to overwrite an archive branch
+pointing elsewhere. The workflow summary records the artifact validation
+separately from the still-pending external Cloudflare branch build. Repository
+branch protection or a ruleset must separately prevent ordinary edits to
+`archive/*`.
 
 ## Cloudflare Workers Builds Configuration
 
