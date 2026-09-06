@@ -24,6 +24,44 @@ primary; centralizes shared status tones; and removes the ambiguous shared
 `info`, `mint`, and `success` action variants. The remaining broad inventory and
 surface-by-surface migration keep this spec active.
 
+The second surface pass migrates Case Entry and Case Setup. It centralizes their
+action and form-control treatments, represents workflow inclusion as blue
+selection rather than mint positive status, keeps workflow launch actions
+primary, and classifies plaintext download as a warning action.
+
+The third surface pass migrates application chrome and reusable notices. It
+uses the status contract for deployment, privacy, vault, error, and difficulty
+feedback; keeps header prominence separate from vault state; gives footer
+navigation the common blue focus treatment; and treats auxiliary banner
+navigation as secondary while preserving warning semantics for plaintext
+export.
+
+The fourth surface pass migrates workflow targets, history and output, and
+administrative row collections. Active targets use selection semantics without
+overwriting their clinical status; event and recovery history use list and time
+structure; output-format tabs use programmatic selected state; plaintext copy
+and download actions use warning semantics; and catalogue/recovery controls use
+the shared compact action, form-focus, and feedback contracts.
+
+The fifth surface pass migrates dialogs and end-visit controls. Shared modal
+frames now expose dialog names and modality consistently; quiet dismissal stays
+secondary; phase and canal selection uses the blue choice contract while phase
+progress remains a separate clinical status; and high-consequence decisions use
+large primary, warning, or destructive actions according to their actual effect.
+Saved-case deletion remains destructive, while referral and medication pathways
+remain warning actions because they route documentation rather than deleting
+clinical data.
+
+The sixth surface pass completes the remaining local semantic families and the
+shared dialog behavior. Vault entry and recovery, contextual validation,
+decision feedback, measurements, operative progress, anesthesia, isolation,
+radiology, import disclosure, privacy navigation, and the floating end-visit
+action now use the shared action, choice, form, status, and focus contracts.
+Clickable diagnosis readiness is separated into a non-interactive status tile
+and an explicit action. The accessible dialog primitive now owns focus,
+keyboard, background, scroll, and restoration behavior for application modals
+and destructive canal confirmation.
+
 ## Principles
 
 - Similar controls with the same meaning must look and behave consistently.

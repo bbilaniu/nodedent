@@ -51,7 +51,13 @@ export const semanticActionButton = {
   secondaryLarge: getActionButtonClass("secondary", "large"),
   secondaryDecision: getActionButtonClass("secondary", "decision"),
   warning: getActionButtonClass("warning"),
+  warningCompact: getActionButtonClass("warning", "compact"),
+  warningLarge: getActionButtonClass("warning", "large"),
+  warningDecision: getActionButtonClass("warning", "decision"),
   destructive: getActionButtonClass("destructive"),
+  destructiveCompact: getActionButtonClass("destructive", "compact"),
+  destructiveLarge: getActionButtonClass("destructive", "large"),
+  destructiveDecision: getActionButtonClass("destructive", "decision"),
 };
 
 const choiceBase = cx(
@@ -60,9 +66,14 @@ const choiceBase = cx(
   semanticInteraction.disabled,
 );
 
+export const semanticSelectionTone: Record<ChoiceState, string> = {
+  selected: "semantic-selection-selected border-brand-blue bg-brand-blue-light/20 text-brand-navy",
+  unselected: "semantic-selection-unselected border-brand-light-node bg-white text-brand-navy",
+};
+
 const choiceStateClasses: Record<ChoiceState, string> = {
-  selected: "semantic-choice-selected border-brand-blue bg-brand-blue-light/20 text-brand-navy shadow-sm hover:bg-brand-blue-light/30 active:bg-brand-blue-light/30",
-  unselected: "semantic-choice-unselected border-brand-light-node bg-white text-brand-navy hover:border-brand-blue-light hover:bg-brand-light-slate active:bg-brand-light-node",
+  selected: cx("semantic-choice-selected shadow-sm hover:bg-brand-blue-light/30 active:bg-brand-blue-light/30", semanticSelectionTone.selected),
+  unselected: cx("semantic-choice-unselected text-brand-navy hover:border-brand-blue-light hover:bg-brand-light-slate active:bg-brand-light-node", semanticSelectionTone.unselected),
 };
 
 export function getChoiceControlClass(state: ChoiceState) {
@@ -78,15 +89,54 @@ export const semanticChoiceControl = {
   indicatorUnselected: "border-brand-light-node bg-white text-transparent",
 };
 
-export const semanticStatusTone: Record<StatusRole, string> = {
-  positive: "border-brand-mint/40 bg-brand-mint/10 text-brand-navy",
-  attention: "border-amber-200 bg-amber-50 text-amber-900",
-  neutral: "border-brand-light-node bg-white text-brand-slate",
-  difficulty: "border-orange-200 bg-orange-50 text-orange-900",
-  danger: "border-red-200 bg-red-50 text-red-800",
+const choiceSurfaceBase = cx(
+  "semantic-control w-full rounded-xl border p-3 text-left text-sm transition-colors duration-150",
+  semanticInteraction.focus,
+  semanticInteraction.disabled,
+);
+
+export const semanticChoiceSurfaceControl = {
+  selected: cx(choiceSurfaceBase, choiceStateClasses.selected),
+  unselected: cx(choiceSurfaceBase, choiceStateClasses.unselected),
 };
 
-const headerButtonBase = cx("shrink-0 rounded-full leading-none", semanticInteraction.focus);
+export const semanticSelectionSurface = {
+  selected: cx("rounded-2xl border p-4", semanticSelectionTone.selected),
+  unselected: cx("rounded-2xl border p-4", semanticSelectionTone.unselected),
+};
+
+const formControlBase = "w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2";
+
+export const semanticFormControl = {
+  default: cx(formControlBase, "border-brand-light-node focus:border-brand-blue focus:ring-brand-blue-light/20"),
+  invalid: cx(formControlBase, "border-red-300 focus:border-red-400 focus:ring-red-100"),
+};
+
+export const semanticReadOnlyOutput = cx(
+  "w-full resize-none rounded-2xl border border-brand-light-node bg-brand-light-slate p-4 font-mono text-xs leading-5 text-brand-navy",
+  semanticInteraction.focus,
+);
+
+export const semanticStatusTone: Record<StatusRole, string> = {
+  positive: "semantic-status-positive border-brand-mint/40 bg-brand-mint/10 text-brand-navy",
+  attention: "semantic-status-attention border-amber-200 bg-amber-50 text-amber-900",
+  neutral: "semantic-status-neutral border-brand-light-node bg-white text-brand-slate",
+  difficulty: "semantic-status-difficulty border-orange-200 bg-orange-50 text-orange-900",
+  danger: "semantic-status-danger border-red-200 bg-red-50 text-red-800",
+};
+
+const statusSurfaceBase = "semantic-status-surface rounded-2xl border";
+
+/** Non-interactive status and notice surfaces stay visually distinct from controls. */
+export const semanticStatusSurface: Record<StatusRole, string> = {
+  positive: cx(statusSurfaceBase, semanticStatusTone.positive),
+  attention: cx(statusSurfaceBase, semanticStatusTone.attention),
+  neutral: cx(statusSurfaceBase, semanticStatusTone.neutral),
+  difficulty: cx(statusSurfaceBase, semanticStatusTone.difficulty),
+  danger: cx(statusSurfaceBase, semanticStatusTone.danger),
+};
+
+const headerButtonBase = "shrink-0 rounded-full leading-none";
 
 export const headerActionButton = {
   primary: cx(getActionButtonClass("primary"), headerButtonBase, "px-4"),
@@ -103,9 +153,7 @@ export const panelActionButton = {
   secondaryCompact: semanticActionButton.secondaryCompact,
   secondaryLarge: semanticActionButton.secondaryLarge,
   secondaryMuted: cx(semanticActionButton.secondary, "text-brand-slate"),
-  muted: cx(semanticActionButton.secondary, "bg-brand-light-slate text-brand-slate hover:bg-brand-light-node"),
   warning: semanticActionButton.warning,
-  danger: cx(getActionButtonClass("warning"), "border-red-200 bg-red-50 text-red-800 hover:bg-red-100 active:bg-red-100"),
   destructive: semanticActionButton.destructive,
 };
 
@@ -126,6 +174,15 @@ export const workspaceSurface = {
   shell: "w-full max-w-6xl rounded-3xl border border-brand-light-node bg-white p-5",
   statusTile: "rounded-xl border px-3 py-2",
   launcherCard: "rounded-xl border border-brand-light-node bg-brand-light-slate p-3",
+};
+
+/** Shared modal structure; action and status meaning remains with their own contracts. */
+export const semanticDialogSurface = {
+  overlay: "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-navy-deep/30 p-4",
+  overlayRaised: "fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-brand-navy-deep/40 p-4",
+  overlayCentered: "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-brand-navy-deep/30 p-4",
+  panel: "relative mt-6 w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
+  panelCentered: "relative w-full rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl",
 };
 
 export const statusBadge = {

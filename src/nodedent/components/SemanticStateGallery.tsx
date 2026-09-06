@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from "react";
+import { AccessibleDialog } from "./AccessibleDialog";
+import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import {
   cx,
+  headerActionButton,
   semanticActionButton,
   semanticChoiceControl,
+  semanticChoiceSurfaceControl,
+  semanticDialogSurface,
+  semanticFormControl,
   semanticInteraction,
+  semanticSelectionSurface,
+  semanticSelectionTone,
+  semanticReadOnlyOutput,
+  semanticStatusSurface,
   semanticStatusTone,
   statusBadge,
 } from "./uiStyles";
@@ -52,6 +62,7 @@ function StateCell({ label, children }: { label: string; children: React.ReactNo
 
 export function SemanticStateGallery() {
   const [theme, setTheme] = useState<GalleryTheme>(getInitialGalleryTheme);
+  const [interactiveDialogOpen, setInteractiveDialogOpen] = useState(false);
 
   useEffect(() => {
     const previousTheme = document.documentElement.dataset.theme;
@@ -89,6 +100,30 @@ export function SemanticStateGallery() {
           </div>
         </header>
 
+        <section aria-labelledby="gallery-chrome-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-chrome-heading" className="text-lg font-bold">Application chrome and notices</h2>
+          <p className="mt-1 text-sm text-brand-slate">Header actions retain action hierarchy while vault, deployment, privacy, and error messages use non-interactive status surfaces.</p>
+          <div className="mt-4 space-y-3">
+            <div className="rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex min-h-9 items-center rounded-full border border-brand-light-node bg-white px-3 font-semibold text-brand-slate">Chart: SYN-001</span>
+                  <span role="status" className={cx("inline-flex min-h-9 items-center", statusBadge.base, semanticStatusTone.positive)}>Vault: saved</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className={headerActionButton.primary}>Case Setup &amp; Status</button>
+                  <button type="button" className={headerActionButton.secondary}>Catalogue</button>
+                </div>
+              </div>
+            </div>
+            <ClinicalDataNotice compact />
+            <div role="alert" className={cx(semanticStatusSurface.danger, "flex flex-col gap-3 p-4 text-sm sm:flex-row sm:items-center sm:justify-between")}>
+              <p><strong>Protected autosave needs attention.</strong> Review the protected record before continuing.</p>
+              <button type="button" className={semanticActionButton.warning}>Export current JSON</button>
+            </div>
+          </div>
+        </section>
+
         <section aria-labelledby="gallery-action-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
           <h2 id="gallery-action-heading" className="text-lg font-bold">Action roles and interaction states</h2>
           <p className="mt-1 text-sm text-brand-slate">Action appearance describes prominence or consequence, never workflow category or selection.</p>
@@ -121,6 +156,81 @@ export function SemanticStateGallery() {
             <ChoiceExample selected>Selected choice</ChoiceExample>
             <ChoiceExample selected={false}>Unselected choice</ChoiceExample>
             <ChoiceExample selected={false} disabled>Unavailable choice</ChoiceExample>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-setup-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-setup-heading" className="text-lg font-bold">Setup selection and form controls</h2>
+          <p className="mt-1 text-sm text-brand-slate">A selected workflow uses selection styling, its principal launcher remains primary, and form focus stays blue.</p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <article className={semanticSelectionSurface.selected}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Selected workflow</p>
+                  <h3 className="mt-1 font-bold">Example treatment</h3>
+                </div>
+                <span className={cx(statusBadge.base, semanticSelectionTone.selected)}>Selected</span>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button type="button" className={semanticActionButton.primary}>Open workflow</button>
+                <button type="button" aria-pressed="true" className={semanticActionButton.secondary}>Remove from case</button>
+              </div>
+            </article>
+            <div className="grid gap-3 rounded-2xl border border-brand-light-node bg-brand-light-slate p-4">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Default field</span>
+                <input aria-label="Default field" readOnly value="Synthetic value" className={semanticFormControl.default} />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Invalid field</span>
+                <input aria-label="Invalid field" aria-invalid="true" readOnly value="Review value" className={semanticFormControl.invalid} />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="gallery-dense-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-dense-heading" className="text-lg font-bold">Targets, history, and output</h2>
+          <p className="mt-1 text-sm text-brand-slate">Dense clinical surfaces keep target selection, recorded status, historical rows, output formats, and plaintext actions semantically independent.</p>
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <article>
+              <h3 className="text-sm font-semibold">Target selection</h3>
+              <button type="button" aria-pressed="true" className={cx(semanticChoiceSurfaceControl.selected, "mt-2")}>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorSelected)}>✓</span>
+                    <strong>Main canal</strong>
+                  </span>
+                  <span className={cx(statusBadge.base, semanticStatusTone.positive)}>Shaped</span>
+                </span>
+                <span className="mt-2 block text-xs text-brand-slate">WL 21 mm · Shape 25/.04</span>
+              </button>
+            </article>
+            <article>
+              <h3 className="text-sm font-semibold">Recent history</h3>
+              <ol className="mt-2 space-y-2">
+                <li className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3 text-xs">
+                  <div className="flex justify-between gap-2"><strong>workingLength.established</strong><time dateTime="2026-08-25T12:00:00.000Z" className="text-brand-slate">12:00</time></div>
+                  <p className="mt-1 text-brand-slate">Main canal working length recorded.</p>
+                </li>
+                <li className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3 text-xs">
+                  <div className="flex justify-between gap-2"><strong>shaping.completed</strong><time dateTime="2026-08-25T12:08:00.000Z" className="text-brand-slate">12:08</time></div>
+                  <p className="mt-1 text-brand-slate">Main canal shaping recorded.</p>
+                </li>
+              </ol>
+            </article>
+            <article>
+              <h3 className="text-sm font-semibold">Output</h3>
+              <div role="tablist" aria-label="Synthetic output format" className="mt-2 flex flex-wrap gap-2">
+                <button type="button" role="tab" aria-selected="true" className={semanticChoiceControl.selected}><span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorSelected)}>✓</span>Compact</button>
+                <button type="button" role="tab" aria-selected="false" className={semanticChoiceControl.unselected}><span aria-hidden="true" className={cx(semanticChoiceControl.indicator, semanticChoiceControl.indicatorUnselected)}>✓</span>Full</button>
+              </div>
+              <textarea aria-label="Synthetic read-only output" readOnly value="Synthetic clinical output" className={cx(semanticReadOnlyOutput, "mt-2 h-24")} />
+              <div className="mt-2 grid gap-2">
+                <button type="button" className={semanticActionButton.warning}>Download plaintext</button>
+                <button type="button" className={semanticActionButton.warning}>Copy output</button>
+              </div>
+            </article>
           </div>
         </section>
 
@@ -162,6 +272,40 @@ export function SemanticStateGallery() {
           </div>
         </section>
 
+        <section aria-labelledby="gallery-dialog-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
+          <h2 id="gallery-dialog-heading" className="text-lg font-bold">Dialogs and high-consequence decisions</h2>
+          <p className="mt-1 text-sm text-brand-slate">A consistent dialog frame keeps dismissal quiet while primary, warning, and destructive decisions communicate prominence and consequence explicitly.</p>
+          <div className="mt-4 rounded-3xl bg-brand-navy-deep/10 p-3 sm:p-5">
+            <article role="dialog" aria-labelledby="gallery-synthetic-dialog-title" className={cx(semanticDialogSurface.panelCentered, "mx-auto max-w-2xl")}>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Synthetic dialog</p>
+                  <h3 id="gallery-synthetic-dialog-title" className="mt-1 text-xl font-bold">Pause or end this visit</h3>
+                  <p className="mt-1 text-sm text-brand-slate">Choose an explicitly labeled action. Clinical state appears after the action is recorded.</p>
+                </div>
+                <button type="button" className={semanticActionButton.secondary}>Cancel</button>
+              </div>
+              <label className="mt-4 block">
+                <span className="mb-1 block text-xs font-medium text-brand-slate">Next-visit plan</span>
+                <textarea readOnly value="Synthetic continuation plan" className={semanticFormControl.default} />
+              </label>
+              <div className="mt-4 grid gap-3">
+                <button type="button" className={semanticActionButton.primaryDecision}>Pause here and continue later</button>
+                <button type="button" className={semanticActionButton.warningDecision}>Open a cautionary pathway</button>
+                <button type="button" className={semanticActionButton.destructiveDecision}>Delete saved case permanently</button>
+              </div>
+            </article>
+          </div>
+          <button
+            type="button"
+            data-testid="open-accessible-dialog-fixture"
+            onClick={() => setInteractiveDialogOpen(true)}
+            className={cx(semanticActionButton.secondary, "mt-4")}
+          >
+            Open interactive dialog fixture
+          </button>
+        </section>
+
         <section aria-labelledby="gallery-status-heading" className="rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm">
           <h2 id="gallery-status-heading" className="text-lg font-bold">Status roles</h2>
           <div className="mt-4 flex flex-wrap gap-3">
@@ -173,6 +317,29 @@ export function SemanticStateGallery() {
           </div>
         </section>
       </div>
+      {interactiveDialogOpen ? (
+        <AccessibleDialog
+          labelledBy="gallery-interactive-dialog-title"
+          describedBy="gallery-interactive-dialog-description"
+          overlayVariant="centered"
+          panelClassName="max-w-lg"
+          closeOnBackdrop
+          onRequestClose={() => setInteractiveDialogOpen(false)}
+        >
+          <h2 id="gallery-interactive-dialog-title" className="text-xl font-bold">Accessible dialog behavior fixture</h2>
+          <p id="gallery-interactive-dialog-description" className="mt-2 text-sm leading-6 text-brand-slate">
+            Synthetic controls exercise initial focus, contained tab order, Escape dismissal, background inertness, scroll locking, and focus restoration.
+          </p>
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs font-medium text-brand-slate">Synthetic field</span>
+            <input className={semanticFormControl.default} defaultValue="Synthetic value" />
+          </label>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" data-dialog-initial-focus onClick={() => setInteractiveDialogOpen(false)} className={semanticActionButton.secondary}>Cancel</button>
+            <button type="button" onClick={() => setInteractiveDialogOpen(false)} className={semanticActionButton.primary}>Confirm synthetic action</button>
+          </div>
+        </AccessibleDialog>
+      ) : null}
     </main>
   );
 }

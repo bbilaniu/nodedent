@@ -224,6 +224,8 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(blankMarkup.includes("Download vault"), true);
   assert.equal(blankMarkup.includes("Review "), false);
   assert.equal(blankMarkup.indexOf("Sandbox — synthetic data only.") > blankMarkup.indexOf("Lock vault"), true);
+  assert.match(blankMarkup, /<button[^>]*semantic-action-primary[^>]*>\s*New case\s*<\/button>/);
+  assert.match(blankMarkup, /<button[^>]*semantic-action-secondary[^>]*>\s*Import case\s*<\/button>/);
 
   const blankWithOtherCasesMarkup = renderToStaticMarkup(React.createElement(CaseEntryGate, {
     activeCase: initialCase,
@@ -260,6 +262,8 @@ test("case entry actions offer imports and only offer review when another meanin
   assert.equal(resumableMarkup.includes("Continue case"), true);
   assert.equal(resumableMarkup.includes("New case"), true);
   assert.equal(resumableMarkup.includes("Review 2 other saved cases"), true);
+  assert.match(resumableMarkup, /<button[^>]*semantic-action-primary[^>]*>\s*Continue case\s*<\/button>/);
+  assert.match(resumableMarkup, /<button[^>]*semantic-action-secondary[^>]*>\s*New case\s*<\/button>/);
 });
 
 test("case entry excludes the active encounter from other saved cases", () => {
@@ -906,6 +910,11 @@ test("full-page case setup keeps workflow-specific setup in its owning workflow"
   assert.equal(markup.includes("Estimated WL for"), false);
   assert.equal(markup.includes("Open workflow"), true);
   assert.equal(markup.includes("est WL 20 mm"), true);
+  assert.match(markup, /<article class="[^"]*semantic-selection-selected[^"]*">/);
+  assert.match(markup, /aria-pressed="true"/);
+  assert.match(markup, /<button[^>]*semantic-action-primary[^>]*>\s*Open workflow\s*<\/button>/);
+  assert.match(markup, /<button[^>]*semantic-action-warning[^>]*>Download plaintext NodeDent case JSON<\/button>/);
+  assert.doesNotMatch(markup, /focus:border-brand-mint/);
 });
 
 test("diagnosis registry keeps current diagnosis capture discipline-scoped and panel-based", () => {
@@ -1119,6 +1128,8 @@ test("contextual endodontic inputs put pre-op fields and radiology action beside
   assert.equal(markup.includes("Record radiograph review"), true);
   assert.equal(markup.includes("Review anesthesia record"), true);
   assert.equal(markup.includes("Drying status"), false);
+  assert.match(markup, /id="endodontic-context-estimatedChamberDepth"[^>]*aria-invalid="true"[^>]*aria-describedby="endodontic-context-estimatedChamberDepth-helper"/);
+  assert.match(markup, /id="endodontic-context-estimatedChamberDepth-helper"[^>]*>Enter Chamber depth before continuing/);
 });
 
 test("contextual endodontic inputs expose only the active step's canal fields", () => {
@@ -1748,6 +1759,8 @@ test("shared workflow modal separates mode, clinical record, catalogue, and clos
   }));
 
   assert.equal((anesthesiaMarkup.match(/>Close<\/button>/g) || []).length, 1);
+  assert.match(anesthesiaMarkup, /role="dialog" aria-modal="true" aria-labelledby="shared-workflow-dialog-title"/);
+  assert.match(anesthesiaMarkup, /semantic-action-secondary[^"]*[^>]*>Close<\/button>/);
   assert.equal(anesthesiaMarkup.includes("Close shared workflow"), false);
   assert.equal(anesthesiaMarkup.includes("Return to parent workflow"), false);
   assert.equal((isolationMarkup.match(/>Close<\/button>/g) || []).length, 1);

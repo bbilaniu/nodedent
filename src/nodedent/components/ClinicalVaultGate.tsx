@@ -14,7 +14,14 @@ import {
 import { PRIVACY_POLICY_HASH } from "./AppFooter";
 import { FilePickerControl } from "./FilePickerControl";
 import { SandboxDataWarning } from "./SandboxDataWarning";
-import { formControlActionButton } from "./uiStyles";
+import {
+  cx,
+  semanticActionButton,
+  semanticChoiceControl,
+  semanticFormControl,
+  semanticInteraction,
+  semanticStatusSurface,
+} from "./uiStyles";
 
 export type ClinicalVaultAccess = {
   session: ClinicalVaultSession;
@@ -181,6 +188,11 @@ export function ClinicalVaultGate({
   }
 
   const secureContextReady = window.isSecureContext && Boolean(globalThis.crypto?.subtle) && Boolean(store);
+  const passphraseMismatch = error === "Passphrase confirmation does not match.";
+  const vaultPassphraseInvalid = Boolean(error && !passphraseMismatch && /passphrase/i.test(error));
+  const restoreFileInvalid = restoreError.startsWith("Choose") || /file|format|json|backup/i.test(restoreError) && !/passphrase/i.test(restoreError);
+  const restorePassphraseInvalid = Boolean(restoreError && !restoreFileInvalid);
+  const restoreErrorTarget = restoreFileInvalid ? "#encrypted-backup-file" : "#restore-backup-passphrase";
 
   return (
     <main className="min-h-screen bg-brand-light-slate p-4 text-brand-navy">
@@ -192,9 +204,9 @@ export function ClinicalVaultGate({
               type="button"
               aria-pressed={themeMode === "dark"}
               onClick={onToggleTheme}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-brand-light-node bg-brand-light-slate px-3 py-2 text-xs font-semibold text-brand-slate hover:bg-brand-light-node"
+              className={themeMode === "dark" ? semanticChoiceControl.selected : semanticChoiceControl.unselected}
             >
-              <span className={`h-3 w-3 rounded-full border ${themeMode === "dark" ? "border-brand-blue bg-brand-blue" : "border-brand-slate bg-brand-light-slate"}`} />
+              <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, themeMode === "dark" ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
               {themeMode === "dark" ? "Dark" : "Light"} mode
             </button>
           </div>
@@ -203,49 +215,66 @@ export function ClinicalVaultGate({
             Use only on a clinic-controlled, encrypted device and browser profile. EMRs such as ClearDent or Dentrix remain the official record. NodeDent does not recover forgotten vault passphrases.
           </p>
           <p className="mt-2 text-sm leading-6 text-brand-slate">
-            Review the <a href={PRIVACY_POLICY_HASH} className="font-semibold text-brand-navy underline decoration-brand-light-node underline-offset-4 hover:decoration-brand-navy focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint">NodeDent privacy policy</a> before creating or unlocking a clinical vault.
+            Review the <a href={PRIVACY_POLICY_HASH} className={cx("font-semibold text-brand-navy underline decoration-brand-light-node underline-offset-4 hover:decoration-brand-navy focus-visible:rounded", semanticInteraction.focus)}>NodeDent privacy policy</a> before creating or unlocking a clinical vault.
           </p>
 
           {!hasVault ? <SandboxDataWarning className="mt-5" /> : null}
 
           {!secureContextReady ? (
-            <div className="mt-5 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm leading-6 text-red-900">
+            <div role="alert" className={cx(semanticStatusSurface.danger, "mt-5 p-4 text-sm leading-6")}>
               Protected clinical storage requires HTTPS, Web Crypto, and IndexedDB. This browser context does not provide all required capabilities.
             </div>
           ) : null}
 
-          {error ? <div role="alert" className="mt-5 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-900">{error}</div> : null}
+          {error ? (
+            <div id="vault-action-error" role="alert" className={cx(semanticStatusSurface.danger, "mt-5 p-4 text-sm leading-6")}>
+              <strong>Vault action needs attention.</strong>{" "}
+              {passphraseMismatch ? <><a href="#vault-confirmation" className="font-semibold underline underline-offset-2">Review passphrase confirmation</a>: {error}</> : vaultPassphraseInvalid ? <><a href="#vault-passphrase" className="font-semibold underline underline-offset-2">Review vault passphrase</a>: {error}</> : error}
+            </div>
+          ) : null}
 
           {secureContextReady && hasVault !== null ? (
             <div className="mt-5 grid gap-4">
               <label className="block">
                 <span className="mb-1 block text-sm font-semibold">Vault passphrase</span>
                 <input
+                  id="vault-passphrase"
                   type="password"
                   autoComplete={hasVault ? "current-password" : "new-password"}
                   value={passphrase}
-                  onChange={(event) => setPassphrase(event.target.value)}
-                  className="w-full rounded-xl border border-brand-light-node px-3 py-2 outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+                  onChange={(event) => {
+                    setPassphrase(event.target.value);
+                    setError("");
+                  }}
+                  aria-invalid={vaultPassphraseInvalid || undefined}
+                  aria-describedby={[!hasVault ? "vault-passphrase-help" : "", vaultPassphraseInvalid ? "vault-action-error" : ""].filter(Boolean).join(" ") || undefined}
+                  className={vaultPassphraseInvalid ? semanticFormControl.invalid : semanticFormControl.default}
                 />
               </label>
               {!hasVault ? (
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold">Confirm passphrase</span>
                   <input
+                    id="vault-confirmation"
                     type="password"
                     autoComplete="new-password"
                     value={confirmation}
-                    onChange={(event) => setConfirmation(event.target.value)}
-                    className="w-full rounded-xl border border-brand-light-node px-3 py-2 outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+                    onChange={(event) => {
+                      setConfirmation(event.target.value);
+                      setError("");
+                    }}
+                    aria-invalid={passphraseMismatch || undefined}
+                    aria-describedby={["vault-passphrase-help", passphraseMismatch ? "vault-action-error" : ""].filter(Boolean).join(" ")}
+                    className={passphraseMismatch ? semanticFormControl.invalid : semanticFormControl.default}
                   />
-                  <span className="mt-1 block text-xs leading-5 text-brand-slate">Use at least 12 characters. The passphrase is never stored and cannot be recovered by NodeDent.</span>
+                  <span id="vault-passphrase-help" className="mt-1 block text-xs leading-5 text-brand-slate">Use at least 12 characters. The passphrase is never stored and cannot be recovered by NodeDent.</span>
                 </label>
               ) : null}
               <button
                 type="button"
                 disabled={busy || !passphrase}
                 onClick={hasVault ? unlockVault : createVault}
-                className="rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:opacity-50"
+                className={semanticActionButton.primaryLarge}
               >
                 {busy ? "Working…" : hasVault ? "Unlock vault" : "Create empty protected vault"}
               </button>
@@ -262,8 +291,9 @@ export function ClinicalVaultGate({
                 label="Encrypted backup file"
                 buttonLabel="Choose backup file"
                 accept=".nodedent,application/json"
-                describedBy="restore-backup-help"
+                describedBy={["restore-backup-help", restoreFileInvalid ? "restore-backup-error" : ""].filter(Boolean).join(" ")}
                 fileName={restoreFile?.name}
+                invalid={restoreFileInvalid}
                 onFileSelect={(file) => {
                   setRestoreFile(file || null);
                   setRestoreError("");
@@ -273,37 +303,39 @@ export function ClinicalVaultGate({
             <label className="mt-3 block">
               <span className="mb-1 block text-sm font-semibold">Backup passphrase</span>
               <input
+                id="restore-backup-passphrase"
                 type="password"
                 autoComplete="current-password"
                 value={restorePassphrase}
-                aria-describedby={restoreError ? "restore-backup-error" : "restore-backup-help"}
+                aria-describedby={restorePassphraseInvalid ? "restore-backup-help restore-backup-error" : "restore-backup-help"}
+                aria-invalid={restorePassphraseInvalid || undefined}
                 onChange={(event) => {
                   setRestorePassphrase(event.target.value);
                   setRestoreError("");
                 }}
-                className="w-full rounded-xl border border-brand-blue-light bg-white px-3 py-2 outline-none focus:border-brand-mint focus:ring-2 focus:ring-brand-mint/20"
+                className={restorePassphraseInvalid ? semanticFormControl.invalid : semanticFormControl.default}
               />
             </label>
-            {restoreError ? <div id="restore-backup-error" role="alert" className="mt-3 rounded-xl border border-red-300 bg-red-50 p-3 text-sm text-red-900">{restoreError}</div> : null}
-            <button type="button" disabled={busy || !store || hasVault === null} onClick={restoreBackup} className={`${formControlActionButton} mt-3 disabled:cursor-not-allowed disabled:opacity-50`}>{busy ? "Working…" : "Restore encrypted backup"}</button>
+            {restoreError ? <div id="restore-backup-error" role="alert" className={cx(semanticStatusSurface.danger, "mt-3 p-3 text-sm")}><a href={restoreErrorTarget} className="font-semibold underline underline-offset-2">Review encrypted backup input</a>: {restoreError}</div> : null}
+            <button type="button" disabled={busy || !store || hasVault === null} onClick={restoreBackup} className={cx(semanticActionButton.warning, "mt-3")}>{busy ? "Working…" : "Restore encrypted backup"}</button>
           </div>
 
           {legacyKeys.length ? (
-            <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950">
+            <div className={cx(semanticStatusSurface.attention, "mt-6 p-4")}>
               <h2 className="text-sm font-bold">Legacy prototype storage detected</h2>
               <p className="mt-1 text-xs leading-5">{legacyKeys.length} legacy item(s) remain separate. NodeDent will not parse, copy, migrate, or import them into the clinical vault.</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={downloadLegacyBackup} className="rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-semibold">Download plaintext legacy backup</button>
-                <button type="button" onClick={deleteLegacyData} className="rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-800">Delete legacy storage</button>
+                <button type="button" onClick={downloadLegacyBackup} className={semanticActionButton.warningCompact}>Download plaintext legacy backup</button>
+                <button type="button" onClick={deleteLegacyData} className={cx(semanticActionButton.destructiveCompact, "sm:ml-auto")}>Delete legacy storage</button>
               </div>
             </div>
           ) : null}
 
           {hasVault ? (
-            <div className="mt-6 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-900">
+            <div className={cx(semanticStatusSurface.danger, "mt-6 p-4")}>
               <h2 className="text-sm font-bold">Unrecoverable or retired vault</h2>
               <p className="mt-1 text-xs leading-5">Use only when the protected vault cannot be recovered or clinic retention requires complete local deletion. Export a usable encrypted backup first when possible.</p>
-              <button type="button" disabled={busy} onClick={deleteProtectedVault} className="mt-3 rounded-xl border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-900 disabled:opacity-50">Delete entire protected vault</button>
+              <button type="button" disabled={busy} onClick={deleteProtectedVault} className={cx(semanticActionButton.destructiveCompact, "mt-3")}>Delete entire protected vault</button>
             </div>
           ) : null}
         </section>

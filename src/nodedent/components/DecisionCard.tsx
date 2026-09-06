@@ -6,8 +6,8 @@ import { compactList } from "../engine/measurements";
 import { protocolNodes } from "../protocol/nodes";
 import { noTreatmentSelectedProcedure } from "../workflow/procedures";
 import { getCapabilityStatus } from "../workflow/selectors";
-import { cx, panelActionButton, workflowDecisionButton } from "./uiStyles";
-import { ContextualEndodonticInputs } from "./ContextualEndodonticInputs";
+import { cx, panelActionButton, semanticActionButton, semanticStatusSurface, semanticStatusTone, statusBadge, workflowDecisionButton } from "./uiStyles";
+import { ContextualEndodonticInputs, contextualEndodonticInputId, getContextualFieldForValidationMessage } from "./ContextualEndodonticInputs";
 
 export function getProtocolOptionLabel(nodeId: string, option: DecisionOption, activeCanal?: CanalRecord | null) {
   if (nodeId === "ready-for-obturation" && option.nextNodeId === "gauge-obturation-30") {
@@ -94,7 +94,7 @@ export function DecisionCard({
     <section className="order-2 min-w-0 rounded-3xl border border-brand-light-node bg-white p-5 shadow-sm lg:col-start-2 lg:row-start-1 xl:col-start-2 xl:row-start-1">
       <div className="mb-3 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-brand-navy">Endodontic decision guide</h3>
-        <button onClick={onUndo} disabled={!historyLength} className={cx(panelActionButton.secondaryMuted, "disabled:cursor-not-allowed disabled:opacity-40")}>Undo last decision</button>
+        <button type="button" onClick={onUndo} disabled={!historyLength} className={panelActionButton.secondaryMuted}>Undo last decision</button>
       </div>
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-slate">Phase : {currentNode.phase}</p>
@@ -105,13 +105,13 @@ export function DecisionCard({
       </div>
       <p className="rounded-2xl bg-brand-light-slate p-4 text-base leading-7 text-brand-navy">{currentNode.chairsideInstruction}</p>
       {currentNode.safetyNotes?.length ? (
-        <div className="mt-3 border-l-4 border-amber-300 bg-amber-50/70 px-3 py-2 text-sm leading-6 text-amber-950">
+        <div className={cx(semanticStatusSurface.attention, "mt-3 border-l-4 p-3 text-sm leading-6")}>
           <strong className="font-semibold">Safety / stop rule:</strong>{" "}
           <span>{currentNode.safetyNotes.join(" ")}</span>
         </div>
       ) : null}
       {recentNodeFeedback ? (
-        <div className="mt-4 rounded-2xl border border-brand-blue-light bg-brand-blue-light/20 p-4 text-sm font-semibold text-brand-navy">
+        <div role="status" className={cx(semanticStatusSurface.positive, "mt-4 p-4 text-sm font-semibold")}>
           {recentNodeFeedback}
         </div>
       ) : null}
@@ -142,7 +142,7 @@ export function DecisionCard({
                 </p>
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${preOpMissing.length ? "border-red-200 bg-red-50 text-red-800" : "border-brand-mint/40 bg-brand-mint/10 text-brand-navy"}`}>
+                <span className={cx(statusBadge.base, preOpMissing.length ? semanticStatusTone.danger : semanticStatusTone.positive)}>
                   {preOpMissing.length ? `${preOpMissing.length} setup item${preOpMissing.length === 1 ? "" : "s"} missing` : "Setup ready"}
                 </span>
                 <button
@@ -170,10 +170,13 @@ export function DecisionCard({
         </div>
       )}
       {validationMessage ? (
-        <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <div role="alert" className={cx(semanticStatusSurface.danger, "mt-4 p-4 text-sm")}>
           <strong>Cannot continue with “{validationMessage.optionLabel}” yet.</strong>
           <p className="mt-1">Please record/fix:</p>
-          <ul className="mt-2 list-inside list-disc space-y-1">{validationMessage.missing.map((item) => <li key={item}>{item}</li>)}</ul>
+          <ul className="mt-2 list-inside list-disc space-y-1">{validationMessage.missing.map((item) => {
+            const fieldId = getContextualFieldForValidationMessage(item, currentNode.contextualFieldIds || []);
+            return <li key={item}>{fieldId ? <a href={`#${contextualEndodonticInputId(fieldId)}`} className="font-semibold underline underline-offset-2">{item}</a> : item}</li>;
+          })}</ul>
         </div>
       ) : null}
       <div className="mt-5 grid gap-3">
@@ -182,10 +185,10 @@ export function DecisionCard({
           const displayOption = { ...option, id: option.id || option.label, label: displayLabel };
           const missing = getMissingRequirements(currentNode.id, displayOption, caseData, activeCanal);
           return (
-            <button key={option.label} onClick={() => onApplyDecision(displayOption)} className={cx(workflowDecisionButton, missing.length ? "border-red-200 text-brand-navy hover:bg-red-50" : "border-brand-light-node text-brand-navy hover:border-brand-mint/50 hover:bg-brand-light-slate")}>
+            <button type="button" key={option.label} onClick={() => onApplyDecision(displayOption)} className={workflowDecisionButton}>
               {displayLabel}
               <span className="mt-1 block text-xs font-normal text-brand-slate">Next: {protocolNodes[option.nextNodeId]?.title || option.nextNodeId}</span>
-              {missing.length ? <span className="mt-2 block rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-800">Missing: {missing.join(", ")}</span> : null}
+              {missing.length ? <span className={cx(semanticStatusSurface.danger, "mt-2 block w-full px-3 py-2 text-xs font-medium")}>Missing: {missing.join(", ")}</span> : null}
             </button>
           );
         })}
@@ -207,12 +210,7 @@ export function DecisionCard({
                 type="button"
                 disabled={target.disabled}
                 onClick={() => onContinueCanal(target)}
-                className={cx(
-                  "rounded-xl border p-3 text-left text-sm font-semibold transition",
-                  target.disabled
-                    ? "cursor-not-allowed border-brand-light-node bg-white/70 text-brand-slate/60"
-                    : "border-brand-blue-light/70 bg-white text-brand-navy hover:-translate-y-0.5 hover:border-brand-blue hover:shadow-sm"
-                )}
+                className={semanticActionButton.secondaryDecision}
               >
                 <span className="flex items-center justify-between gap-2">
                   <span>{target.label}</span>
@@ -223,7 +221,7 @@ export function DecisionCard({
                 </span>
               </button>
             )) : (
-              <p className="rounded-xl border border-brand-blue-light/60 bg-white/70 px-3 py-2 text-sm text-brand-navy">
+              <p className={cx(semanticStatusSurface.neutral, "px-3 py-2 text-sm text-brand-navy")}>
                 {isTemporaryClosureHandoff ? "All recorded canals have a closure-ready status." : "No other canals are recorded yet."}
               </p>
             )}

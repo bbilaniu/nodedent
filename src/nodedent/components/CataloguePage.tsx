@@ -10,6 +10,14 @@ import {
 import { updateUserCatalogItem, updateUserCatalogItems } from "../workflow/userCatalogItems";
 import { CatalogAdministrationPanel } from "./CatalogAdministrationPanel";
 import { SelectInput, TextInput } from "./FormControls";
+import {
+  cx,
+  semanticActionButton,
+  semanticChoiceControl,
+  semanticStatusSurface,
+  statusBadge,
+  type StatusRole,
+} from "./uiStyles";
 
 const sections: CatalogueSection[] = ["Shared modules", "Endodontics"];
 
@@ -22,7 +30,7 @@ function CatalogueDefinitionManager({
   definition: CatalogueDefinition;
   items: CatalogItem[];
   onChange: (items: CatalogItem[]) => boolean;
-  onStatus: (message: string) => void;
+  onStatus: (message: string, role?: StatusRole) => void;
 }) {
   const [newLabel, setNewLabel] = useState("");
   const [editingId, setEditingId] = useState("");
@@ -30,7 +38,7 @@ function CatalogueDefinitionManager({
   const rows = getCatalogueDefinitionItems(definition, items);
 
   function commit(nextItems: CatalogItem[], message: string) {
-    if (onChange(nextItems)) onStatus(message);
+    if (onChange(nextItems)) onStatus(message, "positive");
   }
 
   function addItem() {
@@ -38,7 +46,7 @@ function CatalogueDefinitionManager({
     if (!label) return;
     const item = createUserCatalogueItem(definition, label);
     if (items.some((candidate) => candidate.id === item.id)) {
-      onStatus("That catalogue item already exists.");
+      onStatus("That catalogue item already exists.", "attention");
       return;
     }
     commit(updateUserCatalogItem(items, item), `Added “${label}”.`);
@@ -86,19 +94,19 @@ function CatalogueDefinitionManager({
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 id={`${definition.key}-heading`} className="text-lg font-bold text-brand-navy">{definition.title}</h3>
-          <span className="rounded-full border border-brand-light-node bg-brand-light-slate px-2 py-1 text-xs font-semibold text-brand-slate">{rows.length} item{rows.length === 1 ? "" : "s"}</span>
+          <span className={cx(statusBadge.base, statusBadge.neutral)}>{rows.length} item{rows.length === 1 ? "" : "s"}</span>
         </div>
         <p className="mt-1 text-sm leading-6 text-brand-slate">{definition.description}</p>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
         <TextInput label={`Add ${definition.title.toLowerCase()} item`} value={newLabel} onChange={setNewLabel} placeholder="Enter custom text" />
-        <button type="button" onClick={addItem} disabled={!newLabel.trim()} className="rounded-xl border border-brand-navy bg-brand-navy px-4 py-2 text-sm font-semibold text-white hover:bg-brand-navy-deep disabled:cursor-not-allowed disabled:border-brand-light-node disabled:bg-brand-light-slate disabled:text-brand-slate">
+        <button type="button" onClick={addItem} disabled={!newLabel.trim()} className={semanticActionButton.primary}>
           Add item
         </button>
       </div>
 
-      <div className="mt-4 grid gap-2">
+      <ul aria-label={`${definition.title} catalogue items`} className="mt-4 grid gap-2">
         {rows.map((item) => {
           const suppliedItem = definition.seedItems.some((candidate) => candidate.id === item.id);
           const userOwnedItem = item.owner === "user" && !suppliedItem;
@@ -107,7 +115,7 @@ function CatalogueDefinitionManager({
           const preferenceGroup = rows.filter((candidate) => Boolean(candidate.favorite) === Boolean(item.favorite));
           const preferenceIndex = preferenceGroup.findIndex((candidate) => candidate.id === item.id);
           return (
-            <div key={item.id} className={`rounded-xl border p-3 ${item.active === false ? "border-brand-light-node bg-brand-light-slate" : "border-brand-light-node bg-white"}`}>
+            <li key={item.id} className={`rounded-xl border p-3 ${item.active === false ? "border-brand-light-node bg-brand-light-slate" : "border-brand-light-node bg-white"}`}>
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0 flex-1">
                   {editing ? (
@@ -120,32 +128,32 @@ function CatalogueDefinitionManager({
                 <div className="flex flex-wrap gap-2">
                   {editing ? (
                     <>
-                      <button type="button" onClick={() => saveEdit(item)} className="rounded-lg border border-brand-navy bg-brand-navy px-2 py-1 text-xs font-semibold text-white">Save edit</button>
-                      <button type="button" onClick={() => { setEditingId(""); setEditingLabel(""); }} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy">Cancel</button>
+                      <button type="button" onClick={() => saveEdit(item)} className={semanticActionButton.primaryCompact}>Save edit</button>
+                      <button type="button" onClick={() => { setEditingId(""); setEditingLabel(""); }} className={semanticActionButton.secondaryCompact}>Cancel</button>
                     </>
                   ) : (
                     <>
-                      <button type="button" disabled={preferenceIndex === 0} onClick={() => moveItem(item, -1)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy disabled:opacity-40" aria-label={`Move ${item.label} up`}>↑</button>
-                      <button type="button" disabled={preferenceIndex === preferenceGroup.length - 1} onClick={() => moveItem(item, 1)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy disabled:opacity-40" aria-label={`Move ${item.label} down`}>↓</button>
-                      <button type="button" onClick={() => updatePreference(item, { active: item.active !== false, favorite: !item.favorite }, `${item.favorite ? "Removed" : "Added"} favorite for “${item.label}”.`)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy">{item.favorite ? "Unfavorite" : "Favorite"}</button>
-                      <button type="button" onClick={() => updatePreference(item, { active: item.active === false, favorite: item.favorite }, `${item.active === false ? "Shown" : "Hidden"} “${item.label}”.`)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy">{item.active === false ? "Show" : "Hide"}</button>
+                      <button type="button" disabled={preferenceIndex === 0} onClick={() => moveItem(item, -1)} className={semanticActionButton.secondaryCompact} aria-label={`Move ${item.label} up`}>↑</button>
+                      <button type="button" disabled={preferenceIndex === preferenceGroup.length - 1} onClick={() => moveItem(item, 1)} className={semanticActionButton.secondaryCompact} aria-label={`Move ${item.label} down`}>↓</button>
+                      <button type="button" onClick={() => updatePreference(item, { active: item.active !== false, favorite: !item.favorite }, `${item.favorite ? "Removed" : "Added"} favorite for “${item.label}”.`)} className={semanticActionButton.secondaryCompact}>{item.favorite ? "Unfavorite" : "Favorite"}</button>
+                      <button type="button" onClick={() => updatePreference(item, { active: item.active === false, favorite: item.favorite }, `${item.active === false ? "Shown" : "Hidden"} “${item.label}”.`)} className={semanticActionButton.secondaryCompact}>{item.active === false ? "Show" : "Hide"}</button>
                       {userOwnedItem ? (
                         <>
-                          <button type="button" onClick={() => { setEditingId(item.id); setEditingLabel(item.label); }} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy">Edit</button>
-                          <button type="button" onClick={() => removeUserItem(item, false)} className="rounded-lg border border-red-200 bg-white px-2 py-1 text-xs font-semibold text-red-700">Delete</button>
+                          <button type="button" onClick={() => { setEditingId(item.id); setEditingLabel(item.label); }} className={semanticActionButton.secondaryCompact}>Edit</button>
+                          <button type="button" onClick={() => removeUserItem(item, false)} className={semanticActionButton.destructiveCompact}>Delete</button>
                         </>
                       ) : suppliedItem && item.owner === "user" ? (
-                        <button type="button" onClick={() => removeUserItem(item, true)} className="rounded-lg border border-brand-light-node bg-white px-2 py-1 text-xs font-semibold text-brand-navy">Reset</button>
+                        <button type="button" onClick={() => removeUserItem(item, true)} className={semanticActionButton.secondaryCompact}>Reset</button>
                       ) : null}
                     </>
                   )}
                 </div>
               </div>
-            </div>
+            </li>
           );
         })}
-        {!rows.length ? <p className="rounded-xl border border-brand-light-node bg-brand-light-slate p-3 text-sm text-brand-slate">No items in this catalogue.</p> : null}
-      </div>
+        {!rows.length ? <li className={cx(semanticStatusSurface.neutral, "rounded-xl p-3 text-sm")}>No items in this catalogue.</li> : null}
+      </ul>
     </section>
   );
 }
@@ -167,6 +175,12 @@ export function CataloguePage({
   const selectedGroup = selectedDefinition?.group || groups[0];
   const groupDefinitions = sectionDefinitions.filter((item) => item.group === selectedGroup);
   const [status, setStatus] = useState("Catalogue preferences are stored locally and contain no patient data.");
+  const [statusRole, setStatusRole] = useState<StatusRole>("neutral");
+
+  function updateStatus(message: string, role: StatusRole = "neutral") {
+    setStatus(message);
+    setStatusRole(role);
+  }
 
   function selectSection(nextSection: CatalogueSection) {
     setSection(nextSection);
@@ -194,7 +208,7 @@ export function CataloguePage({
 
   function resetLocalPreferences() {
     if (!window.confirm("Reset all local catalogue additions and overrides? Supplied items will remain available.")) return;
-    if (persistItems([])) setStatus("All local catalogue additions and overrides were reset.");
+    if (persistItems([])) updateStatus("All local catalogue additions and overrides were reset.", "positive");
   }
 
   function persistItems(nextItems: CatalogItem[]) {
@@ -202,7 +216,7 @@ export function CataloguePage({
       onChange(nextItems);
       return true;
     } catch (cause) {
-      setStatus(cause instanceof Error ? `Catalogue preferences could not be saved: ${cause.message}` : "Catalogue preferences could not be saved. Export a backup or retry after storage access is restored.");
+      updateStatus(cause instanceof Error ? `Catalogue preferences could not be saved: ${cause.message}` : "Catalogue preferences could not be saved. Export a backup or retry after storage access is restored.", "danger");
       return false;
     }
   }
@@ -217,7 +231,7 @@ export function CataloguePage({
               <h1 className="mt-1 text-2xl font-bold">Clinical Catalogue</h1>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-brand-slate">Manage patient-independent suggestions used by clinical forms. These entries help documentation and do not prescribe products, doses, or treatment.</p>
             </div>
-            <button type="button" onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-navy hover:bg-brand-light-node">Back to workspace</button>
+            <button type="button" onClick={onClose} className={semanticActionButton.secondary}>Back to workspace</button>
           </div>
         </header>
 
@@ -227,7 +241,13 @@ export function CataloguePage({
               const count = catalogueDefinitions
                 .filter((candidate) => candidate.section === item)
                 .reduce((total, candidate) => total + getCatalogueDefinitionItems(candidate, items).length, 0);
-              return <button key={item} type="button" role="tab" aria-selected={section === item} tabIndex={section === item ? 0 : -1} onKeyDown={(event) => handleSectionKeyDown(event, index)} onClick={() => selectSection(item)} className={`rounded-xl border px-4 py-2 text-sm font-semibold ${section === item ? "border-brand-navy bg-brand-navy text-white" : "border-brand-light-node bg-white text-brand-navy"}`}>{item} ({count})</button>;
+              const selected = section === item;
+              return (
+                <button key={item} type="button" role="tab" aria-selected={selected} tabIndex={selected ? 0 : -1} onKeyDown={(event) => handleSectionKeyDown(event, index)} onClick={() => selectSection(item)} className={selected ? semanticChoiceControl.selected : semanticChoiceControl.unselected}>
+                  <span aria-hidden="true" className={cx(semanticChoiceControl.indicator, selected ? semanticChoiceControl.indicatorSelected : semanticChoiceControl.indicatorUnselected)}>✓</span>
+                  {item} ({count})
+                </button>
+              );
             })}
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -236,16 +256,16 @@ export function CataloguePage({
           </div>
         </section>
 
-        <p role="status" className="rounded-xl border border-brand-mint/40 bg-brand-mint/10 px-4 py-3 text-sm text-brand-navy">{status}</p>
+        <p role="status" className={cx(semanticStatusSurface[statusRole], "rounded-xl px-4 py-3 text-sm")}>{status}</p>
 
-        {selectedDefinition ? <CatalogueDefinitionManager definition={selectedDefinition} items={items} onChange={persistItems} onStatus={setStatus} /> : null}
+        {selectedDefinition ? <CatalogueDefinitionManager definition={selectedDefinition} items={items} onChange={persistItems} onStatus={updateStatus} /> : null}
 
-        <CatalogAdministrationPanel items={items} onChange={(nextItems) => { const saved = persistItems(nextItems); if (saved) setStatus("Imported catalogue preferences were saved locally."); return saved; }} />
+        <CatalogAdministrationPanel items={items} onChange={(nextItems) => { const saved = persistItems(nextItems); if (saved) updateStatus("Imported catalogue preferences were saved locally.", "positive"); return saved; }} />
 
-        <section className="rounded-2xl border border-red-200 bg-white p-4">
+        <section className={cx(semanticStatusSurface.danger, "p-4")}>
           <h2 className="text-sm font-bold text-red-800">Reset local catalogue preferences</h2>
           <p className="mt-1 text-xs leading-5 text-brand-slate">Removes local additions, favorites, ordering, and hidden-item overrides. Supplied catalogue items remain available.</p>
-          <button type="button" onClick={resetLocalPreferences} className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-sm font-semibold text-red-800 hover:bg-red-100">Reset local catalogue</button>
+          <button type="button" onClick={resetLocalPreferences} className={cx(semanticActionButton.destructive, "mt-3")}>Reset local catalogue</button>
         </section>
       </div>
     </main>

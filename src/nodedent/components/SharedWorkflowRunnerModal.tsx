@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { ClinicalEvent, EmbeddedWorkflowLaunch, EndoCase, WorkflowDefinition } from "../types";
 import type { AnesthesiaEventDetails, AnesthesiaEventType } from "../workflow/anesthesia";
 import { sharedAnesthesiaWorkflow, sharedAnesthesiaWorkflowId } from "../workflow/anesthesia";
@@ -12,6 +12,8 @@ import { AnesthesiaWorkflowRunner } from "./AnesthesiaWorkflowRunner";
 import { IsolationWorkflowRunner } from "./IsolationWorkflowRunner";
 import { RadiologyWorkflowRunner } from "./RadiologyWorkflowRunner";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
+import { cx, semanticActionButton, semanticStatusSurface } from "./uiStyles";
+import { AccessibleDialog } from "./AccessibleDialog";
 
 function getWorkflowForLaunch(launch: EmbeddedWorkflowLaunch): WorkflowDefinition | undefined {
   if (launch.workflowId === sharedIsolationWorkflowId) return sharedIsolationWorkflow;
@@ -67,17 +69,58 @@ export function SharedWorkflowRunnerModal({
   ) => void;
 }) {
   const workflow = getWorkflowForLaunch(launch);
+  const [hasUnconfirmedChanges, setHasUnconfirmedChanges] = useState(false);
+
+  function requestClose() {
+    if (hasUnconfirmedChanges && !window.confirm("Discard unrecorded changes in this shared workflow?")) return;
+    onClose();
+  }
+
+  function requestOpenCatalogue() {
+    if (hasUnconfirmedChanges && !window.confirm("Open the Catalogue and discard unrecorded changes in this shared workflow?")) return;
+    setHasUnconfirmedChanges(false);
+    onOpenCatalogue?.();
+  }
+
+  const recordAnesthesiaEvent: typeof onRecordAnesthesiaEvent = (...args) => {
+    onRecordAnesthesiaEvent(...args);
+    setHasUnconfirmedChanges(false);
+  };
+  const recordIsolationEvent: typeof onRecordIsolationEvent = (...args) => {
+    onRecordIsolationEvent(...args);
+    setHasUnconfirmedChanges(false);
+  };
+  const recordRadiologyEvent: typeof onRecordRadiologyEvent = (...args) => {
+    onRecordRadiologyEvent(...args);
+    setHasUnconfirmedChanges(false);
+  };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-auto bg-brand-navy-deep/40 p-4">
-      <section className="mt-6 w-full max-w-3xl rounded-3xl border border-brand-light-node bg-white p-5 shadow-2xl">
+    <AccessibleDialog
+      labelledBy="shared-workflow-dialog-title"
+      overlayVariant="raised"
+      panelClassName="max-w-3xl"
+      onRequestClose={requestClose}
+    >
+      <div
+        onChangeCapture={(event) => {
+          if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) {
+            setHasUnconfirmedChanges(true);
+          }
+        }}
+        onClickCapture={(event) => {
+          if (!(event.target instanceof Element)) return;
+          const button = event.target.closest("button");
+          if (button && !button.matches("[data-dialog-dismiss], [data-clinical-record-action]")) setHasUnconfirmedChanges(true);
+        }}
+      >
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Embedded workflow</p>
-            <h2 className="mt-1 text-2xl font-bold text-brand-navy">{workflow?.title || "Shared workflow"}</h2>
+            <h2 id="shared-workflow-dialog-title" className="mt-1 text-2xl font-bold text-brand-navy">{workflow?.title || "Shared workflow"}</h2>
             <p className="mt-1 text-sm text-brand-slate">Parent step: <strong>{parentNodeTitle}</strong></p>
           </div>
-          <button onClick={onClose} className="rounded-xl border border-brand-light-node bg-brand-light-slate px-4 py-2 text-sm font-semibold text-brand-slate hover:bg-brand-light-node">
+          <button type="button" data-dialog-initial-focus data-dialog-dismiss onClick={requestClose} className={semanticActionButton.secondary}>
             Close
           </button>
         </div>
@@ -93,8 +136,8 @@ export function SharedWorkflowRunnerModal({
               latestIsolationEvent={latestIsolationEvent}
               userCatalogItems={userIsolationCatalogItems}
               onUserCatalogItemsChange={onUserIsolationCatalogItemsChange}
-              onRecordIsolationEvent={onRecordIsolationEvent}
-              onOpenCatalogue={onOpenCatalogue}
+              onRecordIsolationEvent={recordIsolationEvent}
+              onOpenCatalogue={onOpenCatalogue ? requestOpenCatalogue : undefined}
             />
           ) : launch.workflowId === sharedAnesthesiaWorkflowId ? (
             <AnesthesiaWorkflowRunner
@@ -104,8 +147,8 @@ export function SharedWorkflowRunnerModal({
               latestAnesthesiaEvent={latestAnesthesiaEvent}
               userCatalogItems={userAnesthesiaCatalogItems}
               onUserCatalogItemsChange={onUserAnesthesiaCatalogItemsChange}
-              onRecordAnesthesiaEvent={onRecordAnesthesiaEvent}
-              onOpenCatalogue={onOpenCatalogue}
+              onRecordAnesthesiaEvent={recordAnesthesiaEvent}
+              onOpenCatalogue={onOpenCatalogue ? requestOpenCatalogue : undefined}
             />
           ) : launch.workflowId === sharedRadiologyWorkflowId ? (
             <RadiologyWorkflowRunner
@@ -113,15 +156,15 @@ export function SharedWorkflowRunnerModal({
               caseData={caseData}
               parentWorkflowRunId={parentWorkflowRunId}
               latestRadiologyEvent={latestRadiologyEvent}
-              onRecordRadiologyEvent={onRecordRadiologyEvent}
+              onRecordRadiologyEvent={recordRadiologyEvent}
             />
           ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+            <div role="status" className={cx(semanticStatusSurface.attention, "p-4 text-sm leading-6")}>
               This shared workflow is not available in the embedded runner yet.
             </div>
           )}
         </div>
-      </section>
-    </div>
+      </div>
+    </AccessibleDialog>
   );
 }

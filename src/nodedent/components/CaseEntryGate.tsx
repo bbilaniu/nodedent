@@ -2,6 +2,9 @@ import React from "react";
 import type { EndoCase } from "../types";
 import { ClinicalDataNotice } from "./ClinicalDataNotice";
 import { SandboxDataWarning } from "./SandboxDataWarning";
+import { cx, semanticActionButton, semanticStatusTone } from "./uiStyles";
+
+const entryActionWidth = "w-full sm:w-auto";
 
 function formatStartedAt(createdAt?: string) {
   if (!createdAt) return "Not recorded";
@@ -39,7 +42,7 @@ export function CaseEntryGate({
       <div className="mx-auto max-w-4xl space-y-4">
         <ClinicalDataNotice />
         {!persistentStorage ? (
-          <div role="status" className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <div role="status" className={cx("rounded-2xl border px-4 py-3 text-sm", semanticStatusTone.attention)}>
             This browser did not grant persistent storage. It may remove the encrypted vault under storage pressure; download encrypted backups regularly.
           </div>
         ) : null}
@@ -86,7 +89,7 @@ export function CaseEntryGate({
                 <button
                   type="button"
                   onClick={onContinueCurrentCase}
-                  className="w-full rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep sm:w-auto"
+                  className={cx(semanticActionButton.primaryLarge, entryActionWidth)}
                 >
                   Continue case
                 </button>
@@ -94,9 +97,10 @@ export function CaseEntryGate({
               <button
                 type="button"
                 onClick={onStartNewCase}
-                className={hasMeaningfulActiveCase
-                  ? "w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
-                  : "w-full rounded-xl bg-brand-navy px-4 py-3 text-sm font-bold text-white hover:bg-brand-navy-deep sm:w-auto"}
+                className={cx(
+                  hasMeaningfulActiveCase ? semanticActionButton.secondaryLarge : semanticActionButton.primaryLarge,
+                  entryActionWidth,
+                )}
               >
                 New case
               </button>
@@ -110,7 +114,7 @@ export function CaseEntryGate({
                 <button
                   type="button"
                   onClick={onReviewSavedCases}
-                  className="mt-2 w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                  className={cx(semanticActionButton.secondaryLarge, "mt-2", entryActionWidth)}
                 >
                   Review {otherCaseCount} other saved cases
                 </button>
@@ -127,14 +131,14 @@ export function CaseEntryGate({
                     <button
                       type="button"
                       onClick={onImportCaseJson}
-                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                      className={cx(semanticActionButton.secondaryLarge, entryActionWidth)}
                     >
                       Import case
                     </button>
                     <button
                       type="button"
                       onClick={onImportEncryptedVault}
-                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                      className={cx(semanticActionButton.secondaryLarge, entryActionWidth)}
                     >
                       Import vault
                     </button>
@@ -149,14 +153,14 @@ export function CaseEntryGate({
                     <button
                       type="button"
                       onClick={onDownloadEncryptedVault}
-                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-bold text-brand-navy hover:bg-brand-light-slate sm:w-auto"
+                      className={cx(semanticActionButton.secondaryLarge, entryActionWidth)}
                     >
                       Download vault
                     </button>
                     <button
                       type="button"
                       onClick={onLockVault}
-                      className="w-full rounded-xl border border-brand-light-node bg-white px-4 py-3 text-sm font-semibold text-brand-slate hover:bg-brand-light-slate sm:w-auto"
+                      className={cx(semanticActionButton.secondaryLarge, entryActionWidth)}
                     >
                       Lock vault
                     </button>

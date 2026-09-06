@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import type { RadiologyEventDetails, RadiologyModality, RadiologyRegionKind } from "../workflow/radiology";
 import { radiologyModalities, radiologyRegionKinds } from "../workflow/radiology";
 import { TextInput } from "./FormControls";
-import { cx, semanticActionButton, semanticChoiceControl } from "./uiStyles";
+import { cx, semanticActionButton, semanticChoiceControl, semanticFormControl, semanticStatusSurface } from "./uiStyles";
 
 export type RadiologyReviewFormState = {
   modalities: RadiologyModality[];
@@ -132,7 +132,7 @@ export function RadiologyEventForm({
             ))}
           </div>
         </div>
-        {!hasReviewScope ? <p role="status" className="text-xs leading-5 text-amber-900">Enter the tooth, teeth, procedure ID, or region label for the selected review scope.</p> : null}
+        {!hasReviewScope ? <p role="status" className={cx(semanticStatusSurface.attention, "rounded-xl px-3 py-2 text-xs leading-5")}>Enter the tooth, teeth, procedure ID, or region label for the selected review scope.</p> : null}
         {form.modalities.includes("other") ? (
           <TextInput label="Other modality label" value={form.otherModalityLabel} onChange={(value) => updateForm({ otherModalityLabel: value })} placeholder="e.g., pano" />
         ) : null}
@@ -141,7 +141,7 @@ export function RadiologyEventForm({
           <select
             value={form.scopeKind}
             onChange={(event) => updateForm({ scopeKind: event.target.value as RadiologyRegionKind })}
-            className="w-full rounded-xl border border-brand-light-node bg-white px-3 py-2 text-sm outline-none transition focus:border-brand-blue focus:ring-2 focus:ring-brand-blue-light/20"
+            className={semanticFormControl.default}
           >
             {radiologyRegionKinds.map((scopeKind) => <option key={scopeKind} value={scopeKind}>{scopeLabels[scopeKind]}</option>)}
           </select>

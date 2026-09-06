@@ -2,6 +2,7 @@ import React from "react";
 import type { EndoCase } from "../types";
 import { createOperativeSetupScope, type OperativeWorkflowSetupState } from "../workflow/operative";
 import { SectionCard, TextInput } from "./FormControls";
+import { cx, semanticStatusSurface } from "./uiStyles";
 
 export function OperativeWorkflowSetupPanel({
   caseData,
@@ -30,7 +31,7 @@ export function OperativeWorkflowSetupPanel({
           <TextInput label="Material" value={setup.material} onChange={(value) => onSetupChange({ material: value })} placeholder="optional" />
           <TextInput label="Shade" value={setup.shade} onChange={(value) => onSetupChange({ shade: value })} placeholder="optional" />
         </div>
-        <div className="rounded-xl border border-brand-light-node bg-white px-3 py-2">
+        <div className={cx(semanticStatusSurface.neutral, "rounded-xl px-3 py-2")}>
           <p className="text-xs font-bold uppercase tracking-wide text-brand-slate">Current operative scope</p>
           <p className="mt-1 text-sm font-semibold text-brand-navy">{scope.label || "No tooth/surface scope yet"}</p>
         </div>

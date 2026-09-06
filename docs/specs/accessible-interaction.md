@@ -16,6 +16,36 @@ proposes separate visual roles for actions, selected controls, and status. This
 spec owns the corresponding programmatic state, non-color cues, focus behavior,
 and assistive-technology requirements.
 
+## Implementation Status
+
+The 2026-08-25 interaction pass introduced a reusable `AccessibleDialog`
+primitive and moved the application modal and destructive-confirmation families
+onto it. The primitive provides an accessible name and optional description,
+initial focus, contained Tab order, topmost-dialog Escape handling, background
+`inert`/`aria-hidden` suppression, body scroll locking, backdrop behavior, and
+focus restoration. Shared-workflow dismissal or Catalogue navigation and
+end-visit dismissal now warn before they discard unrecorded edits.
+
+Shared text, select, file, time, vault, contextual endodontic, and operative
+validation now exposes field IDs, `aria-invalid`, described-by relationships,
+visible non-color error text, and field links from local error summaries where
+an invalid field exists. Equivalent remaining actions and status messages use
+the semantic UI contracts, with routine dismissal, clinical recording,
+warnings, and destructive consequences kept visually distinct.
+
+The development-only semantic gallery includes an interactive dialog fixture.
+Browser verification confirmed initial focus, forward and reverse Tab wrapping,
+Escape dismissal, background suppression, scroll locking, focus restoration, a
+44 CSS-pixel default action target, visible two-pixel keyboard focus, and no
+horizontal overflow at the available 1920-pixel viewport in light and dark
+modes. The automated rendering and workflow suites cover the component
+semantics and error relationships.
+
+This spec remains active because committed automated browser/axe coverage and
+manual VoiceOver/NVDA, 200% zoom, forced-colors, phone, tablet, mounted-tablet,
+and gloved-use evidence are still acceptance work. Those checks require their
+actual target environments and must not be inferred from the desktop fixture.
+
 ## Required Outcomes
 
 ### Dialog contract
