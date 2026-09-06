@@ -93,6 +93,12 @@ Treat a `beta` to `main` pull request as a short promotion window:
    unchanged application version must already have its canonical tag on an
    ancestor of `main`.
 
+Before either synchronization path moves `beta`, it runs `npm run ci:local`
+with the exact Beta mode, branch, commit, and approved origin, then uploads the
+generated deployment evidence. This explicit gate is required because pushes
+made with the workflow's `GITHUB_TOKEN` do not recursively trigger the CI
+workflow's `push` event for `beta`.
+
 The workflow never force-pushes `beta` and never infers a missing historical
 release tag from the current commit. If `beta` advances before synchronization,
 stop the promotion sequence and merge `main` back into `beta` through the normal

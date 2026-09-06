@@ -133,11 +133,38 @@ jobs:
     name: Fast-forward beta after versioning
     needs: release-tag
     runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: beta
+      NODEDENT_DEPLOYMENT_BRANCH: beta
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ vars.NODEDENT_BETA_ORIGIN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run exact-commit Beta quality gate
+        run: npm run ci:local
+
+      - name: Upload Beta deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-deployment-evidence-${{ github.sha }}
+          path: |
+            dist/deployment.json
+            dist/index.html
+            dist/_headers
+          if-no-files-found: error
 
       - name: Fast-forward beta to main
         shell: bash
@@ -154,6 +181,11 @@ jobs:
     needs: [changesets, detect_release]
     if: needs.detect_release.outputs.version_changed == 'false'
     runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: beta
+      NODEDENT_DEPLOYMENT_BRANCH: beta
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ vars.NODEDENT_BETA_ORIGIN }}
     steps:
       - name: Checkout main update
         uses: actions/checkout@v6
@@ -164,6 +196,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Verify the current release baseline
         shell: bash
@@ -182,6 +218,19 @@ jobs:
             echo "::error::Release tag ${tag} points to ${tag_commit}, which is not an ancestor of main."
             exit 1
           fi
+
+      - name: Run exact-commit Beta quality gate
+        run: npm run ci:local
+
+      - name: Upload Beta deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-deployment-evidence-${{ github.sha }}
+          path: |
+            dist/deployment.json
+            dist/index.html
+            dist/_headers
+          if-no-files-found: error
 
       - name: Fast-forward beta to main
         shell: bash
