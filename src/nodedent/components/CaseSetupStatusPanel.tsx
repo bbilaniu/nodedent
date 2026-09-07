@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import type { CaseSetupFocusTarget, EndoCase } from "../types";
 import { getCaseStatus } from "../engine/deriveCaseStatus";
 import {
@@ -464,17 +464,17 @@ export function CaseSetupStatusPanel({
   const diagnosisSectionRef = useRef<HTMLElement | null>(null);
   const isolationSectionRef = useRef<HTMLElement | null>(null);
   const radiographsSectionRef = useRef<HTMLElement | null>(null);
-  const focusRefs: CaseSetupFocusRefs = {
+  const focusRefs = useMemo<CaseSetupFocusRefs>(() => ({
     diagnosis: diagnosisSectionRef,
     radiographs: radiographsSectionRef,
     anesthesia: anesthesiaSectionRef,
     isolation: isolationSectionRef,
-  };
+  }), []);
   const capabilitySummary = getCaseCapabilitySummary(caseData);
 
   useEffect(() => {
     focusCaseSetupSection(initialFocusSection, focusRefs);
-  }, [initialFocusSection]);
+  }, [initialFocusSection, focusRefs]);
 
   return (
     <div className="grid gap-6">

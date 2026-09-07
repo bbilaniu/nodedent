@@ -13,7 +13,6 @@ import { cx, panelActionButton, panelSurface } from "./uiStyles";
 
 export function CaseSetupPage({
   caseData,
-  activeCanal,
   activeWorkflowId,
   currentNodeId,
   onClose,
