@@ -15,11 +15,12 @@
     "workflows:check": "actionlint",
     "test:e2e": "playwright test",
     "test:e2e:serve": "node scripts/serve-e2e.mjs",
+    "test:smoke": "node --import tsx scripts/check-deployed-site.ts",
     "deployment:check": "node scripts/check-deployment-mode.mjs",
     "deployment:matrix": "node scripts/check-deployment-matrix.mjs",
     "docs:check": "node scripts/check-doc-lifecycle.mjs",
     "docs:workflow-graph": "tsx scripts/export-protocol-graph.ts",
-    "test": "node --import tsx --test src/nodedent/__tests__/*.test.ts",
+    "test": "node --import tsx --test src/nodedent/__tests__/*.test.ts scripts/__tests__/*.test.ts",
     "typecheck": "tsc --noEmit",
     "security:check": "node scripts/check-clinical-security.mjs",
     "changeset": "changeset",
@@ -33,6 +34,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@changesets/cli": "^2.31.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.63.0",

@@ -27,12 +27,18 @@ function focusableElements(panel: HTMLElement) {
 }
 
 function suppressBackground(overlay: HTMLElement) {
-  const parent = overlay.parentElement;
-  if (!parent) return () => {};
-
-  const siblings = Array.from(parent.children).filter((element): element is HTMLElement => (
-    element instanceof HTMLElement && element !== overlay && !["SCRIPT", "STYLE"].includes(element.tagName)
-  ));
+  // Suppress every background branch, including app chrome outside this panel's
+  // immediate parent. Never suppress the ancestor containing the dialog itself.
+  const siblings: HTMLElement[] = [];
+  let foreground: HTMLElement = overlay;
+  while (foreground.parentElement) {
+    const parent = foreground.parentElement;
+    siblings.push(...Array.from(parent.children).filter((element): element is HTMLElement => (
+      element instanceof HTMLElement && element !== foreground && !["SCRIPT", "STYLE"].includes(element.tagName)
+    )));
+    if (parent === document.body) break;
+    foreground = parent;
+  }
   const previous = siblings.map((element) => ({
     element,
     inert: element.inert,
