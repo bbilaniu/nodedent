@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.3
+
+### Patch Changes
+
+- 223debd: Strengthen CI with lint, workflow validation, deployment-mode builds, and synthetic Chromium tests for vault access, recording, persistence, and case transfer. Require the expanded checks before deployment and automatic Beta synchronization, and identify PR builds by the commit actually tested.
+- 459c61e: Show rejected case JSON import errors inside the import dialog, including when importing from the vault entry screen, with an accessible link to the input. Clear the error when the input changes.
+
+  Correct operative memo dependencies and stabilize Case Setup focus dependencies while introducing the lint gate.
+
 ## 2.4.2
 
 ### Patch Changes
