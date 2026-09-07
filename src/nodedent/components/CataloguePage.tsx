@@ -194,7 +194,7 @@ export function CataloguePage({
   }
 
   function handleSectionKeyDown(event: React.KeyboardEvent<HTMLButtonElement>, index: number) {
-    let nextIndex = index;
+    let nextIndex: number;
     if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = (index + 1) % sections.length;
     else if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = (index - 1 + sections.length) % sections.length;
     else if (event.key === "Home") nextIndex = 0;

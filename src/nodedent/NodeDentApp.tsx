@@ -53,7 +53,6 @@ import {
   ClinicalVaultError,
   type BackupConflictResolution,
   type ClinicalVaultBackup,
-  type ClinicalVaultSession,
   type EncryptedBackupImportPreview,
   type EncryptedBackupResolutionResult,
   type RecoveryHistorySummary,
@@ -65,7 +64,6 @@ import { endodonticRootWorkflowId } from "./workflow/registry";
 import { createUserEndodonticCatalogItem, getEndodonticSealerCatalogOptions } from "./workflow/endodonticCatalog";
 import { type DiagnosisFieldId, type DiagnosisSectionId, updateDiagnosisField } from "./workflow/diagnosis";
 import { updateUserCatalogItem } from "./workflow/userCatalogItems";
-import { noTreatmentSelectedProcedure } from "./workflow/procedures";
 import { deploymentIdentity, deploymentOriginMatches } from "./deploymentMode";
 import {
   buildOperativeSetupEventDetails,
@@ -361,11 +359,11 @@ function ClinicalWorkspace({
     : workflowInstances.find((instance) => instance.workflowId === operativeDirectRestorationWorkflowId);
   const operativeSetup = useMemo(
     () => getLatestOperativeWorkflowSetup(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id),
-    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData]
   );
   const latestOperativeRestorationEvent = useMemo(
     () => getOperativeRestorationEvents(caseData, activeOperativeWorkflowInstance?.workflowRunId, activeOperativeWorkflowInstance?.id).at(-1),
-    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData.globalEvents]
+    [activeOperativeWorkflowInstance?.id, activeOperativeWorkflowInstance?.workflowRunId, caseData]
   );
   const caseCapabilitySummary = useMemo(() => getCaseCapabilitySummary(caseData), [caseData]);
   const operativeReadinessSummary = useMemo(() => getOperativeReadinessCapabilitySummary(caseData, operativeSetup), [caseData, operativeSetup]);
@@ -1195,7 +1193,7 @@ function ClinicalWorkspace({
       setImportText("");
       setValidationMessage(null);
     } catch (error) {
-      setValidationMessage({ optionLabel: "Import JSON", missing: [error instanceof Error ? error.message : "Invalid JSON or unsupported case format"] });
+      return error instanceof Error ? error.message : "Invalid JSON or unsupported case format";
     }
   }
 

@@ -1,6 +1,5 @@
 import type { CapabilityName, CapabilitySatisfaction, ClinicalEvent, EndoCase, KnownCapabilityName, WorkflowScope } from "../types";
 import { hasDiagnosisSectionRecord } from "./diagnosis";
-import { isBlank } from "../engine/measurements";
 import { capabilityScopeRules, knownCapabilityNames } from "./capabilities";
 import { anesthesiaInvalidatingEventTypes, getAnesthesiaAdequateCapabilityOutput, getAnesthesiaScopeFromEvent, isAnesthesiaAdministrationEvent, isAnesthesiaEvent } from "./anesthesia";
 import { getIsolationScopeFromEvent, isolationEstablishedEventTypes, isolationInvalidatingEventTypes } from "./isolation";

@@ -91,7 +91,7 @@ export function ClinicalVaultGate({
   }, [store]);
 
   async function finishAccess(session: ClinicalVaultSession) {
-    let persistentStorage = false;
+    let persistentStorage: boolean;
     try {
       persistentStorage = await requestPersistentClinicalStorage();
     } catch {

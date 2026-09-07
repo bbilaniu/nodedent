@@ -40,7 +40,7 @@ export function SavedCasesModal({
   onClose: () => void;
   onToggleImportBox: () => void;
   onImportTextChange: (value: string) => void;
-  onImportCaseJson: () => void;
+  onImportCaseJson: () => string | void;
   onClearSavedCurrentCase: () => void;
   onResetAllSavedCases: () => void;
   onLoadSavedCase: (caseId: string) => void;
@@ -55,8 +55,10 @@ export function SavedCasesModal({
 }) {
   const [importFileName, setImportFileName] = useState("");
   const [importFileError, setImportFileError] = useState("");
+  const [importError, setImportError] = useState("");
 
   async function selectImportFile(file?: File) {
+    setImportError("");
     setImportFileName("");
     setImportFileError("");
     if (!file) return;
@@ -113,17 +115,22 @@ export function SavedCasesModal({
               <label className="mt-3 block">
                 <span className="mb-1 block text-xs font-medium text-brand-slate">Or paste case JSON</span>
                 <textarea
+                  id="case-json-text"
                   value={importText}
                   onChange={(event) => {
+                    setImportError("");
                     setImportFileName("");
                     setImportFileError("");
                     onImportTextChange(event.target.value);
                   }}
                   placeholder="Paste explicitly exported NodeDent case JSON here"
+                  aria-invalid={Boolean(importError) || undefined}
+                  aria-describedby={importError ? "case-json-import-error" : undefined}
                   className={cx(semanticFormControl.default, "h-28 font-mono text-xs")}
                 />
               </label>
-              <button type="button" onClick={onImportCaseJson} className={cx(semanticActionButton.warningCompact, "mt-2")}>Resume imported workflow</button>
+              {importError ? <p id="case-json-import-error" role="alert" className={cx(semanticStatusSurface.danger, "mt-2 p-3 text-xs")}><a href="#case-json-text" className="font-semibold underline underline-offset-2">Cannot import case</a>: {importError}</p> : null}
+              <button type="button" onClick={() => setImportError(onImportCaseJson() || "")} className={cx(semanticActionButton.warningCompact, "mt-2")}>Resume imported workflow</button>
             </div>
           ) : null}
         </div>

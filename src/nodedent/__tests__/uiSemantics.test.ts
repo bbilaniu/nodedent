@@ -321,7 +321,7 @@ test("target selection stays separate from canal status", () => {
   assert.match(markup, /aria-pressed="false"/);
   assert.match(markup, /semantic-selection-selected/);
   assert.match(markup, /data-clinical-status="notStarted"/);
-  assert.doesNotMatch(markup, /semantic-selection-selected[^\"]*bg-brand-navy/);
+  assert.doesNotMatch(markup, /semantic-selection-selected[^"]*bg-brand-navy/);
 });
 
 test("history and output surfaces expose list, tab, focus, and plaintext consequence semantics", () => {
@@ -344,8 +344,8 @@ test("history and output surfaces expose list, tab, focus, and plaintext consequ
   assert.match(outputMarkup, /semantic-selection-selected/);
   assert.match(outputMarkup, /note-preview-output/);
   assert.match(outputMarkup, /focus-visible:outline-brand-blue/);
-  assert.match(outputMarkup, /semantic-action-warning[^\"]*[^>]*>Download plaintext/);
-  assert.match(outputMarkup, /semantic-action-warning[^\"]*[^>]*><span aria-live="polite">Copy current output/);
+  assert.match(outputMarkup, /semantic-action-warning[^"]*[^>]*>Download plaintext/);
+  assert.match(outputMarkup, /semantic-action-warning[^"]*[^>]*><span aria-live="polite">Copy current output/);
 });
 
 test("catalogue administration uses selection, list, status, and destructive contracts", () => {
@@ -359,8 +359,8 @@ test("catalogue administration uses selection, list, status, and destructive con
   assert.match(markup, /semantic-selection-selected/);
   assert.match(markup, /aria-label="Agents catalogue items"/);
   assert.match(markup, /semantic-status-neutral/);
-  assert.match(markup, /semantic-action-primary[^\"]*[^>]*>Add item/);
-  assert.match(markup, /semantic-action-destructive[^\"]*[^>]*>Reset local catalogue/);
+  assert.match(markup, /semantic-action-primary[^"]*[^>]*>Add item/);
+  assert.match(markup, /semantic-action-destructive[^"]*[^>]*>Reset local catalogue/);
 });
 
 test("anesthesia renders selected-choice semantics and a primary record action", () => {
