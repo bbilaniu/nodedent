@@ -27,6 +27,12 @@ async function returnToWorkspace(page: Page) {
   await expect(page.getByText(`Chart: ${chart}`, { exact: true })).toBeVisible();
 }
 
+async function lock(page: Page) {
+  await page.getByRole("button", { name: "Lock vault", exact: true }).click();
+  // A click does not await the handler's encrypted save; wait before navigating away.
+  await expect(page.getByRole("heading", { name: "Unlock clinical vault", exact: true })).toBeVisible();
+}
+
 async function unlock(page: Page) {
   await page.getByLabel("Vault passphrase", { exact: true }).fill(passphrase);
   await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
@@ -49,8 +55,7 @@ async function exportCase(page: Page, info: TestInfo, name: string) {
 test("vault creation, lock, wrong passphrase, and reload preserve the synthetic case", async ({ page }) => {
   await createCase(page);
   await returnToWorkspace(page);
-  await page.getByRole("button", { name: "Lock vault", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Unlock clinical vault" })).toBeVisible();
+  await lock(page);
   await page.getByLabel("Vault passphrase", { exact: true }).fill("incorrect-synthetic-passphrase");
   await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Vault action needs attention");
@@ -118,7 +123,7 @@ test("closing discards a draft; recording appends exactly one administration tha
   expect(administrations).toHaveLength(1);
   expect(JSON.stringify(exported.data)).not.toContain("SYNTHETIC-DISCARDED-AGENT");
   await returnToWorkspace(page);
-  await page.getByRole("button", { name: "Lock vault", exact: true }).click();
+  await lock(page);
   await page.reload();
   await unlock(page);
   await page.getByRole("button", { name: "Case Setup & Status", exact: true }).click();
@@ -167,7 +172,7 @@ test("encrypted vault download restores into an empty browser profile", async ({
   await createCase(page);
   await returnToWorkspace(page);
   // Lock flushes the current case before the backup is downloaded from the entry screen.
-  await page.getByRole("button", { name: "Lock vault", exact: true }).click();
+  await lock(page);
   await page.getByLabel("Vault passphrase", { exact: true }).fill(passphrase);
   await page.getByRole("button", { name: "Unlock vault", exact: true }).click();
   const download = page.waitForEvent("download");
