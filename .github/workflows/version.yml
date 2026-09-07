@@ -38,10 +38,46 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  detect_release:
+    name: Detect versioned release
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.compare_versions.outputs.version_changed }}
+    steps:
+      - name: Checkout released commit
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Compare application versions
+        id: compare_versions
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ -z "${BEFORE_SHA}" || "${BEFORE_SHA}" =~ ^0+$ ]]; then
+            echo "No previous main commit is available; this is not a versioned release transition."
+            echo "version_changed=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          previous_version="$(
+            git show "${BEFORE_SHA}:package.json" |
+              node -e 'let value = ""; process.stdin.setEncoding("utf8"); process.stdin.on("data", (chunk) => { value += chunk; }); process.stdin.on("end", () => { process.stdout.write(JSON.parse(value).version); });'
+          )"
+          current_version="$(node -p "require('./package.json').version")"
+
+          echo "Application version transition: ${previous_version} -> ${current_version}"
+          if [[ "${previous_version}" != "${current_version}" ]]; then
+            echo "version_changed=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "version_changed=false" >> "${GITHUB_OUTPUT}"
+          fi
+
   release-tag:
     name: Tag versioned release
-    needs: changesets
-    if: contains(github.event.head_commit.message, 'Version Packages')
+    needs: [changesets, detect_release]
+    if: needs.detect_release.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout released commit
@@ -96,24 +132,119 @@ jobs:
   sync-beta:
     name: Fast-forward beta after versioning
     needs: release-tag
-    if: contains(github.event.head_commit.message, 'Version Packages')
     runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: beta
+      NODEDENT_DEPLOYMENT_BRANCH: beta
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ vars.NODEDENT_BETA_ORIGIN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run exact-commit Beta quality gate
+        run: npm run ci:local
+
+      - name: Upload Beta deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-deployment-evidence-${{ github.sha }}
+          path: |
+            dist/deployment.json
+            dist/index.html
+            dist/_headers
+          if-no-files-found: error
+
       - name: Fast-forward beta to main
+        shell: bash
         run: |
           git fetch origin beta
-          git merge-base --is-ancestor origin/beta HEAD
+          if ! git merge-base --is-ancestor origin/beta HEAD; then
+            echo "::error::beta advanced independently and cannot be fast-forwarded to main. Merge main back into beta; never force-push the branch."
+            exit 1
+          fi
+          git push origin HEAD:beta
+
+  sync-beta-without-release:
+    name: Fast-forward beta after non-release main update
+    needs: [changesets, detect_release]
+    if: needs.detect_release.outputs.version_changed == 'false'
+    runs-on: ubuntu-latest
+    env:
+      NODEDENT_DEPLOYMENT_MODE: beta
+      NODEDENT_DEPLOYMENT_BRANCH: beta
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
+      NODEDENT_DEPLOYMENT_ORIGIN: ${{ vars.NODEDENT_BETA_ORIGIN }}
+    steps:
+      - name: Checkout main update
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify the current release baseline
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+
+          git fetch --tags origin
+          if ! git show-ref --verify --quiet "refs/tags/${tag}"; then
+            echo "::error::Release tag ${tag} is missing. Recover the exact version-changing commit manually; refusing to tag or synchronize from the current commit."
+            exit 1
+          fi
+
+          tag_commit="$(git rev-list -n 1 "${tag}")"
+          if ! git merge-base --is-ancestor "${tag_commit}" HEAD; then
+            echo "::error::Release tag ${tag} points to ${tag_commit}, which is not an ancestor of main."
+            exit 1
+          fi
+
+      - name: Run exact-commit Beta quality gate
+        run: npm run ci:local
+
+      - name: Upload Beta deployment evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: beta-deployment-evidence-${{ github.sha }}
+          path: |
+            dist/deployment.json
+            dist/index.html
+            dist/_headers
+          if-no-files-found: error
+
+      - name: Fast-forward beta to main
+        shell: bash
+        run: |
+          git fetch origin beta
+          if ! git merge-base --is-ancestor origin/beta HEAD; then
+            echo "::error::beta advanced independently and cannot be fast-forwarded to main. Merge main back into beta; never force-push the branch."
+            exit 1
+          fi
           git push origin HEAD:beta
 
   archive-release:
     name: Create historical Sandbox branch
     needs: release-tag
-    if: contains(github.event.head_commit.message, 'Version Packages')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout released commit
