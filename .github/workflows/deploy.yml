@@ -107,5 +107,6 @@ jobs:
       - name: Check deployed application without opening a vault
         shell: bash
         run: |
-          export NODEDENT_SMOKE_VERSION="$(node -p "require('./package.json').version")"
+          NODEDENT_SMOKE_VERSION="$(node -p "require('./package.json').version")"
+          export NODEDENT_SMOKE_VERSION
           npm run test:smoke
