@@ -27,6 +27,7 @@ This folder separates clinical source material, active product specs, architectu
 ## Engineering Guides
 
 - [Semantic UI contract](guides/semantic-ui-contract.md)
+- [CI verification and dependency maintenance](guides/ci-verification.md)
 - [NodeDent workflow development guide](guides/endo-guide-development-guide.md)
 - [Local clinical deployment guide](guides/local-clinical-deployment.md)
 - [Deployment mode operations](guides/deployment-mode-operations.md)

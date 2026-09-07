@@ -16,14 +16,22 @@ jobs:
   quality:
     name: Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       NODEDENT_DEPLOYMENT_MODE: ${{ github.event_name == 'push' && github.ref_name == 'main' && 'current' || github.event_name == 'push' && github.ref_name == 'beta' && 'beta' || 'sandbox' }}
       NODEDENT_DEPLOYMENT_BRANCH: ${{ github.head_ref || github.ref_name }}
-      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+      NODEDENT_DEPLOYMENT_COMMIT: ${{ github.sha }}
       NODEDENT_DEPLOYMENT_ORIGIN: ${{ github.event_name == 'push' && github.ref_name == 'main' && vars.NODEDENT_CURRENT_ORIGIN || github.event_name == 'push' && github.ref_name == 'beta' && vars.NODEDENT_BETA_ORIGIN || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Validate workflow syntax
+        uses: docker://rhysd/actionlint:1.7.12
+        with:
+          args: -color
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -36,6 +44,9 @@ jobs:
 
       - name: Check versioning
         run: npm run versioning:check
+
+      - name: Lint
+        run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
@@ -55,12 +66,32 @@ jobs:
       - name: Check clinical security boundary
         run: npm run security:check
 
+      - name: Check deployment build matrix
+        run: npm run deployment:matrix
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Test production Sandbox in Chromium
+        run: npm run test:e2e
+
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-failures-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+
       - name: Upload deployment evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: deployment-evidence-${{ github.sha }}
           path: |
             dist/deployment.json
             dist/index.html
             dist/_headers
-          if-no-files-found: ignore
+          if-no-files-found: error
