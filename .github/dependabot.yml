@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: beta
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      development-patch-minor:
+        dependency-type: development
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: beta
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
