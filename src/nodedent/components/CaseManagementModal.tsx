@@ -77,7 +77,7 @@ export function SavedCasesModal({
     <AccessibleDialog labelledBy="saved-cases-dialog-title" panelClassName="max-w-3xl" onRequestClose={onClose}>
         <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-blue">Saved cases</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-slate">Saved cases</p>
             <h2 id="saved-cases-dialog-title" className="mt-1 text-2xl font-bold text-brand-navy">Resume saved workflow</h2>
             <p className="mt-1 text-sm text-brand-slate">Open an encrypted local autosave or explicitly import a NodeDent case JSON.</p>
           </div>
