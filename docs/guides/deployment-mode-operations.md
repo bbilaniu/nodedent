@@ -76,6 +76,34 @@ separately from the still-pending external Cloudflare branch build. Repository
 branch protection or a ruleset must separately prevent ordinary edits to
 `archive/*`.
 
+### Beta-to-Current promotion discipline
+
+Treat a `beta` to `main` pull request as a short promotion window:
+
+1. Start the promotion only after the exact `beta` commit has passed its
+   required checks.
+2. Hold new merges into `beta` until promotion and synchronization finish.
+3. Put review corrections on `beta`, the pull request's head branch, before
+   merging; do not apply them only to `main` or a temporary merge ref.
+4. Merge the reviewed pull request into `main`.
+5. If pending Changesets create or update a `Version Packages` pull request,
+   keep the hold in place through its review and merge.
+6. Let the Version workflow perform a guarded fast-forward of `beta` to the new
+   `main` commit. A real application-version change must be tagged first; an
+   unchanged application version must already have its canonical tag on an
+   ancestor of `main`.
+
+Before either synchronization path moves `beta`, it runs `npm run ci:local`
+with the exact Beta mode, branch, commit, and approved origin, then uploads the
+generated deployment evidence. This explicit gate is required because pushes
+made with the workflow's `GITHUB_TOKEN` do not recursively trigger the CI
+workflow's `push` event for `beta`.
+
+The workflow never force-pushes `beta` and never infers a missing historical
+release tag from the current commit. If `beta` advances before synchronization,
+stop the promotion sequence and merge `main` back into `beta` through the normal
+review path. Resume beta development after the branches are reconciled.
+
 ## Cloudflare Workers Builds Configuration
 
 The Cloudflare project must be reviewed against this table. Do not put secrets

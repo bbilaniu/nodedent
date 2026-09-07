@@ -100,6 +100,8 @@ npm run docs:check
 
 After a `Version Packages` pull request merges into `main`, the Version workflow detects the application-version change between the previous `main` commit and the pushed commit. It does not depend on editable merge-commit text. The workflow creates and pushes `vM.m.p` for that exact released commit, refuses to reuse a version tag that points to another commit, and fast-forwards `beta` only after tagging succeeds. `npm run release` remains the underlying local Changesets command used by that workflow; contributors should not normally run it manually. NodeDent is private and this release flow does not publish it to npm.
 
+Every accepted `main` update also attempts to keep `beta` based on that exact commit. When the application version is unchanged, the workflow first requires the existing `vM.m.p` tag to be present on an ancestor of `main`; it never backfills a missing tag from the current commit. Both release and non-release synchronization paths run the complete gate with the exact Beta deployment identity and retain its artifact evidence before moving `beta`, because a push made by the workflow's `GITHUB_TOKEN` does not trigger another GitHub Actions run. The workflow then fast-forwards `beta` only if the existing `beta` tip is an ancestor of `main`. If `beta` advanced independently, synchronization fails visibly and maintainers must merge `main` back into `beta` without force-pushing.
+
 The Current, Beta, and Sandbox branch classifications, including the synthetic-only boundary for historical archive deployments, are defined in [ADR 0012](adr/0012-define-current-beta-and-sandbox-deployment-modes.md).
 
 ## Ongoing versioning validation
