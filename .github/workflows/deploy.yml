@@ -73,3 +73,40 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  smoke:
+    name: Read-only deployed-site smoke
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      NODEDENT_SMOKE_URL: ${{ vars.NODEDENT_CURRENT_ORIGIN }}
+      NODEDENT_SMOKE_MODE: current
+      NODEDENT_SMOKE_BRANCH: main
+      NODEDENT_SMOKE_COMMIT: ${{ github.sha }}
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Check deployed application without opening a vault
+        shell: bash
+        run: |
+          NODEDENT_SMOKE_VERSION="$(node -p "require('./package.json').version")"
+          export NODEDENT_SMOKE_VERSION
+          npm run test:smoke
