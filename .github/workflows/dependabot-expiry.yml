@@ -1,0 +1,67 @@
+name: Review expired Dependabot ignores
+
+on:
+  schedule:
+    - cron: '37 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-ignore-expiry
+  cancel-in-progress: false
+
+jobs:
+  review:
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+
+      - name: Check expiry dates without installing dependencies
+        id: expiry
+        run: node scripts/expire-dependabot-ignores.mjs --check
+
+      - name: Install locked dependencies for YAML validation
+        if: steps.expiry.outputs.due == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Remove expired rules from the working copy
+        if: steps.expiry.outputs.due == 'true'
+        run: node scripts/expire-dependabot-ignores.mjs --write
+
+      # Run even without changes so an obsolete removal PR can be closed if
+      # maintainers extend an expiry date or remove the rule themselves.
+      - name: Create or update the removal pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ github.token }}
+          branch: automation/expired-dependabot-ignores
+          base: ${{ github.event.repository.default_branch }}
+          add-paths: .github/dependabot.yml
+          commit-message: 'ci: remove expired Dependabot ignore rules'
+          title: 'ci: review expired Dependabot deferrals'
+          body: |
+            The UTC expiry date has arrived for the annotated ignore rules removed here.
+
+            Review the diff and merge when these dependency updates should resume.
+            This PR changes only Dependabot configuration; it does not upgrade dependencies.
+
+            If GitHub requests approval for CI, select **Approve workflows to run** before merging.
+            To defer an update further, extend its `ignore-until` date on the default branch.
+            The next expiry check will update or close this PR accordingly.

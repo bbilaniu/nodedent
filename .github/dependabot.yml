@@ -17,7 +17,7 @@ updates:
       # TypeScript 7.0 lacks the compiler API needed by ESLint; reassess with 7.1.
       - dependency-name: "typescript"
         versions: [">=7.0.0 <7.1.0"]
-      # Review on 2026-10-28; this reminder does not automatically expire the rule.
+      # ignore-until: 2026-10-28
       - dependency-name: "@types/node"
         versions: ["^25.0.0", "^26.0.0", "^27.0.0"]
   - package-ecosystem: github-actions
