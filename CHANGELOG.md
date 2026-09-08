@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.4
+
+### Patch Changes
+
+- 2e113a6: Improve light-theme muted-text contrast and keep background application chrome hidden from assistive technology while a dialog is open. Add keyboard and accessibility regression coverage for vault access and recording versus dismissal.
+- 5d50e2c: Add focused keyboard and axe accessibility checks to the existing quality gates, plus a read-only post-deployment check for application loading and independently expected version, mode, and commit identity. Preserve pre-deployment and Beta synchronization checks; defer full primary-workflow journeys.
+
 ## 2.4.3
 
 ### Patch Changes
