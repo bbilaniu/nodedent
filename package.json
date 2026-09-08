@@ -31,7 +31,7 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.2.8",
-    "zod": "^3.25.0"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
