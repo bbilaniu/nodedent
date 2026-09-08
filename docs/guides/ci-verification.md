@@ -35,7 +35,26 @@ ESLint enforces recommended JavaScript/TypeScript checks and the two core React 
 
 Dependabot proposes weekly npm and GitHub Actions version updates against `beta`. Development patch/minor updates are grouped; major npm changes stay separate. Updates still require review and the same CI checks; automatic merging is not configured. As verified on 2026-09-07, the configuration is on `main` and [hosted Dependabot updates](https://github.com/bbilaniu/nodedent/actions/runs/34155653753) have created PRs. Read-only repository API checks also confirmed vulnerability alerts, secret scanning, and push protection are enabled; automatic Dependabot security-update PRs are disabled. Version-update automation and security-update automation are separate settings.
 
-Run `npm audit` when updating dependencies and review advisories for runtime versus development exposure. Address relevant high/critical issues promptly; document any deferred finding and its rationale. Audit is not a required network-dependent gate in this slice. Do not run unattended `npm audit fix --force`. GitHub Actions currently follow the existing major-tag convention; immutable SHA pinning and its maintenance policy remain a separate hardening option.
+Run `npm audit` when updating dependencies and review advisories for runtime versus development exposure. Address relevant high/critical issues promptly; document any deferred finding and its rationale. Audit is not a required network-dependent gate in this slice. Do not run unattended `npm audit fix --force`. Existing GitHub Actions generally follow the major-tag convention; the new third-party expiry PR action is SHA-pinned. Broader immutable pinning and its maintenance policy remain a separate hardening option.
+
+### Dated Dependabot deferrals
+
+The `Review expired Dependabot ignores` workflow checks the default branch daily at 08:37 UTC, or on manual dispatch from that branch. GitHub schedules can be delayed; this is not a guarantee of an exact-time migration. A comment in the exact form `# ignore-until: YYYY-MM-DD`, immediately above an ignore entry at the same indentation, makes it eligible for a removal proposal on or after that UTC date. The Node-types hold uses **2026-10-28** to coordinate migration with the other projects. The Changesets CLI/action holds remain undated for their separate joint migration, and the TypeScript 7.0 exclusion remains subject to compatibility review.
+
+The workflow ports HygieneNote's expiry script: a dependency-free preflight skips npm installation when no dates are due; due rules are removed only after YAML validation and a semantic comparison proving all other configuration is unchanged. One `automation/expired-dependabot-ignores` PR targets the default branch and changes only `.github/dependabot.yml`. This does not install upgraded application dependencies, merge the PR, change repository settings, or bypass `Quality`. Dependabot still proposes dependency updates against `beta`. Following a reviewed merge to Main, the existing validated Beta synchronization path applies; resolve divergence by merging Main into Beta, never force-pushing.
+
+To defer further, extend the annotation on the default branch. The next run updates or closes the obsolete removal PR even if no annotations are due. Do not hand-edit the automation branch; its content is regenerated. Review the proposed removal alongside the coordinated Node runtime/type upgrades before merging. The date is automated by this workflow, not by Dependabot itself.
+
+The job has a five-minute timeout, non-overlapping runs, no persisted checkout credentials, and only contents/PR write permissions. Repository workflow-PR creation permission was verified enabled on 2026-09-07; Main still required a PR and up-to-date `Quality`. No settings were changed. Bot-created PR checks can require **Approve workflows to run** before merge; see [GitHub's workflow-trigger rules](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow). Scheduled execution begins only after the workflow reaches the default branch.
+
+Preview without changing configuration:
+
+```sh
+node scripts/expire-dependabot-ignores.mjs --check --date 2026-10-28
+node scripts/expire-dependabot-ignores.mjs --preview --date 2026-10-28
+```
+
+`npm test` includes expiry boundary, idempotency, formatting, malformed-input, CLI safety, repository-rule, and workflow-scope regressions. Local validation on 2026-09-07 passed 205 tests (11 expiry tests), zero-warning lint, the production build, actionlint 1.7.12, and documentation/versioning checks. The existing bundle-size warning remains. Hosted scheduled execution and PR creation still require validation after merge; local tests do not exercise those GitHub writes. This is development-tooling-only work, with no application release Changeset required under the [versioning policy](../versioning.md).
 
 ## Read-only deployed-site smoke check
 
